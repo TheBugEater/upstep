@@ -36,7 +36,6 @@ fi
 echo "  logged in as $(npm whoami)"
 
 echo "→ Building packages…"
-pnpm --filter "@upstep/types" build
 pnpm --filter "@upstep/js" build
 
 published=0
