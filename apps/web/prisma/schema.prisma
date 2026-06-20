@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth (NextAuth / Auth.js) ────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Core models ─────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // null for OAuth-only accounts
+  createdAt     DateTime  @default(now())
+
+  // Billing
+  plan                 Plan    @default(FREE)
+  stripeCustomerId     String? @unique
+  stripeSubscriptionId String?
+
+  accounts Account[]
+  sessions Session[]
+  projects Project[]
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  apiKey    String   @unique @default(cuid())
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // When true, new feedback is held as PENDING until the owner approves it.
+  moderationEnabled Boolean @default(true)
+
+  owner    User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  feedback Feedback[]
+}
+
+model Feedback {
+  id        String         @id @default(cuid())
+  projectId String
+  title     String?        // short subject line (optional; used by the RN widget)
+  content   String         @db.Text
+  type      FeedbackType   @default(GENERAL)
+  status    FeedbackStatus @default(OPEN)
+  endUserId String?
+  upvotes   Int            @default(0)
+  downvotes Int            @default(0)
+  flagged   Boolean        @default(false)
+  metadata  Json?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  votes    Vote[]
+  comments Comment[]
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  feedbackId String
+  content    String   @db.Text
+  authorName String?  // display name shown in the SDK
+  isOwner    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+}
+
+model Vote {
+  id          String    @id @default(cuid())
+  feedbackId  String
+  value       VoteValue
+  endUserId   String?
+  fingerprint String?
+  createdAt   DateTime  @default(now())
+
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  // One vote per authenticated user per feedback item
+  @@unique([feedbackId, endUserId])
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE
+  GENERAL
+}
+
+enum FeedbackStatus {
+  PENDING
+  OPEN
+  IN_PROGRESS
+  DONE
+  CLOSED
+}
+
+enum VoteValue {
+  UP
+  DOWN
+}
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+}

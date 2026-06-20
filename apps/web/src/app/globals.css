@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  ::selection {
+    @apply bg-clay/20 text-ink;
+  }
+}
+
+@layer components {
+  /* Subtle dotted grid backdrop used behind hero sections */
+  .bg-grid {
+    background-image: radial-gradient(circle, #E0DDD3 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  /* Soft warm radial glow */
+  .bg-glow {
+    background: radial-gradient(60% 50% at 50% 0%, rgba(217,119,87,0.10) 0%, rgba(217,119,87,0) 70%);
+  }
+}
+
+/* Custom scrollbar to match the warm palette */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #F5F4EE;
+}
+::-webkit-scrollbar-thumb {
+  background: #DAD7CE;
+  border-radius: 999px;
+  border: 2px solid #F5F4EE;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C9C5BA;
+}

@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+dist
+.turbo
+build
+out
+
+# Environment — keep .env.example committed as a template
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea
+.vscode
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Prisma generated client (regenerated via postinstall)
+apps/web/src/generated
+
+# pnpm
+.pnpm-store
