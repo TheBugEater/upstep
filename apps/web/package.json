@@ -21,7 +21,7 @@
     "@upstep/types": "workspace:*",
     "bcryptjs": "^3.0.3",
     "nanoid": "^5.0.9",
-    "next": "15.1.6",
+    "next": "15.5.19",
     "next-auth": "^5.0.0-beta.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
