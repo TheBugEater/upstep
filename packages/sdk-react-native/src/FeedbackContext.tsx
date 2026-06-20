@@ -81,9 +81,11 @@ export function FeedbackProvider({
   );
 
   const vote = useCallback(async (feedbackId: string, value: VoteValue) => {
-    // Optimistic update: flip vote + re-sort with a smooth animation
+    // Capture snapshot for rollback, then animate into new sorted position
+    let snapshot: Feedback[] = [];
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setFeedItems((prev) => {
+      snapshot = prev;
       const updated = prev.map((f) => {
         if (f.id !== feedbackId) return f;
         const wasVoted = f.userVote === "UP";
@@ -96,10 +98,14 @@ export function FeedbackProvider({
       return [...updated].sort((a, b) => b.upvotes - a.upvotes);
     });
 
-    // Confirm with server, then silently sync
-    await client.vote(feedbackId, value);
-    await loadFeed();
-  }, [client, loadFeed]);
+    try {
+      await client.vote(feedbackId, value);
+    } catch {
+      // API failed — animate back to original order
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setFeedItems(snapshot);
+    }
+  }, [client]);
 
   const getItem = useCallback(
     (feedbackId: string) => client.getItem(feedbackId),
