@@ -7,7 +7,7 @@ export async function getProjectFromRequest(req: NextRequest) {
 
   return db.project.findUnique({
     where: { apiKey },
-    include: { owner: { select: { plan: true } } },
+    include: { owner: { select: { plan: true, email: true } } },
   });
 }
 

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getProjectFromRequest } from "@/lib/sdk-auth";
 import { getPlan } from "@/lib/plans";
 import { containsProfanity } from "@/lib/profanity";
+import { sendFeedbackNotification } from "@/lib/email";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -134,6 +135,20 @@ export async function POST(req: NextRequest) {
         : {}),
     },
   });
+
+  // Fire email notification — non-blocking, never fails the request
+  void sendFeedbackNotification({
+    toEmail: project.owner.email,
+    projectName: project.name,
+    projectId: project.id,
+    feedback: {
+      title: feedback.title ?? null,
+      content: feedback.content,
+      type: feedback.type,
+      flagged: feedback.flagged,
+      status: feedback.status,
+    },
+  }).catch(() => {});
 
   return NextResponse.json(feedback, { status: 201, headers: CORS });
 }
