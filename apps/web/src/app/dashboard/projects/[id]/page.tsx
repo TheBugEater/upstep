@@ -17,15 +17,25 @@ export default async function ProjectPage({
   if (!session?.user?.id) redirect("/login");
 
   const { id } = await params;
-  const { type, status, sort } = await searchParams;
+  const { type, sort } = await searchParams;
 
-  const project = await db.project.findFirst({
-    where: { id, ownerId: session.user.id },
+  // Allow access to both the project owner and invited members.
+  const project = await db.project.findUnique({
+    where: { id },
+    include: {
+      members: {
+        include: { user: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
   if (!project) notFound();
 
+  const isOwner = project.ownerId === session.user.id;
+  const isMember = project.members.some((m) => m.userId === session.user!.id);
+  if (!isOwner && !isMember) notFound();
+
   const [listFeedback, boardFeedback, pendingFeedback, completedFeedback, stats] = await Promise.all([
-    // Active items for the main list (OPEN + IN_PROGRESS only; DONE lives on the Completed tab).
     db.feedback.findMany({
       where: {
         projectId: id,
@@ -35,19 +45,16 @@ export default async function ProjectPage({
       orderBy: sort === "votes" ? { upvotes: "desc" } : { createdAt: "desc" },
       take: 100,
     }),
-    // Non-pending items for the board (Open / In progress / Done only).
     db.feedback.findMany({
       where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS", "DONE"] } },
       orderBy: { upvotes: "desc" },
       take: 300,
     }),
-    // Items awaiting moderation for the Pending tab.
     db.feedback.findMany({
       where: { projectId: id, status: "PENDING" },
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
-    // Resolved items for the Completed tab.
     db.feedback.findMany({
       where: {
         projectId: id,
@@ -68,6 +75,16 @@ export default async function ProjectPage({
   const [total, open, inProgress, pendingCount] = stats;
   const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
 
+  // Shape members for SettingsTab (owner first, then members by join date)
+  const ownerUser = await db.user.findUnique({
+    where: { id: project.ownerId },
+    select: { id: true, name: true, email: true },
+  });
+  const teamMembers = [
+    ...(ownerUser ? [{ ...ownerUser, role: "OWNER" as const }] : []),
+    ...project.members.map((m) => ({ ...m.user, role: "MEMBER" as const })),
+  ];
+
   return (
     <div className="min-h-screen bg-canvas">
       <DashboardHeader email={session.user.email} />
@@ -80,7 +97,6 @@ export default async function ProjectPage({
           ← All projects
         </Link>
 
-        {/* Header with inline stats */}
         <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
           <div>
             <h1 className="font-serif text-3xl tracking-tight text-ink">{project.name}</h1>
@@ -106,13 +122,15 @@ export default async function ProjectPage({
               )}
             </div>
           </div>
-          <SetupGuideButton apiKey={project.apiKey} baseUrl={baseUrl} />
+          {isOwner && <SetupGuideButton apiKey={project.apiKey} baseUrl={baseUrl} />}
         </div>
 
         <ProjectTabs
           projectId={id}
           apiKey={project.apiKey}
           moderationEnabled={project.moderationEnabled}
+          isOwner={isOwner}
+          teamMembers={teamMembers}
           listFeedback={listFeedback as never}
           boardFeedback={boardFeedback as never}
           pendingFeedback={pendingFeedback as never}
@@ -125,4 +143,3 @@ export default async function ProjectPage({
     </div>
   );
 }
-

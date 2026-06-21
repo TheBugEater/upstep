@@ -61,9 +61,10 @@ model User {
   stripeCustomerId     String? @unique
   stripeSubscriptionId String?
 
-  accounts Account[]
-  sessions Session[]
-  projects Project[]
+  accounts    Account[]
+  sessions    Session[]
+  projects    Project[]
+  memberships ProjectMember[]
 }
 
 model Project {
@@ -77,8 +78,9 @@ model Project {
   // When true, new feedback is held as PENDING until the owner approves it.
   moderationEnabled Boolean @default(true)
 
-  owner    User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner    User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   feedback Feedback[]
+  members  ProjectMember[]
 }
 
 model Feedback {
@@ -149,4 +151,22 @@ enum Plan {
   FREE
   PRO
   BUSINESS
+}
+
+enum MemberRole {
+  OWNER
+  MEMBER
+}
+
+model ProjectMember {
+  id        String     @id @default(cuid())
+  projectId String
+  userId    String
+  role      MemberRole @default(MEMBER)
+  createdAt DateTime   @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
 }

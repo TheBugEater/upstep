@@ -10,10 +10,19 @@ import { SettingsTab } from "@/components/dashboard/SettingsTab";
 type Tab = "feedback" | "completed" | "pending" | "settings";
 type FeedbackView = "list" | "board";
 
+export interface TeamMember {
+  id: string;
+  name: string | null;
+  email: string;
+  role: "OWNER" | "MEMBER";
+}
+
 interface Props {
   projectId: string;
   apiKey: string;
   moderationEnabled: boolean;
+  isOwner: boolean;
+  teamMembers: TeamMember[];
   /** Active items (OPEN + IN_PROGRESS) for the main list view. */
   listFeedback: Feedback[];
   /** Full active set (non-pending) for the board. */
@@ -31,6 +40,8 @@ export function ProjectTabs({
   projectId,
   apiKey,
   moderationEnabled,
+  isOwner,
+  teamMembers,
   listFeedback,
   boardFeedback,
   pendingFeedback,
@@ -143,6 +154,8 @@ export function ProjectTabs({
           projectId={projectId}
           apiKey={apiKey}
           moderationEnabled={moderationEnabled}
+          isOwner={isOwner}
+          teamMembers={teamMembers}
         />
       )}
     </div>

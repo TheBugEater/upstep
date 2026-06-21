@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getProjectAccess } from "@/lib/project-auth";
 
 export async function GET(
   req: NextRequest,
@@ -12,10 +13,8 @@ export async function GET(
   }
 
   const { id } = await params;
-  const project = await db.project.findFirst({
-    where: { id, ownerId: session.user.id },
-  });
-  if (!project) {
+  const access = await getProjectAccess(id, session.user.id);
+  if (!access) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

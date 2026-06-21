@@ -95,7 +95,7 @@ export const PLANS: Record<PlanId, Plan> = {
   BUSINESS: {
     id: "BUSINESS",
     name: "Business",
-    tagline: "For scale, security, and control.",
+    tagline: "For teams that ship together.",
     projectLimit: Infinity,
     feedbackLimit: Infinity,
     branding: false,
@@ -105,8 +105,7 @@ export const PLANS: Record<PlanId, Plan> = {
       "Unlimited projects",
       "Unlimited feedback items",
       "Team members & roles",
-      "SSO / SAML",
-      "REST API & webhooks",
+      "Email notifications",
       "Priority support",
     ],
   },
