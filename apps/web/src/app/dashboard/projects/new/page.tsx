@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useOnRamp } from "@onramp-sdk/react";
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const { step } = useOnRamp();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [limitHit, setLimitHit] = useState(false);
@@ -28,6 +30,7 @@ export default function NewProjectPage() {
     if (!res.ok) {
       const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
       if (data.code === "PROJECT_LIMIT") {
+        step("project_limit_hit");
         setLimitHit(true);
         setError(data.error ?? "You've reached your project limit.");
       } else {
@@ -38,6 +41,7 @@ export default function NewProjectPage() {
     }
 
     const project = (await res.json()) as { id: string; apiKey: string };
+    step("project_created");
     setCreated(project);
     setLoading(false);
   }
@@ -45,6 +49,7 @@ export default function NewProjectPage() {
   async function copyKey() {
     if (!created) return;
     await navigator.clipboard.writeText(created.apiKey);
+    step("api_key_copied");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

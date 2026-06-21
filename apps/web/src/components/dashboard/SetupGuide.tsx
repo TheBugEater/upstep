@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useOnRamp } from "@onramp-sdk/react";
 
 type FrameworkId = "react" | "js" | "script" | "native";
 
@@ -23,6 +24,7 @@ export function SetupGuideButton({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const { step } = useOnRamp();
 
   // Lock background scroll while the drawer is open.
   useEffect(() => {
@@ -45,7 +47,7 @@ export function SetupGuideButton({
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { step("setup_guide_opened"); setOpen(true); }}
         className="inline-flex items-center gap-2 bg-card border border-line rounded-full px-4 py-2 text-sm font-medium text-ink hover:bg-surface hover:border-line-strong transition shadow-soft"
       >
         <span className="text-clay">⚙</span>
@@ -92,6 +94,7 @@ export function SetupGuideButton({
 
 function SetupGuideContent({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
   const [fw, setFw] = useState<FrameworkId>("react");
+  const { step } = useOnRamp();
   const install = INSTALL[fw];
   const code = SNIPPETS[fw](apiKey, baseUrl);
 
@@ -102,7 +105,7 @@ function SetupGuideContent({ apiKey, baseUrl }: { apiKey: string; baseUrl: strin
         {FRAMEWORKS.map((f) => (
           <button
             key={f.id}
-            onClick={() => setFw(f.id)}
+            onClick={() => { step("framework_selected", { properties: { framework: f.id } }); setFw(f.id); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
               fw === f.id ? "bg-ink text-white" : "bg-surface text-muted hover:text-ink"
             }`}

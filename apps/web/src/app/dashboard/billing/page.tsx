@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { CheckoutButton } from "@/components/billing/CheckoutButton";
 import { ManageBillingButton } from "@/components/billing/ManageBillingButton";
+import { UpgradeSuccessBanner } from "@/components/billing/UpgradeSuccessBanner";
 import { CurrencySwitcher } from "@/components/billing/CurrencySwitcher";
 import { PLANS, PLAN_ORDER, getPlan, formatLimit, formatPrice, isUnlimited } from "@/lib/plans";
 import { detectCurrency } from "@/lib/currency";
@@ -52,11 +53,7 @@ export default async function BillingPage({
         <h1 className="font-serif text-3xl tracking-tight text-ink">Billing &amp; plan</h1>
         <p className="text-sm text-muted mt-1">Manage your subscription and see your usage.</p>
 
-        {upgraded && (
-          <div className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-            🎉 You&apos;re on <span className="font-medium">{current.name}</span> now — thanks for upgrading!
-          </div>
-        )}
+        {upgraded && <UpgradeSuccessBanner plan={current.name} />}
 
         {!enabled && (
           <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">

@@ -4,8 +4,10 @@ import { signIn } from "next-auth/react";
 import { Logo, LogoMark } from "@/components/Logo";
 import { BoardPreview } from "@/components/marketing/BoardPreview";
 import Link from "next/link";
+import { useOnRamp } from "@onramp-sdk/react";
 
 export default function LoginPage() {
+  const { step } = useOnRamp();
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Left — form */}
@@ -26,7 +28,7 @@ export default function LoginPage() {
 
             <div className="mt-8 space-y-3">
               <button
-                onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
+                onClick={() => { step("oauth_clicked", { properties: { provider: "github" } }); signIn("github", { callbackUrl: "/dashboard" }); }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-ink text-white rounded-xl text-sm font-medium hover:bg-ink-soft transition shadow-sm"
               >
                 <GitHubIcon />
@@ -34,7 +36,7 @@ export default function LoginPage() {
               </button>
 
               <button
-                onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                onClick={() => { step("oauth_clicked", { properties: { provider: "google" } }); signIn("google", { callbackUrl: "/dashboard" }); }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-card border border-line text-ink rounded-xl text-sm font-medium hover:bg-surface transition"
               >
                 <GoogleIcon />

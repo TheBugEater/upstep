@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Currency } from "@/lib/plans";
+import { useOnRamp } from "@onramp-sdk/react";
 
 export function CheckoutButton({
   planId,
@@ -16,10 +17,12 @@ export function CheckoutButton({
   className?: string;
 }) {
   const router = useRouter();
+  const { step } = useOnRamp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function start() {
+    step("upgrade_clicked", { properties: { plan: planId, currency } });
     setLoading(true);
     setError("");
     try {

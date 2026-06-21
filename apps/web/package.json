@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
+    "@onramp-sdk/react": "^0.1.4",
     "@prisma/client": "^6.2.1",
     "@upstep/types": "workspace:*",
     "bcryptjs": "^3.0.3",

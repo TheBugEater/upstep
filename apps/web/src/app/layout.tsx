@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { OnRampProvider } from "@onramp-sdk/react";
+import { OnRampRouteTracker } from "@onramp-sdk/react/next";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -30,7 +32,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <OnRampProvider
+          apiKey={process.env.NEXT_PUBLIC_ONRAMP_API_KEY ?? ""}
+          host="https://ingest.getonramp.dev"
+          appVersion="1.0.0"
+        >
+          <OnRampRouteTracker />
+          {children}
+        </OnRampProvider>
+      </body>
     </html>
   );
 }
