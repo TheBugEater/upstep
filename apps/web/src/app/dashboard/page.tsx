@@ -82,7 +82,9 @@ export default async function DashboardPage() {
                 </div>
 
                 <div className="mt-4 font-semibold text-ink">{p.name}</div>
-                <div className="mt-1 text-xs text-faint font-mono truncate">{p.apiKey}</div>
+                <div className="mt-1 text-xs text-faint">
+                  Created {new Date(p.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                </div>
 
                 <div className="mt-5 pt-4 border-t border-line flex items-center justify-between">
                   <span className="text-xs text-muted">Feedback</span>

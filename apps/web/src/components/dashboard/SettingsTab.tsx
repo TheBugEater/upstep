@@ -10,10 +10,10 @@ interface Props {
 
 export function SettingsTab({ projectId, apiKey: initialKey, moderationEnabled }: Props) {
   const [key, setKey] = useState(initialKey);
-  const [revealed, setRevealed] = useState(false);
   const [rotating, startRotate] = useTransition();
-  const [rotated, setRotated] = useState(false);
+  const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedNew, setCopiedNew] = useState(false);
   const [confirmRotate, setConfirmRotate] = useState(false);
 
   const [modOn, setModOn] = useState(moderationEnabled);
@@ -25,8 +25,7 @@ export function SettingsTab({ projectId, apiKey: initialKey, moderationEnabled }
       if (res.ok) {
         const data = (await res.json()) as { apiKey: string };
         setKey(data.apiKey);
-        setRevealed(true);
-        setRotated(true);
+        setNewKey(data.apiKey);
         setConfirmRotate(false);
       }
     });
@@ -36,6 +35,13 @@ export function SettingsTab({ projectId, apiKey: initialKey, moderationEnabled }
     await navigator.clipboard.writeText(key);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function copyNewKey() {
+    if (!newKey) return;
+    await navigator.clipboard.writeText(newKey);
+    setCopiedNew(true);
+    setTimeout(() => setCopiedNew(false), 2000);
   }
 
   async function toggleMod() {
@@ -50,7 +56,7 @@ export function SettingsTab({ projectId, apiKey: initialKey, moderationEnabled }
     });
   }
 
-  const maskedKey = key.slice(0, 8) + "•".repeat(Math.max(0, key.length - 8));
+  const maskedKey = key.slice(0, 12) + "•".repeat(Math.max(0, key.length - 12));
 
   return (
     <div className="space-y-6 max-w-xl">
@@ -58,20 +64,15 @@ export function SettingsTab({ projectId, apiKey: initialKey, moderationEnabled }
       <div className="rounded-2xl border border-line bg-card shadow-soft p-6">
         <h3 className="text-sm font-semibold text-ink mb-1">API Key</h3>
         <p className="text-xs text-muted mb-4">
-          Used in your SDK to send feedback to this project. Keep it secret — it authorises
-          writes on your behalf.
+          Used in your SDK to authorise writes to this project. The key is masked for security —
+          copy it when you need to use it.
         </p>
 
+        {/* Masked key + copy */}
         <div className="flex items-center gap-2 mb-4">
           <code className="flex-1 text-xs font-mono bg-surface border border-line rounded-xl px-4 py-3 text-ink-soft truncate">
-            {revealed ? key : maskedKey}
+            {maskedKey}
           </code>
-          <button
-            onClick={() => setRevealed((v) => !v)}
-            className="text-xs px-3 py-2 rounded-lg border border-line text-muted hover:text-ink hover:border-line-strong transition shrink-0"
-          >
-            {revealed ? "Hide" : "Reveal"}
-          </button>
           <button
             onClick={copyKey}
             className="text-xs px-3 py-2 rounded-lg border border-line text-muted hover:text-ink hover:border-line-strong transition shrink-0"
@@ -80,13 +81,33 @@ export function SettingsTab({ projectId, apiKey: initialKey, moderationEnabled }
           </button>
         </div>
 
-        {rotated && (
-          <div className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5 mb-4">
-            Key rotated — update your SDK config with the new key above. The old key is now
-            invalid.
+        {/* One-time new-key banner after rotation */}
+        {newKey && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
+            <p className="text-xs font-semibold text-amber-700 mb-2">
+              Save your new key — this is the only time it will be shown in full
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs font-mono bg-white border border-amber-200 rounded-lg px-3 py-2 text-ink break-all">
+                {newKey}
+              </code>
+              <button
+                onClick={copyNewKey}
+                className="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition shrink-0"
+              >
+                {copiedNew ? "Copied ✓" : "Copy"}
+              </button>
+            </div>
+            <button
+              onClick={() => setNewKey(null)}
+              className="mt-2 text-xs text-amber-600 hover:text-amber-800 transition"
+            >
+              I&apos;ve saved it — dismiss
+            </button>
           </div>
         )}
 
+        {/* Rotation confirm flow */}
         {confirmRotate ? (
           <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-100">
             <p className="text-xs text-red-700 flex-1">
