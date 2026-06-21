@@ -44,36 +44,42 @@ export function ProjectTabs({
 
   return (
     <div>
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 border-b border-line mb-6">
-        <TabBtn active={tab === "feedback"} onClick={() => setTab("feedback")}>
-          Feedback
-        </TabBtn>
-        <TabBtn active={tab === "completed"} onClick={() => setTab("completed")}>
-          Completed
-          {completedFeedback.length > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-green-100 text-green-700 text-[9px] font-bold">
-              {completedFeedback.length > 99 ? "99+" : completedFeedback.length}
-            </span>
-          )}
-        </TabBtn>
-        <TabBtn active={tab === "pending"} onClick={() => setTab("pending")}>
-          Pending review
-          {pendingCount > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-orange-500 text-white text-[9px] font-bold">
-              {pendingCount > 99 ? "99+" : pendingCount}
-            </span>
-          )}
-        </TabBtn>
-        <TabBtn active={tab === "settings"} onClick={() => setTab("settings")}>
-          Settings
-        </TabBtn>
+      {/* Tab bar — scrollable on mobile */}
+      <div className="relative mb-6">
+        <div className="absolute inset-x-0 bottom-0 border-b border-line" />
+        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-1 min-w-max">
+            <TabBtn active={tab === "feedback"} onClick={() => setTab("feedback")}>
+              Feedback
+            </TabBtn>
+            <TabBtn active={tab === "completed"} onClick={() => setTab("completed")}>
+              Completed
+              {completedFeedback.length > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-green-100 text-green-700 text-[9px] font-bold">
+                  {completedFeedback.length > 99 ? "99+" : completedFeedback.length}
+                </span>
+              )}
+            </TabBtn>
+            <TabBtn active={tab === "pending"} onClick={() => setTab("pending")}>
+              <span className="hidden sm:inline">Pending review</span>
+              <span className="sm:hidden">Pending</span>
+              {pendingCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-orange-500 text-white text-[9px] font-bold">
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
+            </TabBtn>
+            <TabBtn active={tab === "settings"} onClick={() => setTab("settings")}>
+              Settings
+            </TabBtn>
+          </div>
+        </div>
       </div>
 
       {/* Feedback tab — active items (Open + In progress) */}
       {tab === "feedback" && (
         <div>
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex flex-wrap items-center gap-3 mb-5">
             <div className="inline-flex gap-1 bg-card border border-line rounded-xl p-1">
               <ViewBtn active={view === "list"} onClick={() => setView("list")}>
                 ☰ List
@@ -155,7 +161,7 @@ function TabBtn({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 px-4 py-2.5 text-sm font-medium border-b-2 transition -mb-px ${
+      className={`inline-flex items-center gap-1 px-4 py-2.5 text-sm font-medium border-b-2 transition ${
         active
           ? "border-clay text-clay"
           : "border-transparent text-muted hover:text-ink hover:border-line-strong"

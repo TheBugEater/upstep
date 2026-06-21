@@ -171,7 +171,7 @@ export function FeedbackTable({ projectId, feedback, currentType, currentStatus,
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${TYPE_COLORS[f.type]}`}>{f.type}</span>
+                    <span className={`hidden sm:inline text-[10px] px-2 py-0.5 rounded-full font-medium border ${TYPE_COLORS[f.type]}`}>{f.type}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${STATUS_COLORS[f.status]}`}>{f.status.replace("_", " ")}</span>
                   </div>
                 </div>

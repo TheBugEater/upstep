@@ -225,12 +225,12 @@ function BoardDetail({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
-      {/* Backdrop */}
-      <div className="flex-1 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+      {/* Backdrop — full screen, behind the panel */}
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Panel */}
-      <div className="w-full max-w-md bg-canvas border-l border-line shadow-lift flex flex-col overflow-hidden">
+      {/* Panel — slides in from right, full width on mobile */}
+      <div className="absolute inset-y-0 right-0 w-full sm:max-w-md bg-canvas border-l border-line shadow-lift flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 h-14 border-b border-line shrink-0">
           <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${TYPE_COLORS[item.type]}`}>
