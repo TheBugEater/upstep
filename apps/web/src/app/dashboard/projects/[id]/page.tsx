@@ -89,39 +89,18 @@ export default async function ProjectPage({
     <div className="min-h-screen bg-canvas">
       <DashboardHeader email={session.user.email} />
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <Link
           href="/dashboard"
-          className="text-sm text-muted hover:text-ink transition inline-flex items-center gap-1.5 mb-5"
+          className="text-xs text-muted hover:text-ink transition inline-flex items-center gap-1 mb-3"
         >
           ← All projects
         </Link>
 
-        <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
-          <div>
-            <h1 className="font-serif text-3xl tracking-tight text-ink">{project.name}</h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-muted">
-              <span>
-                <span className="font-semibold text-ink">{total}</span> items
-              </span>
-              <span className="text-line">·</span>
-              <span>
-                <span className="font-semibold text-clay">{open}</span> open
-              </span>
-              <span className="text-line">·</span>
-              <span>
-                <span className="font-semibold text-ink">{inProgress}</span> in progress
-              </span>
-              {pendingCount > 0 && (
-                <>
-                  <span className="text-line">·</span>
-                  <span>
-                    <span className="font-semibold text-orange-500">{pendingCount}</span> pending review
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h1 className="font-serif text-2xl sm:text-3xl tracking-tight text-ink min-w-0 truncate">
+            {project.name}
+          </h1>
           {isOwner && <SetupGuideButton apiKey={project.apiKey} baseUrl={baseUrl} />}
         </div>
 
@@ -136,6 +115,7 @@ export default async function ProjectPage({
           pendingFeedback={pendingFeedback as never}
           completedFeedback={completedFeedback as never}
           pendingCount={pendingCount}
+          activeCount={open + inProgress}
           currentType={type ?? undefined}
           currentSort={sort ?? undefined}
         />

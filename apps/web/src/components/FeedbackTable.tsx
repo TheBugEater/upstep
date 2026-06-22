@@ -24,9 +24,10 @@ interface Props {
   currentType: string | undefined;
   currentStatus: string | undefined;
   currentSort: string | undefined;
+  lead?: React.ReactNode;
 }
 
-export function FeedbackTable({ projectId, feedback, currentType, currentStatus, currentSort }: Props) {
+export function FeedbackTable({ projectId, feedback, currentType, currentStatus, currentSort, lead }: Props) {
   const router = useRouter();
   const [items, setItems] = useState(feedback);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -101,7 +102,8 @@ export function FeedbackTable({ projectId, feedback, currentType, currentStatus,
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-4">
+        {lead}
         <div className="flex gap-1 bg-card border border-line rounded-xl p-1">
           <button
             onClick={() => router.push(buildUrl({ type: undefined }))}

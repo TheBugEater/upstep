@@ -32,6 +32,7 @@ interface Props {
   /** Resolved (DONE) items for the Completed tab. */
   completedFeedback: Feedback[];
   pendingCount: number;
+  activeCount: number;
   currentType: string | undefined;
   currentSort: string | undefined;
 }
@@ -47,21 +48,34 @@ export function ProjectTabs({
   pendingFeedback,
   completedFeedback,
   pendingCount,
+  activeCount,
   currentType,
   currentSort,
 }: Props) {
   const [tab, setTab] = useState<Tab>("feedback");
   const [view, setView] = useState<FeedbackView>("list");
 
+  const viewToggle = (
+    <div className="inline-flex gap-1 bg-card border border-line rounded-xl p-1 shrink-0">
+      <ViewBtn active={view === "list"} onClick={() => setView("list")}>☰ List</ViewBtn>
+      <ViewBtn active={view === "board"} onClick={() => setView("board")}>▦ Board</ViewBtn>
+    </div>
+  );
+
   return (
     <div>
       {/* Tab bar — scrollable on mobile */}
-      <div className="relative mb-6">
+      <div className="relative mb-4">
         <div className="absolute inset-x-0 bottom-0 border-b border-line" />
         <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="flex items-center gap-1 min-w-max">
             <TabBtn active={tab === "feedback"} onClick={() => setTab("feedback")}>
               Feedback
+              {activeCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-clay/15 text-clay text-[9px] font-bold">
+                  {activeCount > 99 ? "99+" : activeCount}
+                </span>
+              )}
             </TabBtn>
             <TabBtn active={tab === "completed"} onClick={() => setTab("completed")}>
               Completed
@@ -89,35 +103,24 @@ export function ProjectTabs({
 
       {/* Feedback tab — active items (Open + In progress) */}
       {tab === "feedback" && (
-        <div>
-          <div className="flex flex-wrap items-center gap-3 mb-5">
-            <div className="inline-flex gap-1 bg-card border border-line rounded-xl p-1">
-              <ViewBtn active={view === "list"} onClick={() => setView("list")}>
-                ☰ List
-              </ViewBtn>
-              <ViewBtn active={view === "board"} onClick={() => setView("board")}>
-                ▦ Board
-              </ViewBtn>
+        view === "list" ? (
+          <FeedbackTable
+            projectId={projectId}
+            feedback={listFeedback}
+            currentType={currentType}
+            currentStatus={undefined}
+            currentSort={currentSort}
+            lead={viewToggle}
+          />
+        ) : (
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              {viewToggle}
+              <span className="text-xs text-faint hidden sm:block">Drag cards between columns to change status</span>
             </div>
-            {view === "board" && (
-              <span className="text-xs text-faint hidden sm:block">
-                Drag cards between columns to change status
-              </span>
-            )}
-          </div>
-
-          {view === "list" ? (
-            <FeedbackTable
-              projectId={projectId}
-              feedback={listFeedback}
-              currentType={currentType}
-              currentStatus={undefined}
-              currentSort={currentSort}
-            />
-          ) : (
             <FeedbackBoard projectId={projectId} feedback={boardFeedback} />
-          )}
-        </div>
+          </div>
+        )
       )}
 
       {/* Completed tab — DONE items */}
