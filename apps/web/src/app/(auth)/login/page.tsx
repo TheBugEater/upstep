@@ -51,8 +51,11 @@ export default function LoginPage() {
             </div>
 
             <p className="mt-8 text-xs text-faint leading-relaxed">
-              By continuing you agree to our Terms of Service and Privacy
-              Policy. We&apos;ll never post anything without your permission.
+              By continuing you agree to our{" "}
+              <a href="/legal/terms" className="underline hover:text-muted transition">Terms of Service</a>
+              {" "}and{" "}
+              <a href="/legal/privacy" className="underline hover:text-muted transition">Privacy Policy</a>.
+              {" "}We&apos;ll never post anything without your permission.
             </p>
           </div>
         </div>

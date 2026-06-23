@@ -27,6 +27,12 @@ export const metadata: Metadata = {
   title: "Upstep — Feedback that moves you forward",
   description:
     "Drop the Upstep widget into your web or mobile app in minutes. Collect feedback, let users vote, and ship what matters.",
+  twitter: {
+    card: "summary_large_image",
+    title: "Upstep — Feedback that moves you forward",
+    description:
+      "Drop the Upstep widget into your web or mobile app in minutes. Collect feedback, let users vote, and ship what matters.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
