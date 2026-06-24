@@ -15,18 +15,19 @@ const ROWS = [
   { title: "Let users edit their submission", type: "GENERAL", status: "OPEN", votes: 21 },
 ] as const;
 
+// Exact colors from BoardPreview / Tailwind config
 type ColorSwatch = { text: string; bg: string; border: string };
 
 const TYPE_COLOR: Record<"FEATURE" | "BUG" | "GENERAL", ColorSwatch> = {
-  FEATURE: { text: "#3b82f6", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.22)" },
-  BUG:     { text: "#ef4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.22)"  },
-  GENERAL: { text: "#6b7280", bg: "rgba(107,114,128,0.1)", border: "rgba(107,114,128,0.2)" },
+  FEATURE: { text: "#2563EB", bg: "#EFF6FF", border: "#DBEAFE" },
+  BUG:     { text: "#DC2626", bg: "#FEF2F2", border: "#FEE2E2" },
+  GENERAL: { text: "#6B6860", bg: "#F5F4EE", border: "#E8E6DF" },
 };
 
 const STATUS_COLOR: Record<"OPEN" | "IN_PROGRESS" | "DONE", ColorSwatch> = {
-  OPEN:        { text: "#b45309", bg: "rgba(180,83,9,0.1)",    border: "rgba(180,83,9,0.22)"    },
-  IN_PROGRESS: { text: "#3b82f6", bg: "rgba(59,130,246,0.1)",  border: "rgba(59,130,246,0.22)"  },
-  DONE:        { text: "#22c55e", bg: "rgba(34,197,94,0.1)",   border: "rgba(34,197,94,0.22)"   },
+  OPEN:        { text: "#B45309", bg: "#FFFBEB", border: "#FDE68A" },
+  IN_PROGRESS: { text: "#2563EB", bg: "#EFF6FF", border: "#DBEAFE" },
+  DONE:        { text: "#15803D", bg: "#F0FDF4", border: "#DCFCE7" },
 };
 
 export default async function Image() {
@@ -93,33 +94,33 @@ export default async function Image() {
           </div>
         </div>
 
-        {/* Right: feedback list panel */}
+        {/* Right: feedback list panel — white card matching BoardPreview */}
         <div style={{ display: "flex", flexDirection: "column", flex: 1, paddingLeft: 48, position: "relative", zIndex: 1, justifyContent: "center" }}>
-          <div style={{ display: "flex", flexDirection: "column", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 18, overflow: "hidden", boxShadow: "0 0 0 1px rgba(0,0,0,0.5), 0 20px 40px rgba(0,0,0,0.55)" }}>
+          <div style={{ display: "flex", flexDirection: "column", background: "#FFFFFF", border: "1px solid #E8E6DF", borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 4px rgba(26,25,21,0.05), 0 20px 48px rgba(26,25,21,0.18)" }}>
 
             {/* Panel header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 18px", borderBottom: "1px solid #E8E6DF", background: "#FAF9F7" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 26, height: 26, borderRadius: 7, background: "rgba(240,120,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div style={{ width: 12, height: 12, background: "#F07800", borderRadius: 3 }} />
+                <div style={{ width: 26, height: 26, borderRadius: 8, background: "#FDF0EB", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 13, color: "#D97757" }}>&#9636;</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#EDECEA" }}>Mobile App</span>
-                  <span style={{ fontSize: 10, color: "#4A4945" }}>Feedback board</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#1A1915" }}>Mobile App</span>
+                  <span style={{ fontSize: 10, color: "#9B9890" }}>Feedback board</span>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} />
-                <span style={{ fontSize: 11, color: "#5E5D58" }}>Live</span>
+                <span style={{ fontSize: 11, color: "#6B6860" }}>Live</span>
               </div>
             </div>
 
             {/* Filter chips */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ background: "#F5F4F0", color: "#09080A", fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 7 }}>All</div>
-              <div style={{ background: "rgba(255,255,255,0.06)", color: "#6E6C66", fontSize: 10, fontWeight: 500, padding: "3px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.08)" }}>Features</div>
-              <div style={{ background: "rgba(255,255,255,0.06)", color: "#6E6C66", fontSize: 10, fontWeight: 500, padding: "3px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.08)" }}>Bugs</div>
-              <span style={{ marginLeft: "auto", fontSize: 10, color: "#4A4945" }}>Sorted by votes</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderBottom: "1px solid #E8E6DF" }}>
+              <span style={{ background: "#1A1915", color: "#FFFFFF", fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 7 }}>All</span>
+              <span style={{ background: "#F5F4EE", color: "#6B6860", fontSize: 10, fontWeight: 500, padding: "3px 10px", borderRadius: 7, border: "1px solid #E8E6DF" }}>Features</span>
+              <span style={{ background: "#F5F4EE", color: "#6B6860", fontSize: 10, fontWeight: 500, padding: "3px 10px", borderRadius: 7, border: "1px solid #E8E6DF" }}>Bugs</span>
+              <span style={{ marginLeft: "auto", fontSize: 10, color: "#9B9890" }}>Sorted by votes</span>
             </div>
 
             {/* Rows */}
@@ -129,22 +130,22 @@ export default async function Image() {
               return (
                 <div
                   key={i}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px", borderBottom: i < ROWS.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}
+                  style={{ display: "flex", alignItems: "center", gap: 13, padding: "10px 18px", borderBottom: i < ROWS.length - 1 ? "1px solid #E8E6DF" : "none" }}
                 >
-                  {/* Upvote block */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 38, minHeight: 40, borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", paddingTop: 4, paddingBottom: 4 }}>
-                    <span style={{ fontSize: 9, color: "#F07800", lineHeight: 1, marginBottom: 1 }}>+</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#EDECEA", lineHeight: 1 }}>{row.votes}</span>
+                  {/* Upvote block — same as BoardPreview */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 40, minHeight: 42, borderRadius: 10, border: "1px solid #E8E6DF", background: "#F5F4EE", paddingTop: 4, paddingBottom: 4 }}>
+                    <span style={{ fontSize: 10, color: "#D97757", lineHeight: 1, marginBottom: 2 }}>+</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#1A1915", lineHeight: 1 }}>{row.votes}</span>
                   </div>
 
                   {/* Text */}
                   <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "#CCCAC4", marginBottom: 5, overflow: "hidden" }}>{row.title}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "#1A1915", marginBottom: 5 }}>{row.title}</span>
                     <div style={{ display: "flex", gap: 5 }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: tc.text, background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 99, padding: "2px 7px", letterSpacing: "0.3px" }}>
+                      <span style={{ fontSize: 9, fontWeight: 600, color: tc.text, background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 99, padding: "2px 7px" }}>
                         {row.type}
                       </span>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: sc.text, background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 99, padding: "2px 7px", letterSpacing: "0.3px" }}>
+                      <span style={{ fontSize: 9, fontWeight: 600, color: sc.text, background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 99, padding: "2px 7px" }}>
                         {row.status.replace("_", " ")}
                       </span>
                     </div>
