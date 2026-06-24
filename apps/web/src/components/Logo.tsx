@@ -1,35 +1,16 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export function LogoMark({ size = 28 }: { size?: number }) {
   return (
-    <span
-      className="inline-flex items-center justify-center rounded-[10px] bg-clay shadow-sm"
-      style={{ width: size, height: size }}
-    >
-      <svg
-        width={size * 0.55}
-        height={size * 0.55}
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden
-      >
-        {/* upward step / chevron motif */}
-        <path
-          d="M4 16.5L9.5 11L13 14.5L20 7.5"
-          stroke="white"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M15 7.5H20V12.5"
-          stroke="white"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
+    <Image
+      src="/logo.png"
+      alt="Upstep"
+      width={size}
+      height={size}
+      className="rounded-[10px] shadow-sm"
+      priority
+    />
   );
 }
 
