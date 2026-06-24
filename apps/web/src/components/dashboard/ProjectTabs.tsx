@@ -6,8 +6,9 @@ import { FeedbackTable } from "@/components/FeedbackTable";
 import { FeedbackBoard } from "@/components/FeedbackBoard";
 import { PendingTab } from "@/components/dashboard/PendingTab";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
+import { IntegrationsTab } from "@/components/dashboard/IntegrationsTab";
 
-type Tab = "feedback" | "completed" | "pending" | "settings";
+type Tab = "feedback" | "completed" | "pending" | "integrations" | "settings";
 type FeedbackView = "list" | "board";
 
 export interface TeamMember {
@@ -22,6 +23,7 @@ interface Props {
   apiKey: string;
   moderationEnabled: boolean;
   isOwner: boolean;
+  ownerPlan: string;
   teamMembers: TeamMember[];
   /** Active items (OPEN + IN_PROGRESS) for the main list view. */
   listFeedback: Feedback[];
@@ -42,6 +44,7 @@ export function ProjectTabs({
   apiKey,
   moderationEnabled,
   isOwner,
+  ownerPlan,
   teamMembers,
   listFeedback,
   boardFeedback,
@@ -93,6 +96,9 @@ export function ProjectTabs({
                   {pendingCount > 99 ? "99+" : pendingCount}
                 </span>
               )}
+            </TabBtn>
+            <TabBtn active={tab === "integrations"} onClick={() => setTab("integrations")}>
+              Integrations
             </TabBtn>
             <TabBtn active={tab === "settings"} onClick={() => setTab("settings")}>
               Settings
@@ -149,6 +155,15 @@ export function ProjectTabs({
       {/* Pending review tab */}
       {tab === "pending" && (
         <PendingTab projectId={projectId} initialItems={pendingFeedback} />
+      )}
+
+      {/* Integrations tab */}
+      {tab === "integrations" && (
+        <IntegrationsTab
+          projectId={projectId}
+          isOwner={isOwner}
+          isPro={ownerPlan === "PRO" || ownerPlan === "BUSINESS"}
+        />
       )}
 
       {/* Settings tab */}

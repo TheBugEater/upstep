@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
+import { triggerIntegrations } from "@/lib/integrations";
 
 const updateSchema = z.object({
   status: z.enum(["PENDING", "OPEN", "IN_PROGRESS", "DONE", "CLOSED"]).optional(),
@@ -38,7 +39,18 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       ...(parsed.data.type ? { type: parsed.data.type } : {}),
       ...(parsed.data.status ? { status: parsed.data.status } : {}),
     },
+    include: { project: { select: { name: true } } },
   });
+
+  if (parsed.data.status && parsed.data.status !== feedback.status) {
+    void triggerIntegrations({
+      event: "STATUS_CHANGED",
+      project: { id, name: updated.project.name },
+      feedback: { id: fid, title: feedback.title, content: feedback.content, type: feedback.type },
+      oldStatus: feedback.status,
+      newStatus: parsed.data.status,
+    }).catch(() => {});
+  }
 
   return NextResponse.json(updated);
 }

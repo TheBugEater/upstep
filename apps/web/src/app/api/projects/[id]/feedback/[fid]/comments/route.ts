@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
+import { triggerIntegrations } from "@/lib/integrations";
 
 const commentSchema = z.object({
   content: z.string().min(1).max(2000),
@@ -42,7 +43,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const access = await getProjectAccess(id, session.user.id);
   if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const feedback = await db.feedback.findFirst({ where: { id: fid, projectId: id } });
+  const feedback = await db.feedback.findFirst({
+    where: { id: fid, projectId: id },
+    include: { project: { select: { name: true } } },
+  });
   if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json().catch(() => null);
@@ -59,6 +63,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       isOwner: true,
     },
   });
+
+  void triggerIntegrations({
+    event: "NEW_COMMENT",
+    project: { id, name: feedback.project.name },
+    feedback: { id: fid, title: feedback.title, content: feedback.content, type: feedback.type },
+    comment: { content: comment.content, authorName: comment.authorName },
+  }).catch(() => {});
 
   return NextResponse.json(comment, { status: 201 });
 }

@@ -78,9 +78,10 @@ model Project {
   // When true, new feedback is held as PENDING until the owner approves it.
   moderationEnabled Boolean @default(true)
 
-  owner    User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  feedback Feedback[]
-  members  ProjectMember[]
+  owner        User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  feedback     Feedback[]
+  members      ProjectMember[]
+  integrations Integration[]
 }
 
 model Feedback {
@@ -169,4 +170,30 @@ model ProjectMember {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
+}
+
+model Integration {
+  id         String             @id @default(cuid())
+  projectId  String
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type       IntegrationType
+  name       String?
+  webhookUrl String
+  events     IntegrationEvent[]
+  enabled    Boolean            @default(true)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+}
+
+enum IntegrationType {
+  SLACK
+  DISCORD
+  WEBHOOK
+}
+
+enum IntegrationEvent {
+  NEW_FEEDBACK
+  STATUS_CHANGED
+  NEW_VOTE
+  NEW_COMMENT
 }

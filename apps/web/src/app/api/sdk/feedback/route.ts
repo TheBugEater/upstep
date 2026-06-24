@@ -5,6 +5,7 @@ import { getProjectFromRequest } from "@/lib/sdk-auth";
 import { getPlan } from "@/lib/plans";
 import { containsProfanity } from "@/lib/profanity";
 import { sendFeedbackNotification } from "@/lib/email";
+import { triggerIntegrations } from "@/lib/integrations";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -144,7 +145,13 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Fire email notification — non-blocking, never fails the request
+  // Fire notifications — non-blocking, never fails the request
+  void triggerIntegrations({
+    event: "NEW_FEEDBACK",
+    project: { id: project.id, name: project.name },
+    feedback: { id: feedback.id, title: feedback.title, content: feedback.content, type: feedback.type, status: feedback.status, flagged: feedback.flagged },
+  }).catch(() => {});
+
   void sendFeedbackNotification({
     toEmail: project.owner.email,
     projectName: project.name,

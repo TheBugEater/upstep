@@ -23,7 +23,7 @@ export default async function ProjectPage({
   const project = await db.project.findUnique({
     where: { id },
     include: {
-      owner: { select: { id: true, name: true, email: true } },
+      owner: { select: { id: true, name: true, email: true, plan: true } },
       members: {
         include: { user: { select: { id: true, name: true, email: true } } },
         orderBy: { createdAt: "asc" },
@@ -72,8 +72,10 @@ export default async function ProjectPage({
 
   const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
 
+  const { plan: ownerPlan, ...ownerRest } = project.owner;
+
   const teamMembers = [
-    ...(project.owner ? [{ ...project.owner, role: "OWNER" as const }] : []),
+    ...(project.owner ? [{ ...ownerRest, role: "OWNER" as const }] : []),
     ...project.members.map((m) => ({ ...m.user, role: "MEMBER" as const })),
   ];
 
@@ -101,6 +103,7 @@ export default async function ProjectPage({
           apiKey={project.apiKey}
           moderationEnabled={project.moderationEnabled}
           isOwner={isOwner}
+          ownerPlan={ownerPlan}
           teamMembers={teamMembers}
           listFeedback={listFeedback as never}
           boardFeedback={boardFeedback as never}

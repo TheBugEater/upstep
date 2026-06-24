@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getProjectFromRequest, getFingerprint } from "@/lib/sdk-auth";
+import { triggerIntegrations } from "@/lib/integrations";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -73,6 +74,20 @@ export async function POST(
   }
 
   await adjustCounts(id, value, +1);
+
+  const updatedFeedback = await db.feedback.findUnique({
+    where: { id },
+    select: { id: true, title: true, content: true, type: true, upvotes: true, downvotes: true },
+  });
+  if (updatedFeedback) {
+    void triggerIntegrations({
+      event: "NEW_VOTE",
+      project: { id: project.id, name: project.name },
+      feedback: { ...updatedFeedback },
+      vote: { value },
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ ok: true }, { status: 201, headers: CORS });
 }
 
