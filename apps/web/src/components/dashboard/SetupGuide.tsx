@@ -489,22 +489,28 @@ function buildAiPrompt(framework: FrameworkId, apiKey: string, baseUrl: string):
 
   return `I want to integrate Upstep (a drop-in feedback & voting widget) into my ${
     framework === "native" ? "React Native" : framework === "next" ? "Next.js" : "web"
-  } app.
+  } app. Before writing any code, ask me these questions one at a time and wait for my answers:
 
-Facts:
-- Package: ${pkg}
-- Install: ${install}
-- My Upstep API key: ${apiKey}
-- My Upstep backend URL: ${baseUrl}
+1. Do users log in to this app? If yes, what does the signed-in user object look like and how do I access it (e.g. \`session.user.id\`, \`useUser().id\`, \`auth.currentUser.uid\`)?
+2. Where should the Feedback button appear — on every screen, or only specific pages?
+3. Do you want a floating button (default) or should it open from your own UI element like a menu item or settings row?
 
-Please add it as follows and change nothing else:
+Once I answer, wire up the integration using these details:
+
+Package: ${pkg}
+Install: ${install}
+API key: ${apiKey}
+Backend URL: ${baseUrl}
+
+Base integration to follow:
 
 ${SNIPPETS[framework](apiKey, baseUrl)}
 
-Notes:
-- Mount the provider/init once at the app root so the floating "Feedback" button shows on every screen.
-- Optional config: accentColor (hex string to match my brand), position ("left" | "right"), userId (pass my signed-in user's id to deduplicate their votes).
-- The widget talks to ${baseUrl}/api/sdk/* using the x-api-key header; no extra backend setup is needed.
+Rules to follow when writing the code:
+- If the user has a signed-in user id available, ALWAYS pass it as \`userId\` to the provider and call \`identify(userId)\` whenever auth state changes. This deduplicates votes per user and is strongly recommended.
+- ${framework === "next" ? 'Wrap the provider and widget in a "use client" component — they use browser APIs and cannot run in a Server Component.' : "Mount the provider once at the app root so the widget is available on every screen."}
+- The widget talks to ${baseUrl}/api/sdk/* using an x-api-key header. No extra backend setup is needed.
+- Change nothing else in the codebase — only add what is necessary to mount Upstep.
 
-After wiring it up, tell me where you placed it and how to test that feedback is being submitted.`;
+After wiring it up, tell me exactly where you placed the code and how to verify a test submission appears in the dashboard.`;
 }
