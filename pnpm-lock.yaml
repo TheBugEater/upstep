@@ -35,6 +35,9 @@ importers:
       '@prisma/client':
         specifier: ^6.2.1
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      '@upstep/js':
+        specifier: ^0.5.0
+        version: 0.5.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@upstep/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -1525,6 +1528,20 @@ packages:
 
   '@types/yargs@17.0.35':
     resolution: {integrity: sha512-qUHkeCyQFxMXg79wQfTtfndEC+N9ZZg76HJftDJp+qH2tV7Gj4OJi7l+PiWwJ+pWtW8GwSmqsDj/oymhrTWXjg==}
+
+  '@upstep/js@0.5.0':
+    resolution: {integrity: sha512-POwLLy24GnxFZXutNdt8iSIjldOGZH03ZD8oUS4tYvrtlkzp0vym45vsXkfqqZhJKkBLyOX6VSD4doxVMkRpRw==}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
+  '@upstep/types@0.5.0':
+    resolution: {integrity: sha512-jZ6Khdk8dDfAJhpck5iXRE0ukgDCPZylq7xA1COR9IJToOJg7bSxqVwgFILf1cyqSHVQ4wqQ3HGtdGXRcikD/w==}
 
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
@@ -4528,6 +4545,15 @@ snapshots:
   '@types/yargs@17.0.35':
     dependencies:
       '@types/yargs-parser': 21.0.3
+
+  '@upstep/js@0.5.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      '@upstep/types': 0.5.0
+    optionalDependencies:
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
+
+  '@upstep/types@0.5.0': {}
 
   '@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@22.19.21)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))':
     dependencies:

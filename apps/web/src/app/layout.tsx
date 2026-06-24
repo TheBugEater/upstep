@@ -3,6 +3,7 @@ import { Inter, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { OnRampProvider } from "@onramp-sdk/react";
 import { OnRampRouteTracker } from "@onramp-sdk/react/next";
+import { UpstepWidget } from "@/components/UpstepWidget";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           <OnRampRouteTracker />
           {children}
+          <UpstepWidget />
         </OnRampProvider>
       </body>
     </html>

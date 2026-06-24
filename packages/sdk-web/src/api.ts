@@ -1,6 +1,7 @@
 import type {
   Feedback,
   FeedbackListResponse,
+  FeedbackWithComments,
   SubmitFeedbackPayload,
   VotePayload,
   UpstepConfig,
@@ -72,6 +73,16 @@ export class UpstepApiClient {
       body: JSON.stringify({ value, endUserId: this.userId }),
     });
     if (!res.ok) throw new Error(`Upstep: ${res.status}`);
+  }
+
+  async getItem(feedbackId: string): Promise<FeedbackWithComments> {
+    const qs = new URLSearchParams();
+    if (this.userId) qs.set("endUserId", this.userId);
+    const res = await fetch(`${this.baseUrl}/api/sdk/feedback/${feedbackId}?${qs}`, {
+      headers: this.headers(),
+    });
+    if (!res.ok) throw new Error(`Upstep: ${res.status}`);
+    return res.json() as Promise<FeedbackWithComments>;
   }
 
   async removeVote(feedbackId: string): Promise<void> {

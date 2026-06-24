@@ -329,7 +329,12 @@ import { UpstepProvider, FeedbackWidget } from "@upstep/js/react";
 
 export function UpstepWidget() {
   return (
-    <UpstepProvider apiKey="${apiKey}" baseUrl="${baseUrl}">
+    <UpstepProvider
+      apiKey="${apiKey}"
+      baseUrl="${baseUrl}"
+      // theme="auto"      // "light" | "dark" | "auto" (default)
+      // accentColor="#D97757"
+    >
       <FeedbackWidget />
     </UpstepProvider>
   );
@@ -352,7 +357,12 @@ export default function RootLayout({ children }) {
 
 export default function App({ children }) {
   return (
-    <UpstepProvider apiKey="${apiKey}" baseUrl="${baseUrl}">
+    <UpstepProvider
+      apiKey="${apiKey}"
+      baseUrl="${baseUrl}"
+      // theme="auto"      // "light" | "dark" | "auto" (default)
+      // accentColor="#D97757"
+    >
       {children}
       <FeedbackWidget />
     </UpstepProvider>
@@ -381,9 +391,9 @@ export default function App() {
     <FeedbackProvider
       apiKey="${apiKey}"
       baseUrl="${baseUrl}"
-      // userId="user-123"   — tie votes to the logged-in user
+      // userId="user-123"    // tie votes to the logged-in user
       // accentColor="#D97757"
-      // theme="auto"        — "light" | "dark" | "auto"
+      // theme="auto"         // "light" | "dark" | "auto" (default)
     >
       {/* your app */}
       <FeedbackButton />

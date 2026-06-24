@@ -52,6 +52,7 @@ function buildStyles(accent: string, position: "left" | "right", p: Palette): st
   return `
 #upstep-root *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 #upstep-btn{position:fixed;bottom:24px;${side};z-index:9998;display:inline-flex;align-items:center;gap:7px;background:${accent};color:#fff;border:none;border-radius:9999px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(26,25,21,.18);transition:transform .15s,box-shadow .15s}
+#upstep-btn svg{width:16px;height:16px;flex-shrink:0}
 #upstep-btn:hover{transform:translateY(-1px);box-shadow:0 8px 26px rgba(26,25,21,.24)}
 #upstep-btn svg{width:16px;height:16px}
 #upstep-backdrop{position:fixed;inset:0;background:${p.overlay};backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;animation:upstep-fade .2s ease}
@@ -71,7 +72,8 @@ function buildStyles(accent: string, position: "left" | "right", p: Palette): st
 .upstep-form textarea::placeholder{color:${p.textFaint}}
 .upstep-form textarea:focus{border-color:${accent};background:${p.bg}}
 .upstep-type-row{display:flex;gap:7px;margin:12px 0 4px}
-.upstep-type-btn{flex:1;padding:8px 10px;border-radius:9px;border:1px solid ${p.border};background:${p.bg};color:${p.textSoft};font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s}
+.upstep-type-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 10px;border-radius:9px;border:1px solid ${p.border};background:${p.bg};color:${p.textSoft};font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s}
+.upstep-type-btn svg{width:12px;height:12px;flex-shrink:0}
 .upstep-type-btn:hover{border-color:${p.textFaint}}
 .upstep-type-btn.selected{background:${accent};color:#fff;border-color:${accent}}
 .upstep-submit{width:100%;padding:12px;background:${accent};color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;transition:filter .15s}
@@ -227,12 +229,17 @@ export class UpstepWidget {
 
   private renderSubmitForm(): string {
     const types: FeedbackType[] = ["BUG", "FEATURE", "GENERAL"];
-    const labels: Record<FeedbackType, string> = { BUG: "🐞 Bug", FEATURE: "✨ Feature", GENERAL: "💬 General" };
+    const labels: Record<FeedbackType, string> = { BUG: "Bug", FEATURE: "Feature", GENERAL: "General" };
+    const icons: Record<FeedbackType, string> = {
+      BUG: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="8" cy="10" rx="3.5" ry="4.5"/><path d="M8 5.5V4M5.5 6.5 3.5 5M10.5 6.5 12.5 5M4.5 10.5 2.5 10M11.5 10.5 13.5 10"/></svg>',
+      FEATURE: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M4.1 4.1l1 1M10.9 10.9l1 1M11.9 4.1l-1 1M5.1 10.9l-1 1"/><circle cx="8" cy="8" r="2.5"/></svg>',
+      GENERAL: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a2 2 0 0 1-2 2H5L2 14V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5z"/></svg>',
+    };
     return `
       <div class="upstep-form">
         <textarea id="upstep-textarea" placeholder="What's on your mind?" maxlength="2000"></textarea>
         <div class="upstep-type-row">
-          ${types.map((t) => `<button class="upstep-type-btn${this.selectedType === t ? " selected" : ""}" data-type="${t}">${labels[t]}</button>`).join("")}
+          ${types.map((t) => `<button class="upstep-type-btn${this.selectedType === t ? " selected" : ""}" data-type="${t}">${icons[t]}${labels[t]}</button>`).join("")}
         </div>
         <button class="upstep-submit" id="upstep-submit-btn">Send feedback</button>
         <div id="upstep-form-msg"></div>
@@ -298,7 +305,7 @@ export class UpstepWidget {
       try {
         await this.client.submitFeedback({ content, type: this.selectedType });
         textarea.value = "";
-        if (msg) msg.textContent = "Thanks — we got your feedback! 🎉";
+        if (msg) msg.textContent = "Feedback received. Thank you.";
         await this.fetchFeed();
       } catch {
         if (msg) msg.textContent = "Something went wrong. Please try again.";
