@@ -1,6 +1,6 @@
 {
   "name": "@upstep/js",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Upstep feedback widget for web apps",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

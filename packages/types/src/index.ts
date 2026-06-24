@@ -68,7 +68,7 @@ export interface UpstepConfig {
    * instead of waiting — see the docs.
    */
   userId?: string;
-  /** Base URL of your Upstep backend. Defaults to https://upstep.io */
+  /** Base URL of your Upstep backend. Defaults to https://upstep.dev */
   baseUrl?: string;
   /**
    * Accent color for the widget button, tabs, and highlights.

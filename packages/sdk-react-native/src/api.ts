@@ -13,7 +13,7 @@ export class UpstepApiClient {
   userId: string | undefined;
 
   constructor(config: UpstepConfig) {
-    this.baseUrl = (config.baseUrl ?? "https://upstep.io").replace(/\/$/, "");
+    this.baseUrl = (config.baseUrl ?? "https://upstep.dev").replace(/\/$/, "");
     this.apiKey = config.apiKey;
     if (config.userId !== undefined) this.userId = config.userId;
   }

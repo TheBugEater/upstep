@@ -96,9 +96,13 @@ export function UpstepProvider({
   }, [client, config.userId]);
 
   const loadFeed = useCallback(async () => {
-    const data = await client.listFeedback({ sort: "votes", limit: 20 });
-    setFeedItems(data.items);
-    setShowBranding(data.showBranding ?? true);
+    try {
+      const data = await client.listFeedback({ sort: "votes", limit: 20 });
+      setFeedItems(data.items);
+      setShowBranding(data.showBranding ?? true);
+    } catch {
+      // non-critical — feed unavailable, widget stays mounted
+    }
   }, [client]);
 
   useEffect(() => { loadFeed(); }, [loadFeed]);
@@ -112,8 +116,12 @@ export function UpstepProvider({
   }, [client, loadFeed]);
 
   const vote = useCallback(async (feedbackId: string, value: "UP" | "DOWN") => {
-    await client.vote(feedbackId, value);
-    await loadFeed();
+    try {
+      await client.vote(feedbackId, value);
+      await loadFeed();
+    } catch {
+      // vote failed silently
+    }
   }, [client, loadFeed]);
 
   const getItem = useCallback(
@@ -331,8 +339,7 @@ function FeedList({
   accent: string;
   p: Palette;
 }) {
-  const { feedItems } = useUpstep();
-  const { vote } = useUpstep();
+  const { feedItems, vote } = useUpstep();
 
   const items = tab === "done"
     ? feedItems.filter((f) => f.status === "DONE")
@@ -355,7 +362,7 @@ function FeedList({
     <>
       {items.map((f) => {
         const voted = f.userVote === "UP";
-        const title = (f as Feedback & { title?: string }).title ?? f.content;
+        const title = f.title ?? f.content;
         return (
           <div
             key={f.id}
@@ -419,6 +426,8 @@ function FeedDetail({ feedbackId, accent, p, font }: { feedbackId: string; accen
       await vote(item.id, "UP");
       const updated = await getItem(feedbackId);
       setItem(updated);
+    } catch {
+      // vote or refresh failed silently
     } finally {
       setVoting(false);
     }
@@ -428,7 +437,7 @@ function FeedDetail({ feedbackId, accent, p, font }: { feedbackId: string; accen
     return <div style={{ textAlign: "center", padding: "40px 0", color: p.textFaint, fontSize: 14 }}>Loading…</div>;
   }
 
-  const title = (item as FeedbackWithComments & { title?: string }).title;
+  const title = item.title;
 
   return (
     <div>
