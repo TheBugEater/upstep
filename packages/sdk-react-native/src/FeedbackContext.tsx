@@ -38,6 +38,7 @@ interface UpstepContextValue {
   identify: (userId: string | undefined) => void;
   accentColor: string;
   theme: "light" | "dark" | "auto";
+  showBranding: boolean;
 }
 
 const UpstepContext = createContext<UpstepContextValue | null>(null);
@@ -50,6 +51,7 @@ export function FeedbackProvider({
   const [feedItems, setFeedItems] = useState<Feedback[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [showBranding, setShowBranding] = useState(true);
 
   useEffect(() => {
     client.setUserId(config.userId);
@@ -60,6 +62,7 @@ export function FeedbackProvider({
     try {
       const data = await client.listFeedback({ sort: "votes", limit: 30 });
       setFeedItems(data.items);
+      setShowBranding(data.showBranding ?? true);
     } catch {
       // non-critical
     } finally {
@@ -132,6 +135,7 @@ export function FeedbackProvider({
         isOpen, openSheet, closeSheet, identify,
         accentColor: config.accentColor ?? DEFAULT_ACCENT,
         theme: config.theme ?? "auto",
+        showBranding,
       }}
     >
       {children}

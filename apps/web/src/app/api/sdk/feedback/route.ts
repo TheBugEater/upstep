@@ -58,6 +58,8 @@ export async function GET(req: NextRequest) {
 
   const hasMore = items.length > limit;
   const page = hasMore ? items.slice(0, limit) : items;
+  const nextCursor = hasMore ? (page[page.length - 1]?.id ?? null) : null;
+  const showBranding = getPlan(project.owner.plan).branding;
 
   // Attach the requesting user's vote to each item so the SDK can show voted state.
   if (endUserId && page.length > 0) {
@@ -67,16 +69,10 @@ export async function GET(req: NextRequest) {
     });
     const voteMap = new Map(votes.map((v) => [v.feedbackId, v.value]));
     const withVotes = page.map((i) => ({ ...i, userVote: voteMap.get(i.id) ?? null }));
-    return NextResponse.json(
-      { items: withVotes, nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null },
-      { headers: CORS }
-    );
+    return NextResponse.json({ items: withVotes, nextCursor, showBranding }, { headers: CORS });
   }
 
-  return NextResponse.json(
-    { items: page, nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null },
-    { headers: CORS }
-  );
+  return NextResponse.json({ items: page, nextCursor, showBranding }, { headers: CORS });
 }
 
 // ─── POST /api/sdk/feedback ───────────────────────────────────────────────────

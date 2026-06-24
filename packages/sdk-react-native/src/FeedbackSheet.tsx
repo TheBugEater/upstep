@@ -60,7 +60,7 @@ type Nav =
 // ─── FeedbackSheet ────────────────────────────────────────────────────────────
 
 export function FeedbackSheet() {
-  const { isOpen, closeSheet, accentColor, theme, loadFeed } = useUpstep();
+  const { isOpen, closeSheet, accentColor, theme, loadFeed, showBranding } = useUpstep();
   const scheme = useColorScheme();
   const isDark = theme === "dark" || (theme === "auto" && scheme === "dark");
   const p = isDark ? DARK : LIGHT;
@@ -193,19 +193,21 @@ export function FeedbackSheet() {
             )}
           </ScrollView>
 
-          {/* Branding + safe-area bottom padding in one strip */}
-          <TouchableOpacity
-            onPress={() => Linking.openURL("https://upstep.dev")}
-            activeOpacity={0.6}
-            style={[
-              styles.poweredBy,
-              { borderTopColor: p.border, paddingBottom: insets.bottom + 10, backgroundColor: p.bg },
-            ]}
-          >
-            <Text style={[styles.poweredByText, { color: p.textFaint }]}>
-              Powered by <Text style={{ fontWeight: "700" }}>Upstep.dev</Text>
-            </Text>
-          </TouchableOpacity>
+          {/* Branding — hidden for Business plan */}
+          {showBranding && (
+            <TouchableOpacity
+              onPress={() => Linking.openURL("https://upstep.dev")}
+              activeOpacity={0.6}
+              style={[
+                styles.poweredBy,
+                { borderTopColor: p.border, paddingBottom: insets.bottom + 10, backgroundColor: p.bg },
+              ]}
+            >
+              <Text style={[styles.poweredByText, { color: p.textFaint }]}>
+                Powered by <Text style={{ fontWeight: "700" }}>Upstep.dev</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </KeyboardAvoidingView>
     </Modal>

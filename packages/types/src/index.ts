@@ -109,6 +109,8 @@ export interface VotePayload {
 export interface FeedbackListResponse {
   items: Feedback[];
   nextCursor: string | null;
+  /** Whether the "Powered by Upstep" badge should be shown — false for Business plan. */
+  showBranding: boolean;
 }
 
 export interface ApiError {

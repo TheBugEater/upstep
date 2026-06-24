@@ -82,7 +82,7 @@ export const PLANS: Record<PlanId, Plan> = {
     tagline: "For teams shipping real products.",
     projectLimit: 10,
     feedbackLimit: 5_000,
-    branding: false,
+    branding: true,
     stripePriceId: process.env.STRIPE_PRICE_PRO,
     popular: true,
     features: [
@@ -104,6 +104,7 @@ export const PLANS: Record<PlanId, Plan> = {
       "Everything in Pro",
       "Unlimited projects",
       "Unlimited feedback items",
+      "Remove Upstep branding",
       "Priority support",
     ],
   },
