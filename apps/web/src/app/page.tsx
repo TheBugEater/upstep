@@ -66,7 +66,7 @@ function Hero() {
             </div>
 
             <p className="mt-6 text-xs text-faint">
-              Free to start · No credit card · 2-line integration
+              Free plan available · 2-line integration
             </p>
           </div>
 
