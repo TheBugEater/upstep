@@ -11,15 +11,13 @@ export default async function ProjectPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ type?: string; status?: string; sort?: string }>;
+  searchParams: Promise<Record<string, string>>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
   const { id } = await params;
-  const { type, sort, status } = await searchParams;
-  // Only allow valid list-view statuses; DONE is handled by the Completed tab
-  const activeStatus = status === "OPEN" || status === "IN_PROGRESS" ? status : undefined;
+  await searchParams; // consumed to satisfy Next.js dynamic rendering
 
   // Allow access to both the project owner and invited members.
   const project = await db.project.findUnique({
@@ -40,13 +38,9 @@ export default async function ProjectPage({
 
   const [listFeedback, boardFeedback, pendingFeedback, completedFeedback, openCount, inProgressCount, pendingCount] = await Promise.all([
     db.feedback.findMany({
-      where: {
-        projectId: id,
-        status: activeStatus ? { equals: activeStatus as never } : { in: ["OPEN", "IN_PROGRESS"] },
-        ...(type ? { type: type as never } : {}),
-      },
-      orderBy: sort === "votes" ? { upvotes: "desc" } : { createdAt: "desc" },
-      take: 100,
+      where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS"] } },
+      orderBy: { createdAt: "desc" },
+      take: 200,
     }),
     db.feedback.findMany({
       where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS", "DONE"] } },
@@ -59,13 +53,9 @@ export default async function ProjectPage({
       take: 100,
     }),
     db.feedback.findMany({
-      where: {
-        projectId: id,
-        status: "DONE",
-        ...(type ? { type: type as never } : {}),
-      },
-      orderBy: sort === "votes" ? { upvotes: "desc" } : { createdAt: "desc" },
-      take: 100,
+      where: { projectId: id, status: "DONE" },
+      orderBy: { createdAt: "desc" },
+      take: 200,
     }),
     db.feedback.count({ where: { projectId: id, status: "OPEN" } }),
     db.feedback.count({ where: { projectId: id, status: "IN_PROGRESS" } }),
@@ -113,9 +103,6 @@ export default async function ProjectPage({
           completedFeedback={completedFeedback as never}
           pendingCount={pendingCount}
           activeCount={openCount + inProgressCount}
-          currentType={type ?? undefined}
-          currentStatus={activeStatus}
-          currentSort={sort ?? undefined}
         />
       </div>
     </div>

@@ -35,9 +35,6 @@ interface Props {
   completedFeedback: Feedback[];
   pendingCount: number;
   activeCount: number;
-  currentType: string | undefined;
-  currentStatus: string | undefined;
-  currentSort: string | undefined;
 }
 
 export function ProjectTabs({
@@ -53,9 +50,6 @@ export function ProjectTabs({
   completedFeedback,
   pendingCount,
   activeCount,
-  currentType,
-  currentStatus,
-  currentSort,
 }: Props) {
   const [tab, setTab] = useState<Tab>("feedback");
   const [view, setView] = useState<FeedbackView>("list");
@@ -115,9 +109,6 @@ export function ProjectTabs({
           <FeedbackTable
             projectId={projectId}
             feedback={listFeedback}
-            currentType={currentType}
-            currentStatus={currentStatus}
-            currentSort={currentSort}
             lead={viewToggle}
           />
         ) : (
@@ -146,9 +137,7 @@ export function ProjectTabs({
             <FeedbackTable
               projectId={projectId}
               feedback={completedFeedback}
-              currentType={currentType}
-              currentStatus="DONE"
-              currentSort={currentSort}
+              showStatusFilter={false}
             />
           )}
         </div>

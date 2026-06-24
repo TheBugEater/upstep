@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
 import type { Comment, Feedback, FeedbackStatus, FeedbackType } from "@upstep/types";
 
 const TYPE_COLORS: Record<FeedbackType, string> = {
@@ -21,32 +20,48 @@ const STATUS_COLORS: Record<FeedbackStatus, string> = {
 interface Props {
   projectId: string;
   feedback: Feedback[];
-  currentType: string | undefined;
-  currentStatus: string | undefined;
-  currentSort: string | undefined;
+  /** Pass false to hide the Open/In Progress status filter (e.g. Completed tab). */
+  showStatusFilter?: boolean;
   lead?: React.ReactNode;
 }
 
-export function FeedbackTable({ projectId, feedback, currentType, currentStatus, currentSort, lead }: Props) {
-  const router = useRouter();
+type SortMode = "newest" | "votes";
+
+const TYPES: FeedbackType[] = ["BUG", "FEATURE", "GENERAL"];
+const ACTIVE_STATUSES: FeedbackStatus[] = ["OPEN", "IN_PROGRESS"];
+
+export function FeedbackTable({ projectId, feedback, showStatusFilter = true, lead }: Props) {
   const [items, setItems] = useState(feedback);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  // Re-sync items whenever the server returns new filtered data
-  useEffect(() => {
-    setItems(feedback);
-    setExpanded(null);
-  }, [feedback]);
+  // Client-side filter state — instant, no network round-trip
+  const [filterType, setFilterType] = useState<FeedbackType | "ALL">("ALL");
+  const [filterStatus, setFilterStatus] = useState<FeedbackStatus | "ALL">("ALL");
+  const [sortBy, setSortBy] = useState<SortMode>("newest");
+
   const [commentsByFid, setCommentsByFid] = useState<Record<string, Comment[]>>({});
   const [inputByFid, setInputByFid] = useState<Record<string, string>>({});
   const [postingFid, setPostingFid] = useState<string | null>(null);
 
-  function buildUrl(overrides: Record<string, string | undefined>) {
-    const params = new URLSearchParams();
-    const merged = { type: currentType, status: currentStatus, sort: currentSort, ...overrides };
-    Object.entries(merged).forEach(([k, v]) => { if (v) params.set(k, v); });
-    return `/dashboard/projects/${projectId}?${params}`;
-  }
+  // Re-sync when server passes new data (e.g. tab switch / page nav)
+  useEffect(() => {
+    setItems(feedback);
+    setExpanded(null);
+  }, [feedback]);
+
+  // Derive filtered + sorted view — runs in-memory, no fetches
+  const displayedItems = useMemo(() => {
+    let result = items;
+    if (filterType !== "ALL") result = result.filter((f) => f.type === filterType);
+    if (filterStatus !== "ALL") result = result.filter((f) => f.status === filterStatus);
+    return sortBy === "votes"
+      ? [...result].sort((a, b) => b.upvotes - a.upvotes)
+      : [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [items, filterType, filterStatus, sortBy]);
+
+  // Counts for status badge hints
+  const openCount = useMemo(() => items.filter((f) => f.status === "OPEN").length, [items]);
+  const inProgressCount = useMemo(() => items.filter((f) => f.status === "IN_PROGRESS").length, [items]);
 
   async function toggleExpanded(id: string) {
     if (expanded === id) { setExpanded(null); return; }
@@ -100,9 +115,6 @@ export function FeedbackTable({ projectId, feedback, currentType, currentStatus,
     }
   }
 
-  const TYPES: FeedbackType[] = ["BUG", "FEATURE", "GENERAL"];
-  const STATUSES: FeedbackStatus[] = ["OPEN", "IN_PROGRESS"];
-
   const activeBtn = "bg-ink text-white";
   const inactiveBtn = "bg-card text-muted hover:text-ink";
 
@@ -110,51 +122,65 @@ export function FeedbackTable({ projectId, feedback, currentType, currentStatus,
     <div>
       <div className="flex flex-wrap gap-2 mb-4">
         {lead}
+
+        {/* Type filter */}
         <div className="flex gap-1 bg-card border border-line rounded-xl p-1">
           <button
-            onClick={() => router.push(buildUrl({ type: undefined }))}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${!currentType ? activeBtn : inactiveBtn}`}
+            onClick={() => setFilterType("ALL")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${filterType === "ALL" ? activeBtn : inactiveBtn}`}
           >
             All
           </button>
           {TYPES.map((t) => (
             <button
               key={t}
-              onClick={() => router.push(buildUrl({ type: currentType === t ? undefined : t }))}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${currentType === t ? activeBtn : inactiveBtn}`}
+              onClick={() => setFilterType(filterType === t ? "ALL" : t)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${filterType === t ? activeBtn : inactiveBtn}`}
             >
               {t.charAt(0) + t.slice(1).toLowerCase()}
             </button>
           ))}
         </div>
 
-        <div className="flex gap-1 bg-card border border-line rounded-xl p-1">
-          {STATUSES.map((s) => (
-            <button
-              key={s}
-              onClick={() => router.push(buildUrl({ status: currentStatus === s ? undefined : s }))}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${currentStatus === s ? activeBtn : inactiveBtn}`}
-            >
-              {s.replace("_", " ").charAt(0) + s.replace("_", " ").slice(1).toLowerCase()}
-            </button>
-          ))}
-        </div>
+        {/* Status filter — hidden for Completed tab */}
+        {showStatusFilter && (
+          <div className="flex gap-1 bg-card border border-line rounded-xl p-1">
+            {ACTIVE_STATUSES.map((s) => {
+              const count = s === "OPEN" ? openCount : inProgressCount;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(filterStatus === s ? "ALL" : s)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${filterStatus === s ? activeBtn : inactiveBtn}`}
+                >
+                  {s === "IN_PROGRESS" ? "In progress" : "Open"}
+                  {count > 0 && (
+                    <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterStatus === s ? "bg-white/20 text-white" : "bg-line text-faint"}`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
+        {/* Sort toggle */}
         <button
-          onClick={() => router.push(buildUrl({ sort: currentSort === "votes" ? undefined : "votes" }))}
-          className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${currentSort === "votes" ? "bg-ink text-white border-transparent" : "bg-card text-muted border-line hover:text-ink"}`}
+          onClick={() => setSortBy(sortBy === "votes" ? "newest" : "votes")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${sortBy === "votes" ? "bg-ink text-white border-transparent" : "bg-card text-muted border-line hover:text-ink"}`}
         >
-          {currentSort === "votes" ? "Sorted by votes" : "Sorted by newest"}
+          {sortBy === "votes" ? "Top voted" : "Newest"}
         </button>
       </div>
 
-      {items.length === 0 ? (
+      {displayedItems.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line-strong bg-card/50 text-center py-20 text-muted text-sm">
-          No feedback matches these filters.
+          {items.length === 0 ? "No feedback yet." : "No feedback matches these filters."}
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((f) => {
+          {displayedItems.map((f) => {
             const title = f.title ?? f.content;
             const hasDesc = Boolean(f.title);
             const itemComments = commentsByFid[f.id] ?? [];
@@ -193,7 +219,7 @@ export function FeedbackTable({ projectId, feedback, currentType, currentStatus,
                     {f.status === "PENDING" && (
                       <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-orange-50 border border-orange-100">
                         <span className="text-xs text-orange-700 font-medium flex-1">
-                          {f.flagged ? "⚑ Flagged for profanity. Review before approving." : "Awaiting moderation review."}
+                          {f.flagged ? "Flagged for profanity. Review before approving." : "Awaiting moderation review."}
                         </span>
                         <button
                           onClick={() => updateStatus(f.id, "OPEN")}
@@ -216,15 +242,21 @@ export function FeedbackTable({ projectId, feedback, currentType, currentStatus,
 
                     <div className="flex flex-wrap items-center gap-2 mb-5">
                       <span className="text-xs text-muted font-medium">Status:</span>
-                      {STATUSES.map((s) => (
+                      {ACTIVE_STATUSES.map((s) => (
                         <button
                           key={s}
                           onClick={() => updateStatus(f.id, s)}
                           className={`text-xs px-2.5 py-1 rounded-full font-medium transition border ${f.status === s ? STATUS_COLORS[s] : "bg-card text-muted border-line hover:border-line-strong"}`}
                         >
-                          {s.replace("_", " ")}
+                          {s === "IN_PROGRESS" ? "In progress" : "Open"}
                         </button>
                       ))}
+                      <button
+                        onClick={() => updateStatus(f.id, "DONE")}
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition border ${f.status === "DONE" ? STATUS_COLORS["DONE"] : "bg-card text-muted border-line hover:border-line-strong"}`}
+                      >
+                        Done
+                      </button>
                       <button
                         onClick={() => deleteFeedback(f.id)}
                         className="ml-auto text-xs text-red-400 hover:text-red-600 transition"
