@@ -4,7 +4,7 @@ import { Footer } from "@/components/marketing/Footer";
 import { Pricing } from "@/components/marketing/Pricing";
 
 export const metadata: Metadata = {
-  title: "Pricing — Upstep",
+  title: "Pricing | Upstep",
   description: "Simple, scalable pricing for feedback that moves you forward.",
 };
 

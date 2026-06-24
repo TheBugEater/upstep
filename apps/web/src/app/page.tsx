@@ -35,7 +35,7 @@ function Hero() {
           <div className="animate-fade-up">
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-clay" />
-              Now live — drop-in feedback for any app
+              Now live: drop-in feedback for any app
             </span>
 
             <h1 className="mt-6 font-serif text-5xl md:text-[3.75rem] leading-[1.05] tracking-tight text-ink">
@@ -111,7 +111,7 @@ function Features() {
       <SectionHeading
         eyebrow="Everything you need"
         title="A feedback loop that runs itself"
-        sub="From the moment a user taps “send” to the moment you ship the fix — Upstep handles the whole journey."
+        sub={`From the moment a user taps “send” to the moment you ship the fix, Upstep handles the whole journey.`}
       />
 
       <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -179,7 +179,7 @@ function Integrate() {
           </h2>
           <p className="mt-5 text-muted leading-relaxed">
             Typed SDKs, framework-native components, and a tiny footprint. Pick
-            your platform and ship — Upstep handles storage, dedupe, and the UI.
+            your platform and ship. Upstep handles storage, dedupe, and the UI.
           </p>
 
           <ul className="mt-8 space-y-4">

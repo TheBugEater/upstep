@@ -97,6 +97,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400, headers: CORS });
   }
 
+  // Burst guard: no more than 10 submissions per project in any 60-second window.
+  const since = new Date(Date.now() - 60_000);
+  const recentCount = await db.feedback.count({
+    where: { projectId: project.id, createdAt: { gte: since } },
+  });
+  if (recentCount >= 10) {
+    return NextResponse.json(
+      { error: "Too many submissions. Please slow down." },
+      { status: 429, headers: { ...CORS, "Retry-After": "60" } }
+    );
+  }
+
   // Enforce the per-project feedback cap for the owner's plan.
   const plan = getPlan(project.owner.plan);
   if (Number.isFinite(plan.feedbackLimit)) {

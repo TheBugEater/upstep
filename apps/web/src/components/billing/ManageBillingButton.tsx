@@ -18,7 +18,7 @@ export function ManageBillingButton({ className }: { className?: string }) {
       }
       setError(data.error ?? "Could not open billing portal.");
     } catch {
-      setError("Network error — please try again.");
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }

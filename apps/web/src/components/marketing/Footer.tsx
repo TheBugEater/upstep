@@ -27,8 +27,8 @@ export function Footer() {
             title="Resources"
             links={[
               ["Documentation", "#integrate"],
-              ["npm — @upstep/js", "https://www.npmjs.com/package/@upstep/js"],
-              ["npm — React Native", "https://www.npmjs.com/package/@upstep/react-native"],
+              ["@upstep/js on npm", "https://www.npmjs.com/package/@upstep/js"],
+              ["@upstep/react-native on npm", "https://www.npmjs.com/package/@upstep/react-native"],
             ]}
           />
           <FooterCol

@@ -3,7 +3,7 @@ import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Upstep",
+  title: "Privacy Policy | Upstep",
   description: "How Upstep collects, uses, and protects your information.",
 };
 
@@ -51,10 +51,10 @@ export default function PrivacyPage() {
           <Section title="3. Third-party services">
             <p>We use the following third-party services to operate Upstep:</p>
             <ul>
-              <li><strong>GitHub / Google</strong> — OAuth authentication</li>
-              <li><strong>Stripe</strong> — payment processing and subscription management</li>
-              <li><strong>Resend</strong> — transactional email delivery</li>
-              <li><strong>Railway / Neon</strong> — cloud infrastructure and database hosting</li>
+              <li><strong>GitHub / Google</strong>: OAuth authentication</li>
+              <li><strong>Stripe</strong>: payment processing and subscription management</li>
+              <li><strong>Resend</strong>: transactional email delivery</li>
+              <li><strong>Railway / Neon</strong>: cloud infrastructure and database hosting</li>
             </ul>
             <p>Each service has its own privacy policy governing how they handle data.</p>
           </Section>

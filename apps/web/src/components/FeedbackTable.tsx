@@ -187,7 +187,7 @@ export function FeedbackTable({ projectId, feedback, currentType, currentStatus,
                     {f.status === "PENDING" && (
                       <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-orange-50 border border-orange-100">
                         <span className="text-xs text-orange-700 font-medium flex-1">
-                          {f.flagged ? "⚑ Flagged for profanity — review before approving." : "Awaiting moderation review."}
+                          {f.flagged ? "⚑ Flagged for profanity. Review before approving." : "Awaiting moderation review."}
                         </span>
                         <button
                           onClick={() => updateStatus(f.id, "OPEN")}

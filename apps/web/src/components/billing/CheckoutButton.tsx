@@ -44,7 +44,7 @@ export function CheckoutButton({
       }
       setError(data.error ?? "Could not start checkout.");
     } catch {
-      setError("Network error — please try again.");
+      setError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }

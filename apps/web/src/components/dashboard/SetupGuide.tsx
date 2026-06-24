@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useOnRamp } from "@onramp-sdk/react";
 
-type FrameworkId = "react" | "js" | "script" | "native";
+type FrameworkId = "react" | "next" | "js" | "script" | "native";
 
 const FRAMEWORKS: { id: FrameworkId; label: string }[] = [
   { id: "react", label: "React" },
+  { id: "next", label: "Next.js" },
   { id: "js", label: "Vanilla JS" },
   { id: "script", label: "Script tag" },
   { id: "native", label: "React Native" },
@@ -123,7 +124,13 @@ function SetupGuideContent({ apiKey, baseUrl }: { apiKey: string; baseUrl: strin
 
       <Step n={install ? 2 : 1} title={fw === "script" ? "Drop in the script" : "Initialize with your API key"}>
         <CodeBlock code={code} />
-        {fw !== "script" && (
+        {fw === "next" && (
+          <p className="text-xs text-muted mt-2">
+            The <Code>"use client"</Code> directive is required because the widget uses browser APIs.
+            Wrap it in its own file so your layout and page files can stay Server Components.
+          </p>
+        )}
+        {fw !== "script" && fw !== "next" && (
           <p className="text-xs text-muted mt-2">
             The floating <span className="font-medium text-ink-soft">Feedback</span> button mounts
             automatically. Pass <Code>userId</Code> to dedupe votes per signed-in user, or{" "}
@@ -171,7 +178,7 @@ function Patterns({ framework }: { framework: FrameworkId }) {
             </p>
             <p className="text-xs text-muted mb-2">
               Ties votes to a user so they vote once per item. Works even if login resolves after
-              mount — no need to delay mounting.
+              mount, no need to delay mounting.
             </p>
             <CodeBlock code={identify} />
           </div>
@@ -221,7 +228,7 @@ function AiPrompt({
         <div>
           <div className="text-sm font-semibold text-ink">Building with AI?</div>
           <div className="text-xs text-muted mt-0.5">
-            Copy a ready-made prompt for Cursor, Claude Code, Copilot, or any coding assistant — it
+            Copy a ready-made prompt for Cursor, Claude Code, Copilot, or any coding assistant. It
             includes your API key and exact integration steps.
           </div>
         </div>
@@ -307,6 +314,7 @@ function Code({ children }: { children: React.ReactNode }) {
 
 const INSTALL: Record<FrameworkId, string | null> = {
   react: "npm install @upstep/js",
+  next: "npm install @upstep/js",
   js: "npm install @upstep/js",
   script: null,
   native:
@@ -314,6 +322,32 @@ const INSTALL: Record<FrameworkId, string | null> = {
 };
 
 const SNIPPETS: Record<FrameworkId, (apiKey: string, baseUrl: string) => string> = {
+  next: (apiKey, baseUrl) => `// components/UpstepWidget.tsx
+"use client";
+
+import { UpstepProvider, FeedbackWidget } from "@upstep/js/react";
+
+export function UpstepWidget() {
+  return (
+    <UpstepProvider apiKey="${apiKey}" baseUrl="${baseUrl}">
+      <FeedbackWidget />
+    </UpstepProvider>
+  );
+}
+
+// app/layout.tsx
+import { UpstepWidget } from "@/components/UpstepWidget";
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <UpstepWidget />
+      </body>
+    </html>
+  );
+}`,
   react: (apiKey, baseUrl) => `import { UpstepProvider, FeedbackWidget } from "@upstep/js/react";
 
 export default function App({ children }) {
@@ -366,6 +400,13 @@ export default function App() {
 };
 
 const IDENTIFY_SNIPPET: Record<FrameworkId, string> = {
+  next: `// Inside your UpstepWidget component (already "use client"):
+import { useUpstep } from "@upstep/js/react";
+
+const { identify } = useUpstep();
+useEffect(() => {
+  if (user) identify(user.id);
+}, [user]);`,
   react: `import { useUpstep } from "@upstep/js/react";
 
 const { identify } = useUpstep();
@@ -391,6 +432,15 @@ useEffect(() => {
 };
 
 const TRIGGER_SNIPPET: Record<FrameworkId, string> = {
+  next: `// components/UpstepWidget.tsx  ("use client" already set)
+import { FeedbackWidget, useUpstep } from "@upstep/js/react";
+
+// 1. Hide the floating button:
+<FeedbackWidget hideLauncher />
+
+// 2. Open from any Client Component:
+const { open } = useUpstep();
+<button onClick={open}>Send feedback</button>`,
   react: `import { FeedbackWidget, useUpstep } from "@upstep/js/react";
 
 // 1. Render the modal without the floating button:
@@ -424,11 +474,11 @@ function buildAiPrompt(framework: FrameworkId, apiKey: string, baseUrl: string):
     framework === "native"
       ? "npm install @upstep/react-native @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler"
       : framework === "script"
-        ? "(no install — loaded via <script>)"
+        ? "(no install, loaded via <script>)"
         : "npm install @upstep/js";
 
-  return `I want to integrate Upstep — a drop-in feedback & voting widget — into my ${
-    framework === "native" ? "React Native" : "web"
+  return `I want to integrate Upstep (a drop-in feedback & voting widget) into my ${
+    framework === "native" ? "React Native" : framework === "next" ? "Next.js" : "web"
   } app.
 
 Facts:

@@ -201,7 +201,7 @@ export function SettingsTab({
           {newKey && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
               <p className="text-xs font-semibold text-amber-700 mb-2">
-                Save your new key — this is the only time it will be shown in full
+                Save your new key. This is the only time it will be shown in full.
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-xs font-mono bg-white border border-amber-200 rounded-lg px-3 py-2 text-ink break-all">
@@ -218,7 +218,7 @@ export function SettingsTab({
                 onClick={() => setNewKey(null)}
                 className="mt-2 text-xs text-amber-600 hover:text-amber-800 transition"
               >
-                I&apos;ve saved it — dismiss
+                I&apos;ve saved it, dismiss
               </button>
             </div>
           )}

@@ -70,12 +70,12 @@ export default function NewProjectPage() {
           <h1 className="font-serif text-3xl tracking-tight text-ink">Save your API key</h1>
           <p className="text-sm text-muted mt-2">
             This is the only time your key will be shown in full. Copy it now and store it
-            somewhere safe — your password manager, <code className="font-mono text-xs bg-surface border border-line rounded px-1 py-0.5">.env</code> file, or secrets manager.
+            somewhere safe: your password manager, <code className="font-mono text-xs bg-surface border border-line rounded px-1 py-0.5">.env</code> file, or secrets manager.
           </p>
 
           <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-3">
-              Your API key — copy it now
+              Your API key, copy it now
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-sm font-mono bg-white border border-amber-200 rounded-xl px-4 py-3 text-ink break-all">
