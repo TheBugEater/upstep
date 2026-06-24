@@ -1,13 +1,53 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { CodeShowcase } from "@/components/marketing/CodeShowcase";
 import { BoardPreview } from "@/components/marketing/BoardPreview";
 import { Pricing } from "@/components/marketing/Pricing";
+import { JsonLd } from "@/components/JsonLd";
+
+export const metadata: Metadata = {
+  title: "Upstep — Feedback Widget & Voting for Web and Mobile Apps",
+  description:
+    "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Collect bug reports, feature requests, and user votes. Free plan. No backend needed.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Upstep — Feedback Widget & Voting for Web and Mobile Apps",
+    description:
+      "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Collect bug reports, feature requests, and user votes. Free plan. No backend needed.",
+    url: "/",
+  },
+};
+
+const SOFTWARE_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Upstep",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Web, iOS, Android",
+  url: "https://upstep.dev",
+  description:
+    "Drop-in feedback and voting widget for web and mobile apps. Collect bug reports, feature requests, and user votes in minutes.",
+  offers: [
+    { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Pro", price: "19", priceCurrency: "USD" },
+    { "@type": "Offer", name: "Business", price: "49", priceCurrency: "USD" },
+  ],
+  featureList: [
+    "Embeddable feedback widget",
+    "User voting on feedback",
+    "Bug report collection",
+    "Feature request management",
+    "React and React Native SDK",
+    "Webhook and Slack integrations",
+  ],
+};
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-canvas">
+      <JsonLd data={SOFTWARE_LD} />
       <Nav />
       <Hero />
       <Features />
@@ -35,7 +75,7 @@ function Hero() {
           <div className="animate-fade-up">
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-clay" />
-              Now live: drop-in feedback for any app
+              Feedback widget for web &amp; mobile apps
             </span>
 
             <h1 className="mt-6 font-serif text-5xl md:text-[3.75rem] leading-[1.05] tracking-tight text-ink">
@@ -44,9 +84,9 @@ function Hero() {
             </h1>
 
             <p className="mt-6 text-lg text-muted leading-relaxed max-w-md">
-              Embed a beautiful feedback &amp; voting widget into your web or
-              mobile app in minutes. Listen to users, prioritize with votes,
-              and ship what actually matters.
+              Drop Upstep into your React, Next.js, or React Native app in
+              2 lines of code. Collect bug reports and feature requests,
+              let users vote on what matters most, and ship with confidence.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">

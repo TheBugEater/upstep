@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="border-t border-line bg-surface">
       <div className="max-w-6xl mx-auto px-6 py-14">
-        <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1fr]">
           <div>
             <Logo />
             <p className="text-sm text-muted mt-4 max-w-xs leading-relaxed">
@@ -29,6 +29,14 @@ export function Footer() {
               ["Documentation", "#integrate"],
               ["@upstep/js on npm", "https://www.npmjs.com/package/@upstep/js"],
               ["@upstep/react-native on npm", "https://www.npmjs.com/package/@upstep/react-native"],
+            ]}
+          />
+          <FooterCol
+            title="Compare"
+            links={[
+              ["vs Canny", "/alternatives/canny"],
+              ["vs UserVoice", "/alternatives/uservoice"],
+              ["vs Productboard", "/alternatives/productboard"],
             ]}
           />
           <FooterCol

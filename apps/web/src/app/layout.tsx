@@ -23,15 +23,28 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+const BASE_URL = (process.env.AUTH_URL ?? "https://upstep.dev").replace(/\/$/, "");
+
 export const metadata: Metadata = {
-  title: "Upstep | Feedback that moves you forward",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "Upstep — Feedback Widget & Voting for Web and Mobile Apps",
+    template: "%s | Upstep",
+  },
   description:
-    "Drop the Upstep widget into your web or mobile app in minutes. Collect feedback, let users vote, and ship what matters.",
+    "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Let users submit ideas, report bugs, and vote on features. Free plan available.",
+  openGraph: {
+    siteName: "Upstep",
+    type: "website",
+    locale: "en_US",
+  },
   twitter: {
     card: "summary_large_image",
-    title: "Upstep | Feedback that moves you forward",
-    description:
-      "Drop the Upstep widget into your web or mobile app in minutes. Collect feedback, let users vote, and ship what matters.",
+    site: "@upstepdev",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
