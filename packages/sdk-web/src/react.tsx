@@ -77,6 +77,7 @@ interface UpstepContextValue {
   identify: (userId: string | undefined) => void;
   accentColor: string;
   theme: ThemeMode;
+  showBranding: boolean;
 }
 
 const UpstepContext = createContext<UpstepContextValue | null>(null);
@@ -88,6 +89,7 @@ export function UpstepProvider({
   const [client] = useState(() => new UpstepApiClient(config));
   const [feedItems, setFeedItems] = useState<Feedback[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [showBranding, setShowBranding] = useState(true);
 
   useEffect(() => {
     client.setUserId(config.userId);
@@ -96,6 +98,7 @@ export function UpstepProvider({
   const loadFeed = useCallback(async () => {
     const data = await client.listFeedback({ sort: "votes", limit: 20 });
     setFeedItems(data.items);
+    setShowBranding(data.showBranding ?? true);
   }, [client]);
 
   useEffect(() => { loadFeed(); }, [loadFeed]);
@@ -129,6 +132,7 @@ export function UpstepProvider({
         isOpen, open, close, identify,
         accentColor: config.accentColor ?? DEFAULT_ACCENT,
         theme: config.theme ?? "auto",
+        showBranding,
       }}
     >
       {children}
@@ -162,7 +166,7 @@ export function FeedbackWidget({
   const ctx = useUpstep();
   const accent = accentColor ?? ctx.accentColor;
   const p = usePalette(theme ?? ctx.theme);
-  const { isOpen: open, open: openWidget, close: closeWidget } = ctx;
+  const { isOpen: open, open: openWidget, close: closeWidget, showBranding } = ctx;
   const [screen, setScreen] = useState<Screen>("list");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [feedTab, setFeedTab] = useState<"open" | "done">("open");
@@ -294,6 +298,22 @@ export function FeedbackWidget({
                 />
               )}
             </div>
+
+            {/* Branding footer — hidden for Business plan */}
+            {showBranding && (
+              <a
+                href="https://upstep.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "block", textAlign: "center", padding: "8px 0",
+                  borderTop: `1px solid ${p.border}`, fontSize: 11,
+                  color: p.textFaint, textDecoration: "none", flexShrink: 0,
+                }}
+              >
+                Powered by <strong style={{ fontWeight: 700 }}>Upstep.dev</strong>
+              </a>
+            )}
           </div>
         </div>
       )}
