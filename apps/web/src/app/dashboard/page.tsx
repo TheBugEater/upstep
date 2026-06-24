@@ -18,6 +18,22 @@ export default async function DashboardPage() {
     db.user.findUnique({ where: { id: session.user.id }, select: { plan: true } }),
   ]);
 
+  // Single aggregated query for per-status counts across all projects
+  const feedbackCounts = projects.length > 0
+    ? await db.feedback.groupBy({
+        by: ["projectId", "status"],
+        _count: { id: true },
+        where: { projectId: { in: projects.map((p) => p.id) } },
+      })
+    : [];
+
+  type CountMap = Record<string, Record<string, number>>;
+  const countMap: CountMap = {};
+  for (const row of feedbackCounts) {
+    if (!countMap[row.projectId]) countMap[row.projectId] = {};
+    countMap[row.projectId]![row.status] = row._count.id;
+  }
+
   const totalFeedback = projects.reduce((n, p) => n + p._count.feedback, 0);
   const plan = getPlan(user?.plan);
   const atProjectLimit = projects.length >= plan.projectLimit;
@@ -67,31 +83,66 @@ export default async function DashboardPage() {
         {projects.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="grid sm:grid-cols-2 gap-4">
-            {projects.map((p: typeof projects[number]) => (
-              <Link
-                key={p.id}
-                href={`/dashboard/projects/${p.id}`}
-                className="group rounded-2xl border border-line bg-card p-6 shadow-soft hover:shadow-lift hover:-translate-y-0.5 hover:border-clay/30 transition-all"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-clay/10 text-clay flex items-center justify-center font-serif text-lg">
-                    {p.name[0]?.toUpperCase() ?? "P"}
+          <div className="grid sm:grid-cols-2 gap-3">
+            {projects.map((p) => {
+              const counts = countMap[p.id] ?? {};
+              const openCount = counts["OPEN"] ?? 0;
+              const inProgressCount = counts["IN_PROGRESS"] ?? 0;
+              const pendingCount = counts["PENDING"] ?? 0;
+              const total = p._count.feedback;
+
+              return (
+                <Link
+                  key={p.id}
+                  href={`/dashboard/projects/${p.id}`}
+                  className="group rounded-2xl border border-line bg-card p-5 shadow-soft hover:shadow-lift hover:-translate-y-0.5 hover:border-clay/30 transition-all"
+                >
+                  {/* Header row */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-clay/10 text-clay flex items-center justify-center font-serif text-base shrink-0">
+                      {p.name[0]?.toUpperCase() ?? "P"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-ink truncate leading-snug">{p.name}</p>
+                      <p className="text-xs text-faint mt-0.5">
+                        {new Date(p.createdAt).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    {pendingCount > 0 && (
+                      <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200 shrink-0">
+                        {pendingCount} pending
+                      </span>
+                    )}
+                    <span className="text-muted text-sm opacity-0 group-hover:opacity-100 transition shrink-0">
+                      →
+                    </span>
                   </div>
-                  <span className="text-faint text-sm opacity-0 group-hover:opacity-100 transition">→</span>
-                </div>
 
-                <div className="mt-4 font-semibold text-ink">{p.name}</div>
-                <div className="mt-1 text-xs text-faint">
-                  Created {new Date(p.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                </div>
-
-                <div className="mt-5 pt-4 border-t border-line flex items-center justify-between">
-                  <span className="text-xs text-muted">Feedback</span>
-                  <span className="text-sm font-semibold text-ink">{p._count.feedback}</span>
-                </div>
-              </Link>
-            ))}
+                  {/* Stats row */}
+                  <div className="flex items-center gap-4 pt-3.5 border-t border-line">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-clay/70 shrink-0" />
+                      <span className="text-sm font-semibold text-ink">{openCount}</span>
+                      <span className="text-xs text-faint">open</span>
+                    </div>
+                    {inProgressCount > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                        <span className="text-sm font-semibold text-ink">{inProgressCount}</span>
+                        <span className="text-xs text-faint">in progress</span>
+                      </div>
+                    )}
+                    <span className="ml-auto text-xs text-faint">
+                      {total} total
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
@@ -103,7 +154,7 @@ function EmptyState() {
   return (
     <div className="rounded-2xl border border-dashed border-line-strong bg-card/50 py-20 text-center">
       <div className="w-12 h-12 rounded-2xl bg-clay/10 text-clay flex items-center justify-center text-xl mx-auto mb-4">
-        ✦
+        +
       </div>
       <p className="text-ink font-medium">No projects yet</p>
       <p className="text-sm text-muted mt-1 mb-6">Create your first project to get an API key.</p>

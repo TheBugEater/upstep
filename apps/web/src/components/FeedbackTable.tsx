@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Comment, Feedback, FeedbackStatus, FeedbackType } from "@upstep/types";
 
@@ -31,6 +31,12 @@ export function FeedbackTable({ projectId, feedback, currentType, currentStatus,
   const router = useRouter();
   const [items, setItems] = useState(feedback);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // Re-sync items whenever the server returns new filtered data
+  useEffect(() => {
+    setItems(feedback);
+    setExpanded(null);
+  }, [feedback]);
   const [commentsByFid, setCommentsByFid] = useState<Record<string, Comment[]>>({});
   const [inputByFid, setInputByFid] = useState<Record<string, string>>({});
   const [postingFid, setPostingFid] = useState<string | null>(null);
@@ -95,7 +101,7 @@ export function FeedbackTable({ projectId, feedback, currentType, currentStatus,
   }
 
   const TYPES: FeedbackType[] = ["BUG", "FEATURE", "GENERAL"];
-  const STATUSES: FeedbackStatus[] = ["OPEN", "IN_PROGRESS", "DONE"];
+  const STATUSES: FeedbackStatus[] = ["OPEN", "IN_PROGRESS"];
 
   const activeBtn = "bg-ink text-white";
   const inactiveBtn = "bg-card text-muted hover:text-ink";

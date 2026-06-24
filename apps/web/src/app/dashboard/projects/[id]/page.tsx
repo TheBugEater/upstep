@@ -17,7 +17,9 @@ export default async function ProjectPage({
   if (!session?.user?.id) redirect("/login");
 
   const { id } = await params;
-  const { type, sort } = await searchParams;
+  const { type, sort, status } = await searchParams;
+  // Only allow valid list-view statuses; DONE is handled by the Completed tab
+  const activeStatus = status === "OPEN" || status === "IN_PROGRESS" ? status : undefined;
 
   // Allow access to both the project owner and invited members.
   const project = await db.project.findUnique({
@@ -40,7 +42,7 @@ export default async function ProjectPage({
     db.feedback.findMany({
       where: {
         projectId: id,
-        status: { in: ["OPEN", "IN_PROGRESS"] },
+        status: activeStatus ? { equals: activeStatus as never } : { in: ["OPEN", "IN_PROGRESS"] },
         ...(type ? { type: type as never } : {}),
       },
       orderBy: sort === "votes" ? { upvotes: "desc" } : { createdAt: "desc" },
@@ -112,6 +114,7 @@ export default async function ProjectPage({
           pendingCount={pendingCount}
           activeCount={openCount + inProgressCount}
           currentType={type ?? undefined}
+          currentStatus={activeStatus}
           currentSort={sort ?? undefined}
         />
       </div>

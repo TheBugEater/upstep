@@ -131,13 +131,15 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
         }),
       });
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
+        const data = await res.json().catch(() => ({})) as { error?: string };
         setFormError(typeof data.error === "string" ? data.error : "Failed to save integration.");
         return;
       }
       const integration = (await res.json()) as Integration;
       setIntegrations((prev) => [...prev, integration]);
       closeForm();
+    } catch {
+      setFormError("Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
