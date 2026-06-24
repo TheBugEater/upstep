@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { Comment, Feedback, FeedbackStatus, FeedbackType } from "@upstep/types";
 
 const TYPE_COLORS: Record<FeedbackType, string> = {
@@ -42,6 +42,15 @@ export function FeedbackTable({ projectId, feedback, showStatusFilter = true, le
   const [commentsByFid, setCommentsByFid] = useState<Record<string, Comment[]>>({});
   const [inputByFid, setInputByFid] = useState<Record<string, string>>({});
   const [postingFid, setPostingFid] = useState<string | null>(null);
+
+  // Add-task form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addTitle, setAddTitle] = useState("");
+  const [addContent, setAddContent] = useState("");
+  const [addType, setAddType] = useState<FeedbackType>("FEATURE");
+  const [addStatus, setAddStatus] = useState<FeedbackStatus>("OPEN");
+  const [addSaving, setAddSaving] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
 
   // Re-sync when server passes new data (e.g. tab switch / page nav)
   useEffect(() => {
@@ -93,6 +102,41 @@ export function FeedbackTable({ projectId, feedback, showStatusFilter = true, le
     if (!confirm("Delete this feedback item?")) return;
     const res = await fetch(`/api/projects/${projectId}/feedback/${id}`, { method: "DELETE" });
     if (res.ok) setItems((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  function openAddForm() {
+    setAddTitle("");
+    setAddContent("");
+    setAddType("FEATURE");
+    setAddStatus("OPEN");
+    setShowAddForm(true);
+    setTimeout(() => titleRef.current?.focus(), 0);
+  }
+
+  async function submitAddTask(e: React.FormEvent) {
+    e.preventDefault();
+    const content = addTitle.trim() || addContent.trim();
+    if (!content || addSaving) return;
+    setAddSaving(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: addTitle.trim() || undefined,
+          content: addContent.trim() || addTitle.trim(),
+          type: addType,
+          status: addStatus,
+        }),
+      });
+      if (res.ok) {
+        const created = (await res.json()) as Feedback;
+        setItems((prev) => [created, ...prev]);
+        setShowAddForm(false);
+      }
+    } finally {
+      setAddSaving(false);
+    }
   }
 
   async function postComment(id: string) {
@@ -172,7 +216,101 @@ export function FeedbackTable({ projectId, feedback, showStatusFilter = true, le
         >
           {sortBy === "votes" ? "Top voted" : "Newest"}
         </button>
+
+        {/* Add task button */}
+        <button
+          onClick={openAddForm}
+          className="ml-auto px-3.5 py-1.5 rounded-xl bg-clay text-white text-xs font-semibold hover:bg-clay-hover transition shadow-soft"
+        >
+          + Add task
+        </button>
       </div>
+
+      {/* Inline add-task form */}
+      {showAddForm && (
+        <form
+          onSubmit={(e) => void submitAddTask(e)}
+          className="mb-3 rounded-2xl border border-clay/30 bg-card shadow-soft p-4"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-ink">New task</span>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="text-xs text-faint hover:text-ink transition"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Title */}
+          <input
+            ref={titleRef}
+            type="text"
+            value={addTitle}
+            onChange={(e) => setAddTitle(e.target.value)}
+            placeholder="Title (required)"
+            maxLength={200}
+            required
+            className="w-full text-sm rounded-xl border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/40 transition mb-2"
+          />
+
+          {/* Description */}
+          <textarea
+            value={addContent}
+            onChange={(e) => setAddContent(e.target.value)}
+            placeholder="Description (optional)"
+            maxLength={2000}
+            rows={2}
+            className="w-full text-sm rounded-xl border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/40 transition resize-none mb-3"
+          />
+
+          {/* Type + Status row */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex gap-1">
+              {TYPES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setAddType(t)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${addType === t ? TYPE_COLORS[t] : "bg-card text-muted border-line hover:border-line-strong"}`}
+                >
+                  {t.charAt(0) + t.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              {ACTIVE_STATUSES.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setAddStatus(s)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${addStatus === s ? STATUS_COLORS[s] : "bg-card text-muted border-line hover:border-line-strong"}`}
+                >
+                  {s === "IN_PROGRESS" ? "In progress" : "Open"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={addSaving || !addTitle.trim()}
+              className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-medium hover:bg-ink/80 transition disabled:opacity-40"
+            >
+              {addSaving ? "Adding…" : "Add task"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="px-4 py-2 rounded-xl border border-line text-sm text-muted hover:text-ink transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {displayedItems.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line-strong bg-card/50 text-center py-20 text-muted text-sm">
