@@ -23,6 +23,7 @@ export default async function ProjectPage({
   const project = await db.project.findUnique({
     where: { id },
     include: {
+      owner: { select: { id: true, name: true, email: true } },
       members: {
         include: { user: { select: { id: true, name: true, email: true } } },
         orderBy: { createdAt: "asc" },
@@ -35,7 +36,7 @@ export default async function ProjectPage({
   const isMember = project.members.some((m) => m.userId === session.user!.id);
   if (!isOwner && !isMember) notFound();
 
-  const [listFeedback, boardFeedback, pendingFeedback, completedFeedback, stats] = await Promise.all([
+  const [listFeedback, boardFeedback, pendingFeedback, completedFeedback, openCount, inProgressCount, pendingCount] = await Promise.all([
     db.feedback.findMany({
       where: {
         projectId: id,
@@ -48,7 +49,7 @@ export default async function ProjectPage({
     db.feedback.findMany({
       where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS", "DONE"] } },
       orderBy: { upvotes: "desc" },
-      take: 300,
+      take: 100,
     }),
     db.feedback.findMany({
       where: { projectId: id, status: "PENDING" },
@@ -64,24 +65,15 @@ export default async function ProjectPage({
       orderBy: sort === "votes" ? { upvotes: "desc" } : { createdAt: "desc" },
       take: 100,
     }),
-    Promise.all([
-      db.feedback.count({ where: { projectId: id, status: { not: "PENDING" } } }),
-      db.feedback.count({ where: { projectId: id, status: "OPEN" } }),
-      db.feedback.count({ where: { projectId: id, status: "IN_PROGRESS" } }),
-      db.feedback.count({ where: { projectId: id, status: "PENDING" } }),
-    ]),
+    db.feedback.count({ where: { projectId: id, status: "OPEN" } }),
+    db.feedback.count({ where: { projectId: id, status: "IN_PROGRESS" } }),
+    db.feedback.count({ where: { projectId: id, status: "PENDING" } }),
   ]);
 
-  const [total, open, inProgress, pendingCount] = stats;
   const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
 
-  // Shape members for SettingsTab (owner first, then members by join date)
-  const ownerUser = await db.user.findUnique({
-    where: { id: project.ownerId },
-    select: { id: true, name: true, email: true },
-  });
   const teamMembers = [
-    ...(ownerUser ? [{ ...ownerUser, role: "OWNER" as const }] : []),
+    ...(project.owner ? [{ ...project.owner, role: "OWNER" as const }] : []),
     ...project.members.map((m) => ({ ...m.user, role: "MEMBER" as const })),
   ];
 
@@ -115,7 +107,7 @@ export default async function ProjectPage({
           pendingFeedback={pendingFeedback as never}
           completedFeedback={completedFeedback as never}
           pendingCount={pendingCount}
-          activeCount={open + inProgress}
+          activeCount={openCount + inProgressCount}
           currentType={type ?? undefined}
           currentSort={sort ?? undefined}
         />
