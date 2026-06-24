@@ -25,7 +25,7 @@ export default async function Image() {
           fontFamily: "sans-serif",
         }}
       >
-        {/* ── Background glows ─────────────────────────────────────────── */}
+        {/* Background glows */}
         <div
           style={{
             position: "absolute",
@@ -52,7 +52,7 @@ export default async function Image() {
           }}
         />
 
-        {/* ── Left: content ────────────────────────────────────────────── */}
+        {/* Left: content */}
         <div
           style={{
             display: "flex",
@@ -91,7 +91,7 @@ export default async function Image() {
             </span>
           </div>
 
-          {/* Headline — three explicit lines, no wrapping surprises */}
+          {/* Headline - three explicit lines, no wrapping */}
           <div
             style={{
               display: "flex",
@@ -171,7 +171,7 @@ export default async function Image() {
           </div>
         </div>
 
-        {/* ── Right: product card mockup ────────────────────────────────── */}
+        {/* Right: product card mockup */}
         <div
           style={{
             display: "flex",
@@ -215,6 +215,8 @@ export default async function Image() {
           {/* Main feedback card */}
           <div
             style={{
+              display: "flex",
+              flexDirection: "column",
               background: "rgba(255,255,255,0.06)",
               border: "1px solid rgba(255,255,255,0.13)",
               borderRadius: 20,
@@ -245,7 +247,7 @@ export default async function Image() {
                   textTransform: "uppercase",
                 }}
               >
-                ✦ Feature request
+                Feature request
               </span>
             </div>
 
@@ -282,11 +284,11 @@ export default async function Image() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 5,
+                  gap: 6,
                 }}
               >
-                <span style={{ fontSize: 14, color: "#F07800", fontWeight: 700 }}>▲</span>
-                <span style={{ fontSize: 14, color: "#7A7870", fontWeight: 600 }}>89</span>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: "#F07800" }} />
+                <span style={{ fontSize: 14, color: "#F07800", fontWeight: 700 }}>89</span>
               </div>
               <div
                 style={{
@@ -338,7 +340,7 @@ export default async function Image() {
             <span style={{ fontSize: 14, color: "#7A7870", flex: 1 }}>
               Search results not loading on mobile
             </span>
-            <span style={{ fontSize: 13, color: "#4A4945" }}>▲ 34</span>
+            <span style={{ fontSize: 13, color: "#4A4945" }}>34 votes</span>
           </div>
 
           {/* Third compact card */}
