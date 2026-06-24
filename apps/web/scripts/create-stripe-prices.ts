@@ -46,11 +46,11 @@ function priceData(planId: PlanId) {
   const others = CURRENCIES.filter((c) => c !== base);
   const currency_options: Record<string, { unit_amount: number }> = {};
   for (const c of others) {
-    currency_options[c.toLowerCase()] = { unit_amount: PRICE_MATRIX[planId][c] * 100 };
+    currency_options[c.toLowerCase()] = { unit_amount: Math.round(PRICE_MATRIX[planId][c] * 100) };
   }
   return {
     currency: base.toLowerCase(),
-    unit_amount: PRICE_MATRIX[planId][base] * 100,
+    unit_amount: Math.round(PRICE_MATRIX[planId][base] * 100),
     currency_options,
   };
 }

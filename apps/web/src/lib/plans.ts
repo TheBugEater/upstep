@@ -22,8 +22,8 @@ export const CURRENCY_META: Record<Currency, { symbol: string; label: string }> 
 /** Monthly amount per plan per currency (whole units, not cents). */
 export const PRICE_MATRIX: Record<PlanId, Record<Currency, number>> = {
   FREE: { USD: 0, GBP: 0, EUR: 0 },
-  PRO: { USD: 19, GBP: 15, EUR: 18 },
-  BUSINESS: { USD: 99, GBP: 79, EUR: 95 },
+  PRO: { USD: 14.99, GBP: 11.99, EUR: 13.99 },
+  BUSINESS: { USD: 49.99, GBP: 39.99, EUR: 44.99 },
 };
 
 export function isCurrency(v: string | null | undefined): v is Currency {
