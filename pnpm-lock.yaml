@@ -30,8 +30,8 @@ importers:
         specifier: ^2.7.4
         version: 2.11.2(@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3))
       '@onramp-sdk/react':
-        specifier: ^0.2.1
-        version: 0.2.1(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+        specifier: ^0.2.2
+        version: 0.2.2(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@prisma/client':
         specifier: ^6.2.1
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
@@ -1131,8 +1131,8 @@ packages:
   '@onramp-sdk/core@0.5.0':
     resolution: {integrity: sha512-Qf0vyJDgAJPh2hwtA6Ho7m1J7x/YfKf0BNqzFN9/uY8gh94CnjWTgtcbhr/OWpKOzMUA/1U8bFB6+EnW4R3i5g==}
 
-  '@onramp-sdk/react@0.2.1':
-    resolution: {integrity: sha512-nSSFi4X9GrxFXP7+xFy98mOaZ7uT8Gn8etoW2VoRml7BmM+Gy9spXR64wp5pbP0YayTDJdniRlcnXxGRROuTuA==}
+  '@onramp-sdk/react@0.2.2':
+    resolution: {integrity: sha512-l1Hc1ZJcPIYLxgWuyQgyu/+iFkx2hwvvdEM0ep+OASefh2VT8Vu7zzTtmzpWDRqLFy53sHmED0fr9UbBM9Bqrw==}
     peerDependencies:
       next: '>=13.0.0'
       react: '>=18.0.0'
@@ -4145,7 +4145,7 @@ snapshots:
       '@onramp-sdk/shared': 0.3.0
       zod: 3.25.76
 
-  '@onramp-sdk/react@0.2.1(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@onramp-sdk/react@0.2.2(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@onramp-sdk/core': 0.5.0
       '@onramp-sdk/shared': 0.3.0

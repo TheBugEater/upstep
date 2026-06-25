@@ -82,6 +82,7 @@ model Project {
   feedback     Feedback[]
   members      ProjectMember[]
   integrations Integration[]
+  labels       Label[]
 }
 
 model Feedback {
@@ -103,6 +104,7 @@ model Feedback {
   project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   votes    Vote[]
   comments Comment[]
+  labels   Label[]
 }
 
 model Comment {
@@ -190,6 +192,18 @@ enum IntegrationType {
   SLACK
   DISCORD
   WEBHOOK
+}
+
+model Label {
+  id        String     @id @default(cuid())
+  projectId String
+  name      String
+  color     String     @default("#6366f1")
+  createdAt DateTime   @default(now())
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  feedbacks Feedback[]
+
+  @@unique([projectId, name])
 }
 
 enum IntegrationEvent {

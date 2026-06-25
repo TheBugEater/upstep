@@ -86,6 +86,7 @@ export async function POST(
       flagged: false,
       upvotes: 0,
     },
+    include: { labels: { select: { id: true, name: true, color: true } } },
   });
 
   void triggerIntegrations({

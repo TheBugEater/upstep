@@ -14,6 +14,12 @@ export interface Project {
   createdAt: string;
 }
 
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface Feedback {
   id: string;
   projectId: string;
@@ -29,6 +35,7 @@ export interface Feedback {
   flagged?: boolean;
   /** Dev-only — hidden from the public SDK widget. */
   internal?: boolean;
+  labels?: Label[];
   metadata: Record<string, unknown> | null;
   createdAt: string;
   /** The current user's vote, if any — populated by the API when userId is known. */

@@ -69,8 +69,9 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedType, setSelectedType] = useState<IntegrationType | null>(null);
+  const [editingIntegration, setEditingIntegration] = useState<Integration | null>(null);
 
-  // Form state
+  // Form state (shared between create and edit)
   const [formName, setFormName] = useState("");
   const [formUrl, setFormUrl] = useState("");
   const [formEvents, setFormEvents] = useState<IntegrationEvent[]>(["NEW_FEEDBACK"]);
@@ -91,6 +92,7 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
   }, [projectId, isPro]);
 
   function openForm(type: IntegrationType) {
+    setEditingIntegration(null);
     setSelectedType(type);
     setFormName("");
     setFormUrl("");
@@ -99,9 +101,20 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
     setShowForm(true);
   }
 
+  function openEditForm(integration: Integration) {
+    setShowForm(false);
+    setSelectedType(null);
+    setEditingIntegration(integration);
+    setFormName(integration.name ?? "");
+    setFormUrl(integration.webhookUrl);
+    setFormEvents(integration.events);
+    setFormError("");
+  }
+
   function closeForm() {
     setShowForm(false);
     setSelectedType(null);
+    setEditingIntegration(null);
     setFormError("");
   }
 
@@ -113,22 +126,26 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
 
   async function saveIntegration(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedType || saving) return;
+    if (saving) return;
+    if (!editingIntegration && !selectedType) return;
     if (!formUrl.trim()) { setFormError("Webhook URL is required."); return; }
     if (formEvents.length === 0) { setFormError("Select at least one event."); return; }
 
     setSaving(true);
     setFormError("");
     try {
-      const res = await fetch(`/api/projects/${projectId}/integrations`, {
-        method: "POST",
+      const isEdit = Boolean(editingIntegration);
+      const url = isEdit
+        ? `/api/projects/${projectId}/integrations/${editingIntegration!.id}`
+        : `/api/projects/${projectId}/integrations`;
+      const body = isEdit
+        ? { name: formName.trim() || null, webhookUrl: formUrl.trim(), events: formEvents }
+        : { type: selectedType, name: formName.trim() || undefined, webhookUrl: formUrl.trim(), events: formEvents };
+
+      const res = await fetch(url, {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: selectedType,
-          name: formName.trim() || undefined,
-          webhookUrl: formUrl.trim(),
-          events: formEvents,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({})) as { error?: string };
@@ -136,7 +153,11 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
         return;
       }
       const integration = (await res.json()) as Integration;
-      setIntegrations((prev) => [...prev, integration]);
+      if (isEdit) {
+        setIntegrations((prev) => prev.map((i) => i.id === integration.id ? integration : i));
+      } else {
+        setIntegrations((prev) => [...prev, integration]);
+      }
       closeForm();
     } catch {
       setFormError("Something went wrong. Please try again.");
@@ -201,7 +222,11 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
 
   // ── Main UI ──────────────────────────────────────────────────────────────────
 
-  const typeInfo = selectedType ? INTEGRATION_TYPES.find((t) => t.type === selectedType) : null;
+  const typeInfo = editingIntegration
+    ? INTEGRATION_TYPES.find((t) => t.type === editingIntegration.type)
+    : selectedType
+    ? INTEGRATION_TYPES.find((t) => t.type === selectedType)
+    : null;
 
   return (
     <div className="space-y-5 max-w-xl">
@@ -218,57 +243,134 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
               + Add
             </button>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {integrations.map((integration) => {
               const info = INTEGRATION_TYPES.find((t) => t.type === integration.type);
+              const isEditing = editingIntegration?.id === integration.id;
               return (
-                <div key={integration.id} className="flex items-start gap-3 p-3 rounded-xl border border-line bg-surface">
-                  {/* Icon */}
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0"
-                    style={{ background: info?.color ?? "#374151" }}
-                  >
-                    {info?.icon}
-                  </div>
+                <div key={integration.id} className="rounded-xl border border-line bg-surface overflow-hidden">
+                  {/* Row */}
+                  <div className="flex items-start gap-3 p-3">
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0"
+                      style={{ background: info?.color ?? "#374151" }}
+                    >
+                      {info?.icon}
+                    </div>
 
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-ink truncate">
-                      {integration.name ?? info?.label ?? integration.type}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {integration.events.map((ev) => (
-                        <span key={ev} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-clay/8 text-clay border border-clay/15">
-                          {EVENT_LABELS[ev]?.label ?? ev}
-                        </span>
-                      ))}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-ink truncate">
+                        {integration.name ?? info?.label ?? integration.type}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {integration.events.map((ev) => (
+                          <span key={ev} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-clay/8 text-clay border border-clay/15">
+                            {EVENT_LABELS[ev]?.label ?? ev}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => toggleEnabled(integration)}
+                        aria-pressed={integration.enabled}
+                        className={`relative inline-flex h-5 w-9 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+                          integration.enabled ? "bg-clay" : "bg-line-strong"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                            integration.enabled ? "translate-x-4" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                      <button
+                        onClick={() => isEditing ? closeForm() : openEditForm(integration)}
+                        className={`text-xs transition ${isEditing ? "text-clay" : "text-faint hover:text-ink"}`}
+                        aria-label="Edit integration"
+                      >
+                        {isEditing ? "Cancel" : "Edit"}
+                      </button>
+                      <button
+                        onClick={() => void deleteIntegration(integration.id)}
+                        disabled={deleting === integration.id}
+                        className="text-xs text-faint hover:text-red-500 transition disabled:opacity-40"
+                        aria-label="Delete integration"
+                      >
+                        {deleting === integration.id ? "..." : "✕"}
+                      </button>
                     </div>
                   </div>
 
-                  {/* Toggle + delete */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => toggleEnabled(integration)}
-                      aria-pressed={integration.enabled}
-                      className={`relative inline-flex h-5 w-9 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                        integration.enabled ? "bg-clay" : "bg-line-strong"
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                          integration.enabled ? "translate-x-4" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                    <button
-                      onClick={() => void deleteIntegration(integration.id)}
-                      disabled={deleting === integration.id}
-                      className="text-xs text-faint hover:text-red-500 transition disabled:opacity-40"
-                      aria-label="Delete integration"
-                    >
-                      {deleting === integration.id ? "…" : "✕"}
-                    </button>
-                  </div>
+                  {/* Inline edit form */}
+                  {isEditing && typeInfo && (
+                    <div className="border-t border-line px-4 pb-4 pt-3 bg-canvas">
+                      <form onSubmit={(e) => void saveIntegration(e)} className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-ink mb-1">
+                            Name <span className="font-normal text-faint">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formName}
+                            onChange={(e) => setFormName(e.target.value)}
+                            placeholder={`e.g. ${typeInfo.label} #product`}
+                            maxLength={100}
+                            className="w-full text-sm rounded-xl border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/40 transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-ink mb-1">
+                            Webhook URL <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="url"
+                            value={formUrl}
+                            onChange={(e) => { setFormUrl(e.target.value); setFormError(""); }}
+                            placeholder={typeInfo.placeholder}
+                            required
+                            className="w-full text-sm rounded-xl border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/40 transition font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-ink mb-1.5">
+                            Notify me when...
+                          </label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {ALL_EVENTS.map((event) => (
+                              <label key={event} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formEvents.includes(event)}
+                                  onChange={() => toggleEvent(event)}
+                                  className="h-3.5 w-3.5 rounded border-line accent-clay"
+                                />
+                                <span className="text-xs text-ink">{EVENT_LABELS[event].label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        {formError && <p className="text-xs text-red-500">{formError}</p>}
+                        <div className="flex gap-2">
+                          <button
+                            type="submit"
+                            disabled={saving}
+                            className="px-3 py-1.5 rounded-xl bg-ink text-white text-xs font-medium hover:bg-ink/80 transition disabled:opacity-40"
+                          >
+                            {saving ? "Saving..." : "Save changes"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={closeForm}
+                            className="px-3 py-1.5 rounded-xl border border-line text-xs text-muted hover:text-ink transition"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -11,6 +11,7 @@ const INTEGRATION_EVENTS = ["NEW_FEEDBACK", "STATUS_CHANGED", "NEW_VOTE", "NEW_C
 const updateSchema = z.object({
   enabled: z.boolean().optional(),
   name: z.string().max(100).optional(),
+  webhookUrl: z.string().url().optional(),
   events: z.array(z.enum(INTEGRATION_EVENTS)).min(1).optional(),
 });
 
@@ -37,6 +38,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
       ...(parsed.data.events !== undefined ? { events: parsed.data.events } : {}),
       ...(parsed.data.name !== undefined ? { name: parsed.data.name ?? null } : {}),
+      ...(parsed.data.webhookUrl !== undefined ? { webhookUrl: parsed.data.webhookUrl } : {}),
     },
     select: { id: true, type: true, name: true, webhookUrl: true, events: true, enabled: true, createdAt: true },
   });

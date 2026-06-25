@@ -36,26 +36,32 @@ export default async function ProjectPage({
   const isMember = project.members.some((m) => m.userId === session.user!.id);
   if (!isOwner && !isMember) notFound();
 
+  const labelInclude = { labels: { select: { id: true, name: true, color: true } } };
+
   const [listFeedback, boardFeedback, pendingFeedback, completedFeedback, openCount, inProgressCount, pendingCount] = await Promise.all([
     db.feedback.findMany({
       where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS"] } },
       orderBy: { createdAt: "desc" },
       take: 200,
+      include: labelInclude,
     }),
     db.feedback.findMany({
       where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS", "DONE"] } },
       orderBy: { upvotes: "desc" },
       take: 100,
+      include: labelInclude,
     }),
     db.feedback.findMany({
       where: { projectId: id, status: "PENDING" },
       orderBy: { createdAt: "desc" },
       take: 100,
+      include: labelInclude,
     }),
     db.feedback.findMany({
       where: { projectId: id, status: "DONE" },
       orderBy: { createdAt: "desc" },
       take: 200,
+      include: labelInclude,
     }),
     db.feedback.count({ where: { projectId: id, status: "OPEN" } }),
     db.feedback.count({ where: { projectId: id, status: "IN_PROGRESS" } }),

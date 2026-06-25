@@ -3,6 +3,8 @@ import { Inter, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { OnRampProvider } from "@onramp-sdk/react";
 import { OnRampRouteTracker } from "@onramp-sdk/react/next";
+import { auth } from "@/lib/auth";
+import { OnRampIdentify } from "@/components/OnRampIdentify";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -48,7 +50,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable} ${mono.variable}`}>
       <body>
@@ -58,6 +62,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           appVersion="1.0.0"
         >
           <OnRampRouteTracker />
+          {session?.user?.email && (
+            <OnRampIdentify email={session.user.email} />
+          )}
           {children}
         </OnRampProvider>
       </body>
