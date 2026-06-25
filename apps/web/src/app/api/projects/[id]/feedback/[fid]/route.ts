@@ -8,6 +8,7 @@ import { triggerIntegrations } from "@/lib/integrations";
 const updateSchema = z.object({
   status: z.enum(["PENDING", "OPEN", "IN_PROGRESS", "DONE", "CLOSED"]).optional(),
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
+  internal: z.boolean().optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string; fid: string }> };
@@ -38,6 +39,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     data: {
       ...(parsed.data.type ? { type: parsed.data.type } : {}),
       ...(parsed.data.status ? { status: parsed.data.status } : {}),
+      ...(parsed.data.internal !== undefined ? { internal: parsed.data.internal } : {}),
     },
     include: { project: { select: { name: true } } },
   });

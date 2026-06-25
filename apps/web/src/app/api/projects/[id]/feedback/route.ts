@@ -46,6 +46,7 @@ const createSchema = z.object({
   content: z.string().min(1).max(2000),
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).default("GENERAL"),
   status: z.enum(["OPEN", "IN_PROGRESS"]).default("OPEN"),
+  internal: z.boolean().default(false),
 });
 
 export async function POST(
@@ -81,6 +82,7 @@ export async function POST(
       content: parsed.data.content,
       type: parsed.data.type,
       status: parsed.data.status,
+      internal: parsed.data.internal,
       flagged: false,
       upvotes: 0,
     },

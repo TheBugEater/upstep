@@ -27,6 +27,8 @@ export interface Feedback {
   downvotes: number;
   /** Auto-flagged by the profanity filter on submit. */
   flagged?: boolean;
+  /** Dev-only — hidden from the public SDK widget. */
+  internal?: boolean;
   metadata: Record<string, unknown> | null;
   createdAt: string;
   /** The current user's vote, if any — populated by the API when userId is known. */

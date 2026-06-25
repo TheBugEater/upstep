@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
       ...(type ? { type: type as never } : {}),
       // If caller explicitly filters by status, honour it.
       // Otherwise hide PENDING — unless the item belongs to the requesting user.
+      internal: false,
       ...(status
         ? { status: status as never }
         : endUserId

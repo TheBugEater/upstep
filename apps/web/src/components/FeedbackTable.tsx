@@ -49,6 +49,7 @@ export function FeedbackTable({ projectId, feedback, showStatusFilter = true, le
   const [addContent, setAddContent] = useState("");
   const [addType, setAddType] = useState<FeedbackType>("FEATURE");
   const [addStatus, setAddStatus] = useState<FeedbackStatus>("OPEN");
+  const [addInternal, setAddInternal] = useState(false);
   const [addSaving, setAddSaving] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -109,6 +110,7 @@ export function FeedbackTable({ projectId, feedback, showStatusFilter = true, le
     setAddContent("");
     setAddType("FEATURE");
     setAddStatus("OPEN");
+    setAddInternal(false);
     setShowAddForm(true);
     setTimeout(() => titleRef.current?.focus(), 0);
   }
@@ -127,6 +129,7 @@ export function FeedbackTable({ projectId, feedback, showStatusFilter = true, le
           content: addContent.trim() || addTitle.trim(),
           type: addType,
           status: addStatus,
+          internal: addInternal,
         }),
       });
       if (res.ok) {
@@ -291,6 +294,16 @@ export function FeedbackTable({ projectId, feedback, showStatusFilter = true, le
                 </button>
               ))}
             </div>
+
+            {/* Internal toggle */}
+            <button
+              type="button"
+              onClick={() => setAddInternal((v) => !v)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${addInternal ? "bg-violet-50 text-violet-700 border-violet-200" : "bg-card text-muted border-line hover:border-line-strong"}`}
+            >
+              <span className="text-[10px]">&#128274;</span>
+              Dev only
+            </button>
           </div>
 
           <div className="flex gap-2">
@@ -343,6 +356,11 @@ export function FeedbackTable({ projectId, feedback, showStatusFilter = true, le
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    {f.internal && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border bg-violet-50 text-violet-700 border-violet-200">
+                        Dev only
+                      </span>
+                    )}
                     <span className={`hidden sm:inline text-[10px] px-2 py-0.5 rounded-full font-medium border ${TYPE_COLORS[f.type]}`}>{f.type}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${STATUS_COLORS[f.status]}`}>{f.status.replace("_", " ")}</span>
                   </div>
@@ -394,6 +412,22 @@ export function FeedbackTable({ projectId, feedback, showStatusFilter = true, le
                         className={`text-xs px-2.5 py-1 rounded-full font-medium transition border ${f.status === "DONE" ? STATUS_COLORS["DONE"] : "bg-card text-muted border-line hover:border-line-strong"}`}
                       >
                         Done
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const res = await fetch(`/api/projects/${projectId}/feedback/${f.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ internal: !f.internal }),
+                          });
+                          if (res.ok) {
+                            const updated = (await res.json()) as Feedback;
+                            setItems((prev) => prev.map((i) => (i.id === f.id ? updated : i)));
+                          }
+                        }}
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition border ${f.internal ? "bg-violet-50 text-violet-700 border-violet-200" : "bg-card text-muted border-line hover:border-line-strong"}`}
+                      >
+                        {f.internal ? "Dev only (visible to devs)" : "Make dev only"}
                       </button>
                       <button
                         onClick={() => deleteFeedback(f.id)}
