@@ -30,14 +30,14 @@ importers:
         specifier: ^2.7.4
         version: 2.11.2(@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3))
       '@onramp-sdk/react':
-        specifier: ^0.1.4
-        version: 0.1.4(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+        specifier: ^0.2.1
+        version: 0.2.1(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@prisma/client':
         specifier: ^6.2.1
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       '@upstep/js':
-        specifier: ^0.5.3
-        version: 0.5.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.5.4
+        version: 0.5.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@upstep/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -1128,11 +1128,11 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@onramp-sdk/core@0.4.1':
-    resolution: {integrity: sha512-pFvfwcmgFPm2WgTk1XgaKaHnaHndbzyKj24Up4mwJHS3VgT6MMcnce2rJNixOHys8gxmexPNxULru69RF/uf1w==}
+  '@onramp-sdk/core@0.5.0':
+    resolution: {integrity: sha512-Qf0vyJDgAJPh2hwtA6Ho7m1J7x/YfKf0BNqzFN9/uY8gh94CnjWTgtcbhr/OWpKOzMUA/1U8bFB6+EnW4R3i5g==}
 
-  '@onramp-sdk/react@0.1.4':
-    resolution: {integrity: sha512-CjWx3isKrUb2TLBRvpZ4e4K4VLROzUk97uK+3kS4VDTB8FMMiAdGXmjn2JNSkIAHRPQSHFZK8Z/ugFHX1IMd/w==}
+  '@onramp-sdk/react@0.2.1':
+    resolution: {integrity: sha512-nSSFi4X9GrxFXP7+xFy98mOaZ7uT8Gn8etoW2VoRml7BmM+Gy9spXR64wp5pbP0YayTDJdniRlcnXxGRROuTuA==}
     peerDependencies:
       next: '>=13.0.0'
       react: '>=18.0.0'
@@ -1140,8 +1140,8 @@ packages:
       next:
         optional: true
 
-  '@onramp-sdk/shared@0.2.2':
-    resolution: {integrity: sha512-14ehTsyyCVIU62qzXtW/C/aMblinUceinIgdGbaz5c9EGac/W4KkzhwPLhOh//hQGK9K0nzWTayeEwXsCxY75A==}
+  '@onramp-sdk/shared@0.3.0':
+    resolution: {integrity: sha512-eTktQwRREoF3XmXkfsBPmrLIzJ0wVBZfSKdH8IfvYGq6jbY6AaAGzW7JQCBqFBSqlMPlgkMWqHFWFzFCmkBsXg==}
 
   '@panva/hkdf@1.2.1':
     resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
@@ -1529,8 +1529,8 @@ packages:
   '@types/yargs@17.0.35':
     resolution: {integrity: sha512-qUHkeCyQFxMXg79wQfTtfndEC+N9ZZg76HJftDJp+qH2tV7Gj4OJi7l+PiWwJ+pWtW8GwSmqsDj/oymhrTWXjg==}
 
-  '@upstep/js@0.5.3':
-    resolution: {integrity: sha512-7pHHHghssgzajIB8ATORko+K3C7EvGIjRDsKbvcsVReFHPitSrtLOk2YS6iIflDJ5cxFvGN3dcakSpeZJO0XHw==}
+  '@upstep/js@0.5.4':
+    resolution: {integrity: sha512-7rXqAXEM77y7qRphgFG2zBCwgjCw7MVIcB72URnajHhaUt0Ar9OduvfRFEu0T1yxmheoD97dl9/F3om922VG3w==}
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
@@ -1540,8 +1540,8 @@ packages:
       react-dom:
         optional: true
 
-  '@upstep/types@0.5.1':
-    resolution: {integrity: sha512-tYopXE5bCpYD4hrKxcBcz5mRjjDBMU7J+27j+IQpOPcoROPIJ4BR/arHygj6C74mrKsMO308RLbCPLvMpouEyA==}
+  '@upstep/types@0.5.2':
+    resolution: {integrity: sha512-dP5y0aqYfB7OKKF0yJQVXn2rZoz7DuXR2pU8H1nv+i19eT++y+zPrxVYwr+zQ/i4xiEM96n2HPL3G0Xhsl/w6A==}
 
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
@@ -4140,20 +4140,20 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
 
-  '@onramp-sdk/core@0.4.1':
+  '@onramp-sdk/core@0.5.0':
     dependencies:
-      '@onramp-sdk/shared': 0.2.2
+      '@onramp-sdk/shared': 0.3.0
       zod: 3.25.76
 
-  '@onramp-sdk/react@0.1.4(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@onramp-sdk/react@0.2.1(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@onramp-sdk/core': 0.4.1
-      '@onramp-sdk/shared': 0.2.2
+      '@onramp-sdk/core': 0.5.0
+      '@onramp-sdk/shared': 0.3.0
       react: 19.2.7
     optionalDependencies:
       next: 15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
 
-  '@onramp-sdk/shared@0.2.2': {}
+  '@onramp-sdk/shared@0.3.0': {}
 
   '@panva/hkdf@1.2.1': {}
 
@@ -4558,14 +4558,14 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 21.0.3
 
-  '@upstep/js@0.5.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@upstep/js@0.5.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@upstep/types': 0.5.1
+      '@upstep/types': 0.5.2
     optionalDependencies:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  '@upstep/types@0.5.1': {}
+  '@upstep/types@0.5.2': {}
 
   '@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@22.19.21)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))':
     dependencies:
