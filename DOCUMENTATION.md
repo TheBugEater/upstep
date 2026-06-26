@@ -367,6 +367,17 @@ Notes on the React components:
   config (or `data-*` attributes for the script tag).
 - **Dark mode** is built in across all three SDKs. With `theme: "auto"` the
   panel re-themes live when the user switches their OS appearance.
+- **Mobile-responsive launcher** — on viewports narrower than 640 px the web
+  launcher (both React and vanilla) collapses to an icon-only pill; the label is
+  hidden automatically.
+
+### Disabling the floating launcher
+
+| SDK | How to disable |
+|-----|----------------|
+| React (`@upstep/js/react`) | `<FeedbackWidget hideLauncher />` — render the modal without the button, then call `const { open } = useUpstep()` from your own UI |
+| Vanilla JS / Script tag | `Upstep.init({ ..., launcher: false })` — call `Upstep.open()` from your own element |
+| React Native | Simply omit `<FeedbackButton />` — it is a separate optional component. Render `<FeedbackSheet />` alone and call `const { openSheet } = useUpstep()` from anywhere |
 
 ---
 
@@ -560,7 +571,7 @@ Query parameters:
 | `limit` | `20` | Max `50` |
 | `cursor` | — | Feedback id to paginate after |
 | `type` | — | `BUG` \| `FEATURE` \| `GENERAL` |
-| `status` | — | `OPEN` \| `IN_PROGRESS` \| `DONE` \| `CLOSED` |
+| `status` | — | `OPEN` \| `IN_PROGRESS` \| `DONE` \| `CLOSED`. When omitted, `PENDING`, `CLOSED`, and `DONE` are excluded — only active (`OPEN` / `IN_PROGRESS`) items are returned by default |
 | `sort` | newest | `votes` sorts by upvotes descending |
 | `endUserId` | — | When provided, includes the user's own `PENDING` items |
 
@@ -707,18 +718,10 @@ The project detail page (`/dashboard/projects/[id]`) has three tabs:
 
 ### Feedback tab
 
-Two sub-views toggled at the top right:
-
-- **List view** — a filterable table (by type, status, sort by votes/newest).
-  Each row shows the title (falling back to truncated content), upvote count,
-  type/status badges. Clicking a row expands it to show the full description,
-  status change buttons, delete, and a **Developer response** section for
-  leaving comments that appear in the React Native detail screen.
-- **Board view** — a Jira-style kanban with three columns: **Open**,
-  **In Progress**, and **Done**. Each card shows the title (with a content
-  preview underneath if a title is set), upvotes, and type badge. **Drag a
-  card between columns to move it** — updates are optimistic and persisted via
-  `PATCH /api/projects/:id/feedback/:fid`.
+A Jira-style kanban board with three columns: **Open**, **In Progress**, and **Done**.
+Each card shows the title (with a content preview underneath if a title is set),
+upvotes, and type badge. **Drag a card between columns to move it** — updates are
+optimistic and persisted via `PATCH /api/projects/:id/feedback/:fid`.
 
 ### Pending review tab
 

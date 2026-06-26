@@ -66,7 +66,6 @@ export function FeedbackSheet() {
   const p = isDark ? DARK : LIGHT;
 
   const [nav, setNav] = useState<Nav>({ screen: "list" });
-  const [listTab, setListTab] = useState<"open" | "done">("open");
   const insets = useSafeAreaInsets();
 
   // Refresh list every time the modal opens
@@ -136,30 +135,6 @@ export function FeedbackSheet() {
             )}
           </View>
 
-          {/* Open / Completed tabs — only on list screen */}
-          {nav.screen === "list" && (
-            <View style={[styles.listTabBar, { borderBottomColor: p.border }]}>
-              <TouchableOpacity
-                onPress={() => setListTab("open")}
-                style={[styles.listTabBtn, listTab === "open" && { borderBottomColor: accentColor }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.listTabText, { color: listTab === "open" ? accentColor : p.textFaint }]}>
-                  Open
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setListTab("done")}
-                style={[styles.listTabBtn, listTab === "done" && { borderBottomColor: accentColor }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.listTabText, { color: listTab === "done" ? accentColor : p.textFaint }]}>
-                  Completed
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {/* Scrollable body */}
           <ScrollView
             style={styles.scroll}
@@ -171,7 +146,6 @@ export function FeedbackSheet() {
               <FeedListBody
                 p={p}
                 accent={accentColor}
-                tab={listTab}
                 onSelect={(id) => setNav({ screen: "detail", feedbackId: id })}
               />
             )}
@@ -217,15 +191,13 @@ export function FeedbackSheet() {
 // ─── FeedListBody ─────────────────────────────────────────────────────────────
 
 function FeedListBody({
-  p, accent, tab, onSelect,
+  p, accent, onSelect,
 }: {
-  p: Palette; accent: string; tab: "open" | "done"; onSelect: (id: string) => void;
+  p: Palette; accent: string; onSelect: (id: string) => void;
 }) {
   const { feedItems, feedLoading, vote } = useUpstep();
 
-  const displayItems = tab === "done"
-    ? feedItems.filter((f) => f.status === "DONE")
-    : feedItems.filter((f) => f.status === "OPEN" || f.status === "IN_PROGRESS" || f.status === "PENDING");
+  const displayItems = feedItems.filter((f) => f.status !== "CLOSED");
 
   if (feedLoading) {
     return (
@@ -239,9 +211,7 @@ function FeedListBody({
     return (
       <View style={styles.centered}>
         <Text style={[styles.emptyText, { color: p.textFaint }]}>
-          {tab === "done"
-            ? "No completed items yet."
-            : "No open feedback yet. Be the first to add one."}
+          No open feedback yet. Be the first to add one.
         </Text>
       </View>
     );
@@ -639,23 +609,6 @@ const styles = StyleSheet.create({
   navBtnSpacer: { width: 60 },
   newBtn: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
   newBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
-
-  // List tab bar
-  listTabBar: {
-    flexDirection: "row",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  listTabBtn: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 11,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  listTabText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
 
   // Scroll — flex: 1 fills all remaining space after the fixed header
   scroll: { flex: 1 },

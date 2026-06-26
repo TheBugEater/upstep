@@ -55,6 +55,7 @@ function buildStyles(accent: string, position: "left" | "right", p: Palette): st
 #upstep-btn svg{width:16px;height:16px;flex-shrink:0}
 #upstep-btn:hover{transform:translateY(-1px);box-shadow:0 8px 26px rgba(26,25,21,.24)}
 #upstep-btn svg{width:16px;height:16px}
+@media(max-width:639px){#upstep-btn{padding:12px}#upstep-btn span{display:none}}
 #upstep-backdrop{position:fixed;inset:0;background:${p.overlay};backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;animation:upstep-fade .2s ease}
 @keyframes upstep-fade{from{opacity:0}to{opacity:1}}
 @keyframes upstep-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}

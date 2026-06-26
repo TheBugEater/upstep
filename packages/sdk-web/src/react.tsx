@@ -177,7 +177,16 @@ export function FeedbackWidget({
   const { isOpen: open, open: openWidget, close: closeWidget, showBranding } = ctx;
   const [screen, setScreen] = useState<Screen>("list");
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [feedTab, setFeedTab] = useState<"open" | "done">("open");
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 639px)").matches : false
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const posStyle: React.CSSProperties =
     position === "bottom-left"
@@ -204,11 +213,12 @@ export function FeedbackWidget({
           style={{
             ...posStyle, zIndex: 9998, display: "inline-flex", alignItems: "center", gap: 7,
             background: accent, color: "#fff", border: "none", borderRadius: 9999,
-            padding: "12px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer",
+            padding: isMobile ? "12px" : "12px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer",
             fontFamily: font, boxShadow: "0 6px 20px rgba(26,25,21,.18)",
           }}
         >
-          <ChatIcon size={16} /> Feedback
+          <ChatIcon size={16} />
+          {!isMobile && "Feedback"}
         </button>
       )}
 
@@ -264,31 +274,10 @@ export function FeedbackWidget({
               </div>
             </div>
 
-            {/* Tab bar — list screen only */}
-            {screen === "list" && (
-              <div style={{ display: "flex", borderBottom: `1px solid ${p.border}`, flexShrink: 0 }}>
-                {(["open", "done"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setFeedTab(t)}
-                    style={{
-                      flex: 1, padding: "10px 0", border: "none", background: "none", cursor: "pointer",
-                      fontSize: 13, fontWeight: 600,
-                      color: feedTab === t ? accent : p.textFaint,
-                      borderBottom: `2px solid ${feedTab === t ? accent : "transparent"}`,
-                    }}
-                  >
-                    {t === "open" ? "Open" : "Completed"}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Body */}
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 24px" }}>
               {screen === "list" && (
                 <FeedList
-                  tab={feedTab}
                   onSelect={goToDetail}
                   accent={accent}
                   p={p}
@@ -332,27 +321,24 @@ export function FeedbackWidget({
 // ─── FeedList ─────────────────────────────────────────────────────────────────
 
 function FeedList({
-  tab, onSelect, accent, p,
+  onSelect, accent, p,
 }: {
-  tab: "open" | "done";
   onSelect: (id: string) => void;
   accent: string;
   p: Palette;
 }) {
   const { feedItems, vote } = useUpstep();
 
-  const items = tab === "done"
-    ? feedItems.filter((f) => f.status === "DONE")
-    : feedItems.filter((f) => f.status !== "DONE" && f.status !== "CLOSED");
+  const items = feedItems.filter((f) => f.status !== "CLOSED");
 
   if (!items.length) {
     return (
       <div style={{ textAlign: "center", padding: "40px 0" }}>
         <div style={{ color: p.textSoft, fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
-          {tab === "done" ? "Nothing completed yet" : "No open feedback yet"}
+          No open feedback yet
         </div>
         <div style={{ color: p.textFaint, fontSize: 14 }}>
-          {tab === "done" ? "Shipped items will appear here." : "Be the first to share one."}
+          Be the first to share one.
         </div>
       </div>
     );
