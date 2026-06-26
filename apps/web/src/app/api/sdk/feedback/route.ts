@@ -41,7 +41,9 @@ export async function GET(req: NextRequest) {
       ...(type ? { type: type as never } : {}),
       // If caller explicitly filters by status, honour it.
       // Otherwise hide PENDING — unless the item belongs to the requesting user.
+      // Also exclude items whose custom board status is marked as done.
       internal: false,
+      NOT: { boardStatus: { isDone: true } },
       ...(status
         ? { status: status as never }
         : endUserId
@@ -127,6 +129,13 @@ export async function POST(req: NextRequest) {
   const status = project.moderationEnabled ? "PENDING" : "OPEN";
   const flagged = containsProfanity(content);
 
+  // Auto-assign to the first non-done status so new submissions appear on the board
+  const defaultStatus = await db.status.findFirst({
+    where: { projectId: project.id, isDone: false },
+    orderBy: { order: "asc" },
+    select: { id: true },
+  });
+
   // Creator gets an automatic upvote.
   const feedback = await db.feedback.create({
     data: {
@@ -137,6 +146,7 @@ export async function POST(req: NextRequest) {
       status,
       flagged,
       upvotes: 1,
+      ...(defaultStatus ? { statusId: defaultStatus.id } : {}),
       ...(endUserId ? { endUserId } : {}),
       ...(parsed.data.metadata ? { metadata: parsed.data.metadata as object } : {}),
       // Record the vote so the creator can't double-vote later.

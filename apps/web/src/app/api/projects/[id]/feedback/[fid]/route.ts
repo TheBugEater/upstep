@@ -7,6 +7,7 @@ import { triggerIntegrations } from "@/lib/integrations";
 
 const updateSchema = z.object({
   status: z.enum(["PENDING", "OPEN", "IN_PROGRESS", "DONE", "CLOSED"]).optional(),
+  statusId: z.string().optional(),
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
   internal: z.boolean().optional(),
   addLabelId: z.string().optional(),
@@ -36,11 +37,28 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  // When moving via statusId, resolve the Status record to sync the enum field
+  let resolvedStatusEnum = parsed.data.status;
+  let resolvedStatusId = parsed.data.statusId;
+
+  if (parsed.data.statusId !== undefined) {
+    if (parsed.data.statusId === null) {
+      resolvedStatusId = null as unknown as string;
+    } else {
+      const customStatus = await db.status.findFirst({
+        where: { id: parsed.data.statusId, projectId: id },
+      });
+      if (!customStatus) return NextResponse.json({ error: "Invalid statusId" }, { status: 400 });
+      resolvedStatusEnum = customStatus.isDone ? "DONE" : "OPEN";
+    }
+  }
+
   const updated = await db.feedback.update({
     where: { id: fid },
     data: {
       ...(parsed.data.type ? { type: parsed.data.type } : {}),
-      ...(parsed.data.status ? { status: parsed.data.status } : {}),
+      ...(resolvedStatusEnum ? { status: resolvedStatusEnum } : {}),
+      ...(resolvedStatusId !== undefined ? { statusId: resolvedStatusId } : {}),
       ...(parsed.data.internal !== undefined ? { internal: parsed.data.internal } : {}),
       ...(parsed.data.addLabelId ? { labels: { connect: { id: parsed.data.addLabelId } } } : {}),
       ...(parsed.data.removeLabelId ? { labels: { disconnect: { id: parsed.data.removeLabelId } } } : {}),
@@ -48,13 +66,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     include: { project: { select: { name: true } }, labels: { select: { id: true, name: true, color: true } } },
   });
 
-  if (parsed.data.status && parsed.data.status !== feedback.status) {
+  const effectiveNewStatus = resolvedStatusEnum ?? parsed.data.status;
+  if (effectiveNewStatus && effectiveNewStatus !== feedback.status) {
     void triggerIntegrations({
       event: "STATUS_CHANGED",
       project: { id, name: updated.project.name },
       feedback: { id: fid, title: feedback.title, content: feedback.content, type: feedback.type },
       oldStatus: feedback.status,
-      newStatus: parsed.data.status,
+      newStatus: effectiveNewStatus,
     }).catch(() => {});
   }
 

@@ -83,6 +83,8 @@ model Project {
   members      ProjectMember[]
   integrations Integration[]
   labels       Label[]
+  statuses     Status[]
+  boards       Board[]
 }
 
 model Feedback {
@@ -92,6 +94,7 @@ model Feedback {
   content   String         @db.Text
   type      FeedbackType   @default(GENERAL)
   status    FeedbackStatus @default(OPEN)
+  statusId  String?
   endUserId String?
   upvotes   Int            @default(0)
   downvotes Int            @default(0)
@@ -101,10 +104,11 @@ model Feedback {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
-  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  votes    Vote[]
-  comments Comment[]
-  labels   Label[]
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  boardStatus Status?   @relation("FeedbackBoardStatus", fields: [statusId], references: [id], onDelete: SetNull)
+  votes       Vote[]
+  comments    Comment[]
+  labels      Label[]
 }
 
 model Comment {
@@ -211,4 +215,44 @@ enum IntegrationEvent {
   STATUS_CHANGED
   NEW_VOTE
   NEW_COMMENT
+}
+
+// ─── Custom statuses & boards ─────────────────────────────────────────────────
+
+model Status {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  color     String   @default("#94a3b8")
+  order     Int      @default(0)
+  isDone    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  feedbacks    Feedback[]    @relation("FeedbackBoardStatus")
+  boardColumns BoardColumn[]
+
+  @@unique([projectId, name])
+  @@index([projectId, order])
+}
+
+model Board {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  columns BoardColumn[]
+}
+
+model BoardColumn {
+  id       String @id @default(cuid())
+  boardId  String
+  statusId String
+  order    Int    @default(0)
+
+  board  Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  status Status @relation(fields: [statusId], references: [id], onDelete: Cascade)
 }

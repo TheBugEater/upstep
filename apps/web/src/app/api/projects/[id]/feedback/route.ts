@@ -75,6 +75,13 @@ export async function POST(
     select: { name: true },
   });
 
+  // Auto-assign to the first non-done status for the board view
+  const defaultStatus = await db.status.findFirst({
+    where: { projectId: id, isDone: false },
+    orderBy: { order: "asc" },
+    select: { id: true },
+  });
+
   const feedback = await db.feedback.create({
     data: {
       projectId: id,
@@ -82,6 +89,7 @@ export async function POST(
       content: parsed.data.content,
       type: parsed.data.type,
       status: parsed.data.status,
+      ...(defaultStatus ? { statusId: defaultStatus.id } : {}),
       internal: parsed.data.internal,
       flagged: false,
       upvotes: 0,

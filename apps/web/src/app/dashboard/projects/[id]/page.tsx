@@ -38,12 +38,12 @@ export default async function ProjectPage({
 
   const labelInclude = { labels: { select: { id: true, name: true, color: true } } };
 
-  const [boardFeedback, pendingFeedback, completedFeedback, openCount, inProgressCount, pendingCount] = await Promise.all([
+  const [boardFeedback, pendingFeedback, completedFeedback, openCount, inProgressCount, pendingCount, boards, statuses, projectLabels] = await Promise.all([
     db.feedback.findMany({
       where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS", "DONE"] } },
       orderBy: { upvotes: "desc" },
       take: 100,
-      include: labelInclude,
+      include: { ...labelInclude, boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } } },
     }),
     db.feedback.findMany({
       where: { projectId: id, status: "PENDING" },
@@ -60,6 +60,24 @@ export default async function ProjectPage({
     db.feedback.count({ where: { projectId: id, status: "OPEN" } }),
     db.feedback.count({ where: { projectId: id, status: "IN_PROGRESS" } }),
     db.feedback.count({ where: { projectId: id, status: "PENDING" } }),
+    db.board.findMany({
+      where: { projectId: id },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+      include: {
+        columns: {
+          orderBy: { order: "asc" },
+          include: { status: true },
+        },
+      },
+    }),
+    db.status.findMany({
+      where: { projectId: id },
+      orderBy: { order: "asc" },
+    }),
+    db.label.findMany({
+      where: { projectId: id },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
@@ -102,6 +120,9 @@ export default async function ProjectPage({
           completedFeedback={completedFeedback as never}
           pendingCount={pendingCount}
           activeCount={openCount + inProgressCount}
+          boards={boards as never}
+          statuses={statuses as never}
+          projectLabels={projectLabels as never}
         />
       </div>
     </div>

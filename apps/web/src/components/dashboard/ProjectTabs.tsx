@@ -7,6 +7,8 @@ import { FeedbackBoard } from "@/components/FeedbackBoard";
 import { PendingTab } from "@/components/dashboard/PendingTab";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import { IntegrationsTab } from "@/components/dashboard/IntegrationsTab";
+import type { ProjectBoard, ProjectStatus } from "@/types/dashboard";
+import type { Label } from "@upstep/types";
 
 type Tab = "feedback" | "completed" | "pending" | "integrations" | "settings";
 
@@ -32,6 +34,9 @@ interface Props {
   completedFeedback: Feedback[];
   pendingCount: number;
   activeCount: number;
+  boards: ProjectBoard[];
+  statuses: ProjectStatus[];
+  projectLabels: Label[];
 }
 
 export function ProjectTabs({
@@ -46,6 +51,9 @@ export function ProjectTabs({
   completedFeedback,
   pendingCount,
   activeCount,
+  boards,
+  statuses,
+  projectLabels,
 }: Props) {
   const [tab, setTab] = useState<Tab>("feedback");
 
@@ -95,7 +103,14 @@ export function ProjectTabs({
       {tab === "feedback" && (
         <div>
           <p className="text-xs text-faint hidden sm:block mb-4">Drag cards between columns to change status</p>
-          <FeedbackBoard projectId={projectId} feedback={boardFeedback} />
+          <FeedbackBoard
+            projectId={projectId}
+            feedback={boardFeedback}
+            boards={boards}
+            statuses={statuses}
+            projectLabels={projectLabels}
+            isOwner={isOwner}
+          />
         </div>
       )}
 
