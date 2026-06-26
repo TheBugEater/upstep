@@ -47,11 +47,11 @@ export async function GET(req: NextRequest) {
         : endUserId
           ? {
               OR: [
-                { status: { notIn: ["PENDING", "CLOSED"] as const } },
+                { status: { notIn: ["PENDING", "CLOSED", "DONE"] as const } },
                 { status: "PENDING" as const, endUserId },
               ],
             }
-          : { status: { notIn: ["PENDING", "CLOSED"] as const } }),
+          : { status: { notIn: ["PENDING", "CLOSED", "DONE"] as const } }),
     },
     orderBy: { [sort]: "desc" },
     take: limit + 1,

@@ -9,7 +9,6 @@ import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import { IntegrationsTab } from "@/components/dashboard/IntegrationsTab";
 
 type Tab = "feedback" | "completed" | "pending" | "integrations" | "settings";
-type FeedbackView = "list" | "board";
 
 export interface TeamMember {
   id: string;
@@ -25,9 +24,7 @@ interface Props {
   isOwner: boolean;
   ownerPlan: string;
   teamMembers: TeamMember[];
-  /** Active items (OPEN + IN_PROGRESS) for the main list view. */
-  listFeedback: Feedback[];
-  /** Full active set (non-pending) for the board. */
+  /** Active set (OPEN + IN_PROGRESS + DONE) for the board. */
   boardFeedback: Feedback[];
   /** Pending items for the moderation tab. */
   pendingFeedback: Feedback[];
@@ -44,7 +41,6 @@ export function ProjectTabs({
   isOwner,
   ownerPlan,
   teamMembers,
-  listFeedback,
   boardFeedback,
   pendingFeedback,
   completedFeedback,
@@ -52,14 +48,6 @@ export function ProjectTabs({
   activeCount,
 }: Props) {
   const [tab, setTab] = useState<Tab>("feedback");
-  const [view, setView] = useState<FeedbackView>("list");
-
-  const viewToggle = (
-    <div className="inline-flex gap-1 bg-card border border-line rounded-xl p-1 shrink-0">
-      <ViewBtn active={view === "list"} onClick={() => setView("list")}>☰ List</ViewBtn>
-      <ViewBtn active={view === "board"} onClick={() => setView("board")}>▦ Board</ViewBtn>
-    </div>
-  );
 
   return (
     <div>
@@ -103,23 +91,12 @@ export function ProjectTabs({
         </div>
       </div>
 
-      {/* Feedback tab — active items (Open + In progress) */}
+      {/* Feedback tab — board view */}
       {tab === "feedback" && (
-        view === "list" ? (
-          <FeedbackTable
-            projectId={projectId}
-            feedback={listFeedback}
-            lead={viewToggle}
-          />
-        ) : (
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              {viewToggle}
-              <span className="text-xs text-faint hidden sm:block">Drag cards between columns to change status</span>
-            </div>
-            <FeedbackBoard projectId={projectId} feedback={boardFeedback} />
-          </div>
-        )
+        <div>
+          <p className="text-xs text-faint hidden sm:block mb-4">Drag cards between columns to change status</p>
+          <FeedbackBoard projectId={projectId} feedback={boardFeedback} />
+        </div>
       )}
 
       {/* Completed tab — DONE items */}
@@ -194,23 +171,3 @@ function TabBtn({
   );
 }
 
-function ViewBtn({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-        active ? "bg-ink text-white" : "text-muted hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}

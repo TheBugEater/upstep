@@ -38,13 +38,7 @@ export default async function ProjectPage({
 
   const labelInclude = { labels: { select: { id: true, name: true, color: true } } };
 
-  const [listFeedback, boardFeedback, pendingFeedback, completedFeedback, openCount, inProgressCount, pendingCount] = await Promise.all([
-    db.feedback.findMany({
-      where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS"] } },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-      include: labelInclude,
-    }),
+  const [boardFeedback, pendingFeedback, completedFeedback, openCount, inProgressCount, pendingCount] = await Promise.all([
     db.feedback.findMany({
       where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS", "DONE"] } },
       orderBy: { upvotes: "desc" },
@@ -103,7 +97,6 @@ export default async function ProjectPage({
           isOwner={isOwner}
           ownerPlan={ownerPlan}
           teamMembers={teamMembers}
-          listFeedback={listFeedback as never}
           boardFeedback={boardFeedback as never}
           pendingFeedback={pendingFeedback as never}
           completedFeedback={completedFeedback as never}
