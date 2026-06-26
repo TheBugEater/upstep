@@ -36,8 +36,8 @@ importers:
         specifier: ^6.2.1
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       '@upstep/js':
-        specifier: ^0.5.4
-        version: 0.5.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.5.5
+        version: 0.5.5(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@upstep/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -1529,8 +1529,8 @@ packages:
   '@types/yargs@17.0.35':
     resolution: {integrity: sha512-qUHkeCyQFxMXg79wQfTtfndEC+N9ZZg76HJftDJp+qH2tV7Gj4OJi7l+PiWwJ+pWtW8GwSmqsDj/oymhrTWXjg==}
 
-  '@upstep/js@0.5.4':
-    resolution: {integrity: sha512-7rXqAXEM77y7qRphgFG2zBCwgjCw7MVIcB72URnajHhaUt0Ar9OduvfRFEu0T1yxmheoD97dl9/F3om922VG3w==}
+  '@upstep/js@0.5.5':
+    resolution: {integrity: sha512-olYLYguOtEJmL71Fdrjz95x8fS7jsQpJd/Jdt908c8VMOs+TdeYsQiMnBomovUd4bWvTWU3fFjHLPbVsd4SU1w==}
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
@@ -1540,8 +1540,8 @@ packages:
       react-dom:
         optional: true
 
-  '@upstep/types@0.5.2':
-    resolution: {integrity: sha512-dP5y0aqYfB7OKKF0yJQVXn2rZoz7DuXR2pU8H1nv+i19eT++y+zPrxVYwr+zQ/i4xiEM96n2HPL3G0Xhsl/w6A==}
+  '@upstep/types@0.5.3':
+    resolution: {integrity: sha512-QaCXPgWTNV4Xx2SIfex1cPSKW5Os7Tm94r0Lz3emiWpmA8/gc48owC9pt8hzkQsUFMY0zn75hrln/4VLFpPN1w==}
 
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
@@ -4558,14 +4558,14 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 21.0.3
 
-  '@upstep/js@0.5.4(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@upstep/js@0.5.5(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@upstep/types': 0.5.2
+      '@upstep/types': 0.5.3
     optionalDependencies:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  '@upstep/types@0.5.2': {}
+  '@upstep/types@0.5.3': {}
 
   '@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@22.19.21)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))':
     dependencies:
