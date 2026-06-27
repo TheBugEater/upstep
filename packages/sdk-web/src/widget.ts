@@ -51,10 +51,10 @@ function buildStyles(accent: string, position: "left" | "right", p: Palette): st
   const side = position === "left" ? "left:24px" : "right:24px";
   return `
 #upstep-root *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-#upstep-btn{position:fixed;bottom:24px;${side};z-index:9998;display:inline-flex;align-items:center;gap:7px;background:${accent};color:#fff;border:none;border-radius:9999px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(26,25,21,.18);transition:transform .15s,box-shadow .15s}
+#upstep-btn{position:fixed;bottom:24px;${side};z-index:9998;display:inline-flex;align-items:center;gap:7px;background:${accent};color:#fff;border:none;border-radius:9999px;padding:12px 18px;font-size:14px;font-weight:600;cursor:grab;touch-action:none;box-shadow:0 6px 20px rgba(26,25,21,.18);transition:transform .15s,box-shadow .15s}
 #upstep-btn svg{width:16px;height:16px;flex-shrink:0}
 #upstep-btn:hover{transform:translateY(-1px);box-shadow:0 8px 26px rgba(26,25,21,.24)}
-#upstep-btn svg{width:16px;height:16px}
+#upstep-btn.upstep-dragging{cursor:grabbing;transform:scale(1.06);box-shadow:0 10px 32px rgba(26,25,21,.28);transition:transform .08s,box-shadow .08s}
 @media(max-width:639px){#upstep-btn{padding:12px}#upstep-btn span{display:none}}
 #upstep-backdrop{position:fixed;inset:0;background:${p.overlay};backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;animation:upstep-fade .2s ease}
 @keyframes upstep-fade{from{opacity:0}to{opacity:1}}
@@ -102,7 +102,7 @@ function buildStyles(accent: string, position: "left" | "right", p: Palette): st
 }
 
 const CHAT_ICON =
-  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 
 type Tab = "submit" | "feed";
 
@@ -126,6 +126,7 @@ export class UpstepWidget {
   private position: "left" | "right";
   private showLauncher: boolean;
   private palette: Palette;
+  private dragMoved = false;
 
   constructor(client: UpstepApiClient, options: WidgetOptions = {}) {
     this.client = client;
@@ -162,8 +163,87 @@ export class UpstepWidget {
     const btn = document.createElement("button");
     btn.id = "upstep-btn";
     btn.innerHTML = `${CHAT_ICON}<span>Feedback</span>`;
-    btn.addEventListener("click", () => this.openModal());
+    btn.addEventListener("click", () => {
+      if (!this.dragMoved) this.openModal();
+    });
     document.body.appendChild(btn);
+    this.makeDraggable(btn);
+  }
+
+  private makeDraggable(btn: HTMLElement) {
+    const MARGIN = 24;
+    const THRESHOLD = 6;
+    const KEY = "upstep-btn-pos";
+
+    // Restore saved position
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const { side, bottom } = JSON.parse(raw) as { side: "left" | "right"; bottom: number };
+        btn.style.left = side === "left" ? `${MARGIN}px` : "auto";
+        btn.style.right = side === "right" ? `${MARGIN}px` : "auto";
+        btn.style.top = "auto";
+        btn.style.bottom = `${bottom}px`;
+      }
+    } catch {}
+
+    let startPX = 0, startPY = 0, startLeft = 0, startTop = 0;
+    let active = false;
+
+    const snap = () => {
+      const rect = btn.getBoundingClientRect();
+      const side = rect.left + rect.width / 2 < window.innerWidth / 2 ? "left" : "right";
+      const clampedTop = Math.max(MARGIN, Math.min(window.innerHeight - rect.height - MARGIN, rect.top));
+      const bottom = window.innerHeight - clampedTop - rect.height;
+
+      btn.style.transition = "left .25s cubic-bezier(.16,1,.3,1),right .25s cubic-bezier(.16,1,.3,1),top .25s cubic-bezier(.16,1,.3,1),bottom .25s cubic-bezier(.16,1,.3,1),transform .15s,box-shadow .15s";
+      btn.style.left = side === "left" ? `${MARGIN}px` : "auto";
+      btn.style.right = side === "right" ? `${MARGIN}px` : "auto";
+      btn.style.top = "auto";
+      btn.style.bottom = `${bottom}px`;
+
+      try {
+        localStorage.setItem(KEY, JSON.stringify({ side, bottom }));
+      } catch {}
+    };
+
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      this.dragMoved = false;
+      active = true;
+      const rect = btn.getBoundingClientRect();
+      startPX = e.clientX;
+      startPY = e.clientY;
+      startLeft = rect.left;
+      startTop = rect.top;
+      btn.setPointerCapture(e.pointerId);
+      btn.style.transition = "none";
+    };
+
+    const onMove = (e: PointerEvent) => {
+      if (!active) return;
+      const dx = e.clientX - startPX;
+      const dy = e.clientY - startPY;
+      if (!this.dragMoved && Math.hypot(dx, dy) < THRESHOLD) return;
+      if (!this.dragMoved) btn.classList.add("upstep-dragging");
+      this.dragMoved = true;
+      btn.style.left = `${startLeft + dx}px`;
+      btn.style.right = "auto";
+      btn.style.top = `${startTop + dy}px`;
+      btn.style.bottom = "auto";
+    };
+
+    const onUp = () => {
+      if (!active) return;
+      active = false;
+      btn.classList.remove("upstep-dragging");
+      if (this.dragMoved) snap();
+    };
+
+    btn.addEventListener("pointerdown", onDown);
+    btn.addEventListener("pointermove", onMove);
+    btn.addEventListener("pointerup", onUp);
+    btn.addEventListener("pointercancel", onUp);
   }
 
   private openModal() {
