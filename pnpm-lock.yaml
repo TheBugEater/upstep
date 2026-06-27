@@ -36,8 +36,8 @@ importers:
         specifier: ^6.2.1
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       '@upstep/js':
-        specifier: ^0.5.6
-        version: 0.5.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.5.7
+        version: 0.5.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@upstep/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -1529,8 +1529,8 @@ packages:
   '@types/yargs@17.0.35':
     resolution: {integrity: sha512-qUHkeCyQFxMXg79wQfTtfndEC+N9ZZg76HJftDJp+qH2tV7Gj4OJi7l+PiWwJ+pWtW8GwSmqsDj/oymhrTWXjg==}
 
-  '@upstep/js@0.5.6':
-    resolution: {integrity: sha512-UDRVwWiu8jwSgk46py3maZK8OOKOtuEvFCMfNPQPRnAuKPPA4g3+tpJLh6kw2ilyOl1o898D9+nj9C/Y71lXUQ==}
+  '@upstep/js@0.5.7':
+    resolution: {integrity: sha512-eZdl3hVHcfjQiqiPg9zPdQoGJj1ESk9gm5Y4uF3VYsB/ENqlQ8wy65IY/lUm6WZGt++8MizRtlQaPRrIX4ob2w==}
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
@@ -4558,7 +4558,7 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 21.0.3
 
-  '@upstep/js@0.5.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@upstep/js@0.5.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@upstep/types': 0.5.3
     optionalDependencies:
