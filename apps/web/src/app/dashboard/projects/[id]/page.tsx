@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { SetupGuideButton } from "@/components/dashboard/SetupGuide";
-import { ProjectTabs } from "@/components/dashboard/ProjectTabs";
+import { ProjectWorkspace } from "@/components/workspace/ProjectWorkspace";
 
 export default async function ProjectPage({
   params,
@@ -36,30 +36,24 @@ export default async function ProjectPage({
   const isMember = project.members.some((m) => m.userId === session.user!.id);
   if (!isOwner && !isMember) notFound();
 
-  const labelInclude = { labels: { select: { id: true, name: true, color: true } } };
+  const include = {
+    labels: { select: { id: true, name: true, color: true } },
+    boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } },
+  };
 
-  const [boardFeedback, pendingFeedback, completedFeedback, openCount, inProgressCount, pendingCount, boards, statuses, projectLabels] = await Promise.all([
+  const [boardFeedback, pendingFeedback, boards, statuses, projectLabels] = await Promise.all([
     db.feedback.findMany({
       where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS", "DONE"] } },
       orderBy: { upvotes: "desc" },
-      take: 100,
-      include: { ...labelInclude, boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } } },
+      take: 300,
+      include,
     }),
     db.feedback.findMany({
       where: { projectId: id, status: "PENDING" },
       orderBy: { createdAt: "desc" },
       take: 100,
-      include: labelInclude,
+      include,
     }),
-    db.feedback.findMany({
-      where: { projectId: id, status: "DONE" },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-      include: labelInclude,
-    }),
-    db.feedback.count({ where: { projectId: id, status: "OPEN" } }),
-    db.feedback.count({ where: { projectId: id, status: "IN_PROGRESS" } }),
-    db.feedback.count({ where: { projectId: id, status: "PENDING" } }),
     db.board.findMany({
       where: { projectId: id },
       orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
@@ -93,7 +87,7 @@ export default async function ProjectPage({
     <div className="min-h-screen bg-canvas">
       <DashboardHeader email={session.user.email} />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <Link
           href="/dashboard"
           className="text-xs text-muted hover:text-ink transition inline-flex items-center gap-1 mb-3"
@@ -108,21 +102,18 @@ export default async function ProjectPage({
           {isOwner && <SetupGuideButton apiKey={project.apiKey} baseUrl={baseUrl} />}
         </div>
 
-        <ProjectTabs
+        <ProjectWorkspace
           projectId={id}
           apiKey={project.apiKey}
           moderationEnabled={project.moderationEnabled}
           isOwner={isOwner}
           ownerPlan={ownerPlan}
           teamMembers={teamMembers}
-          boardFeedback={boardFeedback as never}
-          pendingFeedback={pendingFeedback as never}
-          completedFeedback={completedFeedback as never}
-          pendingCount={pendingCount}
-          activeCount={openCount + inProgressCount}
-          boards={boards as never}
-          statuses={statuses as never}
-          projectLabels={projectLabels as never}
+          initialItems={boardFeedback as never}
+          initialPending={pendingFeedback as never}
+          initialBoards={boards as never}
+          initialStatuses={statuses as never}
+          initialLabels={projectLabels as never}
         />
       </div>
     </div>

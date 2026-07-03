@@ -1,3 +1,5 @@
+import type { Feedback, Label } from "@upstep/types";
+
 export interface ProjectStatus {
   id: string;
   name: string;
@@ -18,4 +20,11 @@ export interface ProjectBoard {
   name: string;
   isDefault: boolean;
   columns: BoardColumnDef[];
+}
+
+/** A feedback item as the dashboard workspace sees it — with board placement. */
+export interface WorkspaceItem extends Feedback {
+  statusId?: string | null;
+  boardStatus?: ProjectStatus | null;
+  labels?: Label[];
 }

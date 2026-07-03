@@ -51,6 +51,18 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       if (!customStatus) return NextResponse.json({ error: "Invalid statusId" }, { status: 400 });
       resolvedStatusEnum = customStatus.isDone ? "DONE" : "OPEN";
     }
+  } else if (
+    (parsed.data.status === "OPEN" || parsed.data.status === "IN_PROGRESS") &&
+    !feedback.statusId
+  ) {
+    // Approving an item with no board column yet (e.g. from Pending review) —
+    // drop it into the first non-done column so it shows up on the board.
+    const firstStatus = await db.status.findFirst({
+      where: { projectId: id, isDone: false },
+      orderBy: { order: "asc" },
+      select: { id: true },
+    });
+    if (firstStatus) resolvedStatusId = firstStatus.id;
   }
 
   const updated = await db.feedback.update({
@@ -63,7 +75,11 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       ...(parsed.data.addLabelId ? { labels: { connect: { id: parsed.data.addLabelId } } } : {}),
       ...(parsed.data.removeLabelId ? { labels: { disconnect: { id: parsed.data.removeLabelId } } } : {}),
     },
-    include: { project: { select: { name: true } }, labels: { select: { id: true, name: true, color: true } } },
+    include: {
+      project: { select: { name: true } },
+      labels: { select: { id: true, name: true, color: true } },
+      boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } },
+    },
   });
 
   const effectiveNewStatus = resolvedStatusEnum ?? parsed.data.status;

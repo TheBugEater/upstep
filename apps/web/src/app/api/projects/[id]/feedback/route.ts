@@ -24,15 +24,22 @@ export async function GET(
   const type = searchParams.get("type") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
   const sort = searchParams.get("sort") === "votes" ? "upvotes" : "createdAt";
+  const take = Math.min(Number(searchParams.get("take")) || 50, 300);
 
   const feedback = await db.feedback.findMany({
     where: {
       projectId: id,
       ...(type ? { type: type as never } : {}),
-      ...(status ? { status: status as never } : {}),
+      ...(status
+        ? { status: { in: status.split(",") as never } }
+        : {}),
     },
     orderBy: { [sort]: "desc" },
-    take: 50,
+    take,
+    include: {
+      labels: { select: { id: true, name: true, color: true } },
+      boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } },
+    },
   });
 
   return NextResponse.json(feedback);
@@ -47,6 +54,8 @@ const createSchema = z.object({
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).default("GENERAL"),
   status: z.enum(["OPEN", "IN_PROGRESS"]).default("OPEN"),
   internal: z.boolean().default(false),
+  statusId: z.string().optional(),
+  labelIds: z.array(z.string()).optional(),
 });
 
 export async function POST(
@@ -75,12 +84,34 @@ export async function POST(
     select: { name: true },
   });
 
-  // Auto-assign to the first non-done status for the board view
-  const defaultStatus = await db.status.findFirst({
-    where: { projectId: id, isDone: false },
-    orderBy: { order: "asc" },
-    select: { id: true },
-  });
+  // Place the card in the requested column, or fall back to the first
+  // non-done status so it always appears on the board.
+  let boardStatus: { id: string; isDone: boolean } | null = null;
+  if (parsed.data.statusId) {
+    boardStatus = await db.status.findFirst({
+      where: { id: parsed.data.statusId, projectId: id },
+      select: { id: true, isDone: true },
+    });
+    if (!boardStatus) {
+      return NextResponse.json({ error: "Invalid statusId" }, { status: 400 });
+    }
+  } else {
+    boardStatus = await db.status.findFirst({
+      where: { projectId: id, isDone: false },
+      orderBy: { order: "asc" },
+      select: { id: true, isDone: true },
+    });
+  }
+
+  if (parsed.data.labelIds?.length) {
+    const labels = await db.label.findMany({
+      where: { projectId: id, id: { in: parsed.data.labelIds } },
+      select: { id: true },
+    });
+    if (labels.length !== parsed.data.labelIds.length) {
+      return NextResponse.json({ error: "Invalid label IDs" }, { status: 400 });
+    }
+  }
 
   const feedback = await db.feedback.create({
     data: {
@@ -88,13 +119,19 @@ export async function POST(
       ...(parsed.data.title ? { title: parsed.data.title } : {}),
       content: parsed.data.content,
       type: parsed.data.type,
-      status: parsed.data.status,
-      ...(defaultStatus ? { statusId: defaultStatus.id } : {}),
+      status: boardStatus?.isDone ? "DONE" : parsed.data.status,
+      ...(boardStatus ? { statusId: boardStatus.id } : {}),
       internal: parsed.data.internal,
       flagged: false,
       upvotes: 0,
+      ...(parsed.data.labelIds?.length
+        ? { labels: { connect: parsed.data.labelIds.map((lid) => ({ id: lid })) } }
+        : {}),
     },
-    include: { labels: { select: { id: true, name: true, color: true } } },
+    include: {
+      labels: { select: { id: true, name: true, color: true } },
+      boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } },
+    },
   });
 
   void triggerIntegrations({

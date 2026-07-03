@@ -30,6 +30,9 @@ const createSchema = z.object({
   name: z.string().min(1).max(50),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   isDone: z.boolean().optional(),
+  // Append the new status as a column on every existing board so it is
+  // usable immediately without editing each board.
+  addToBoards: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
@@ -58,6 +61,22 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       isDone: parsed.data.isDone ?? false,
     },
   });
+
+  if (parsed.data.addToBoards) {
+    const boards = await db.board.findMany({
+      where: { projectId: id },
+      select: { id: true, columns: { select: { order: true } } },
+    });
+    if (boards.length > 0) {
+      await db.boardColumn.createMany({
+        data: boards.map((b) => ({
+          boardId: b.id,
+          statusId: status.id,
+          order: Math.max(-1, ...b.columns.map((c) => c.order)) + 1,
+        })),
+      });
+    }
+  }
 
   return NextResponse.json(status, { status: 201 });
 }

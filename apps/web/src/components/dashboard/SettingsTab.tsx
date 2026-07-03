@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { TeamMember } from "@/components/dashboard/ProjectTabs";
+import type { TeamMember } from "@/components/workspace/ProjectWorkspace";
 
 interface Props {
   projectId: string;
