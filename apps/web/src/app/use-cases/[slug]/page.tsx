@@ -83,7 +83,7 @@ export default async function UseCasePage({
           <ul className="space-y-2.5">
             {u.challenges.map((c) => (
               <li key={c} className="flex items-start gap-3 text-sm text-ink-soft">
-                <span className="mt-0.5 w-4 h-4 rounded-full bg-red-50 border border-red-100 text-red-500 flex items-center justify-center shrink-0 text-[10px] font-bold">✕</span>
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-danger/10 border border-danger/25 text-danger flex items-center justify-center shrink-0 text-[10px] font-bold">✕</span>
                 {c}
               </li>
             ))}

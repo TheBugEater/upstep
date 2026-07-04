@@ -15,15 +15,15 @@ const ITEMS: Item[] = [
 ];
 
 const TYPE_STYLES: Record<Item["type"], string> = {
-  FEATURE: "bg-blue-50 text-blue-600 border-blue-100",
-  BUG: "bg-red-50 text-red-600 border-red-100",
+  FEATURE: "bg-info/10 text-info border-info/25",
+  BUG: "bg-danger/10 text-danger border-danger/25",
   GENERAL: "bg-surface text-muted border-line",
 };
 
 const STATUS_STYLES: Record<Item["status"], string> = {
-  OPEN: "bg-amber-50 text-amber-700 border-amber-100",
-  IN_PROGRESS: "bg-blue-50 text-blue-600 border-blue-100",
-  DONE: "bg-green-50 text-green-700 border-green-100",
+  OPEN: "bg-warning/10 text-warning border-warning/25",
+  IN_PROGRESS: "bg-info/10 text-info border-info/25",
+  DONE: "bg-success/10 text-success border-success/25",
 };
 
 export function BoardPreview() {
@@ -39,7 +39,7 @@ export function BoardPreview() {
           </div>
         </div>
         <span className="inline-flex items-center gap-1.5 text-[11px] text-muted">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          <span className="w-1.5 h-1.5 rounded-full bg-success/100" />
           Live
         </span>
       </div>
@@ -82,7 +82,7 @@ function Chip({ children, active }: { children: React.ReactNode; active?: boolea
   return (
     <span
       className={`px-2.5 py-1 rounded-lg text-[11px] font-medium ${
-        active ? "bg-ink text-white" : "bg-surface text-muted border border-line"
+        active ? "bg-primary text-primary-fg" : "bg-surface text-muted border border-line"
       }`}
     >
       {children}

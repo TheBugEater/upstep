@@ -395,12 +395,12 @@ export function ProjectWorkspace({
             </TabBtn>
             <TabBtn active={tab === "completed"} onClick={() => setTab("completed")}>
               Completed
-              <Badge count={completedCount} cls="bg-green-100 text-green-700" />
+              <Badge count={completedCount} cls="bg-success/15 text-success" />
             </TabBtn>
             <TabBtn active={tab === "pending"} onClick={() => setTab("pending")}>
               <span className="hidden sm:inline">Pending review</span>
               <span className="sm:hidden">Pending</span>
-              <Badge count={pending.length} cls="bg-orange-500 text-white" />
+              <Badge count={pending.length} cls="bg-clay text-white" />
             </TabBtn>
             <TabBtn active={tab === "integrations"} onClick={() => setTab("integrations")}>
               Integrations
@@ -423,7 +423,7 @@ export function ProjectWorkspace({
                   onClick={() => setActiveBoardId(b.id)}
                   className={`shrink-0 text-xs px-3 py-1.5 rounded-full font-medium border transition ${
                     b.id === (activeBoard?.id ?? "")
-                      ? "bg-ink text-white border-ink"
+                      ? "bg-primary text-primary-fg border-ink"
                       : "bg-card text-muted border-line hover:border-line-strong hover:text-ink"
                   }`}
                 >
@@ -576,6 +576,7 @@ export function ProjectWorkspace({
       {tab === "integrations" && (
         <IntegrationsTab
           projectId={projectId}
+          apiKey={apiKey}
           isOwner={isOwner}
           isPro={ownerPlan === "PRO" || ownerPlan === "BUSINESS"}
         />
@@ -716,7 +717,7 @@ function ViewBtn({
       onClick={onClick}
       title={`${label} view`}
       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-medium transition ${
-        active ? "bg-ink text-white" : "text-muted hover:text-ink"
+        active ? "bg-primary text-primary-fg" : "text-muted hover:text-ink"
       }`}
     >
       {children}
@@ -738,7 +739,7 @@ function FilterBtn({
     <button
       onClick={onClick}
       className={`px-2.5 py-1.5 rounded-[10px] text-xs font-medium transition ${
-        active ? "bg-ink text-white" : "text-muted hover:text-ink"
+        active ? "bg-primary text-primary-fg" : "text-muted hover:text-ink"
       }`}
     >
       {children}

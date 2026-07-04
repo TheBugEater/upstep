@@ -46,7 +46,7 @@ function LoginForm() {
             <div className="mt-8 space-y-3">
               <button
                 onClick={() => { step("oauth_clicked", { properties: { provider: "github" } }); signIn("github", { callbackUrl }); }}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-ink text-white rounded-xl text-sm font-medium hover:bg-ink-soft transition shadow-sm"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-primary text-primary-fg rounded-xl text-sm font-medium hover:bg-primary/85 transition shadow-sm"
               >
                 <GitHubIcon />
                 Continue with GitHub
@@ -81,7 +81,7 @@ function LoginForm() {
       </div>
 
       {/* Right — brand panel */}
-      <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-ink p-12">
+      <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-[#161513] p-12">
         <div className="absolute inset-0 bg-grid opacity-[0.07]" />
         <div className="absolute inset-0 bg-glow opacity-60" />
 

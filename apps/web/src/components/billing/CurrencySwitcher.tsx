@@ -28,7 +28,7 @@ export function CurrencySwitcher({ current }: { current: Currency }) {
           onClick={() => select(c)}
           aria-pressed={c === current}
           className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-            c === current ? "bg-ink text-white" : "text-muted hover:text-ink"
+            c === current ? "bg-primary text-primary-fg" : "text-muted hover:text-ink"
           }`}
         >
           {CURRENCY_META[c].symbol} {c}

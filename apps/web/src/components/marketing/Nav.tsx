@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_LINKS: [string, string][] = [
   ["Features", "/#features"],
   ["How it works", "/#how"],
+  ["MCP", "/#mcp"],
   ["Developers", "/#integrate"],
   ["Pricing", "/pricing"],
 ];
@@ -30,6 +32,7 @@ export function Nav() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle className="!w-8 !h-8" />
           <Link
             href="/login"
             className="hidden sm:inline-flex text-sm text-muted hover:text-ink transition px-3 py-2"
@@ -38,10 +41,10 @@ export function Nav() {
           </Link>
           <Link
             href="/login"
-            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium bg-ink text-white rounded-full px-4 py-2 hover:bg-ink-soft transition shadow-sm"
+            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium bg-primary text-primary-fg rounded-full px-4 py-2 hover:bg-primary/85 transition shadow-sm"
           >
             Get started
-            <span aria-hidden className="text-white/70">→</span>
+            <span aria-hidden className="opacity-70">→</span>
           </Link>
 
           {/* Hamburger — mobile only */}
@@ -85,7 +88,7 @@ export function Nav() {
               <Link
                 href="/login"
                 onClick={() => setMenuOpen(false)}
-                className="flex-1 text-center text-sm font-medium bg-ink text-white rounded-xl px-4 py-2.5 hover:bg-ink-soft transition"
+                className="flex-1 text-center text-sm font-medium bg-primary text-primary-fg rounded-xl px-4 py-2.5 hover:bg-primary/85 transition"
               >
                 Get started
               </Link>

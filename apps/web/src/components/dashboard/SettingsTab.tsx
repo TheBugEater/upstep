@@ -146,7 +146,7 @@ export function SettingsTab({
                 <button
                   onClick={() => void removeMember(m.id)}
                   disabled={removing === m.id}
-                  className="text-xs text-faint hover:text-red-500 transition disabled:opacity-40 shrink-0"
+                  className="text-xs text-faint hover:text-danger transition disabled:opacity-40 shrink-0"
                   aria-label={`Remove ${m.email}`}
                 >
                   {removing === m.id ? "…" : "✕"}
@@ -168,13 +168,13 @@ export function SettingsTab({
             <button
               type="submit"
               disabled={inviting || !inviteEmail.trim()}
-              className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-medium hover:bg-ink/80 transition disabled:opacity-40 shrink-0"
+              className="px-4 py-2 rounded-xl bg-primary text-primary-fg text-sm font-medium hover:bg-primary/85 transition disabled:opacity-40 shrink-0"
             >
               {inviting ? "Adding…" : "Add"}
             </button>
           </form>
         )}
-        {inviteError && <p className="text-xs text-red-500 mt-2">{inviteError}</p>}
+        {inviteError && <p className="text-xs text-danger mt-2">{inviteError}</p>}
       </div>
 
       {/* ── API Key (owner only) ─────────────────────────────────────────────── */}
@@ -199,24 +199,24 @@ export function SettingsTab({
           </div>
 
           {newKey && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-4">
-              <p className="text-xs font-semibold text-amber-700 mb-2">
+            <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 mb-4">
+              <p className="text-xs font-semibold text-warning mb-2">
                 Save your new key. This is the only time it will be shown in full.
               </p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs font-mono bg-white border border-amber-200 rounded-lg px-3 py-2 text-ink break-all">
+                <code className="flex-1 text-xs font-mono bg-white border border-warning/30 rounded-lg px-3 py-2 text-ink break-all">
                   {newKey}
                 </code>
                 <button
                   onClick={() => void copyNewKey()}
-                  className="text-xs px-3 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-700 transition shrink-0"
+                  className="text-xs px-3 py-2 rounded-lg bg-warning text-white font-medium hover:bg-warning/85 transition shrink-0"
                 >
                   {copiedNew ? "Copied ✓" : "Copy"}
                 </button>
               </div>
               <button
                 onClick={() => setNewKey(null)}
-                className="mt-2 text-xs text-amber-600 hover:text-amber-800 transition"
+                className="mt-2 text-xs text-warning hover:text-warning transition"
               >
                 I&apos;ve saved it, dismiss
               </button>
@@ -224,15 +224,15 @@ export function SettingsTab({
           )}
 
           {confirmRotate ? (
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-100">
-              <p className="text-xs text-red-700 flex-1">
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-danger/10 border border-danger/25">
+              <p className="text-xs text-danger flex-1">
                 <strong>This cannot be undone.</strong> Your old key will stop working immediately.
                 Any live apps using it will break until you update them.
               </p>
               <button
                 onClick={() => void rotateKey()}
                 disabled={rotating}
-                className="text-xs px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-60 shrink-0"
+                className="text-xs px-4 py-2 rounded-lg bg-danger text-white font-semibold hover:bg-danger/85 transition disabled:opacity-60 shrink-0"
               >
                 {rotating ? "Rotating…" : "Confirm rotate"}
               </button>
@@ -246,7 +246,7 @@ export function SettingsTab({
           ) : (
             <button
               onClick={() => setConfirmRotate(true)}
-              className="text-xs px-4 py-2 rounded-xl border border-line text-muted hover:text-red-600 hover:border-red-200 transition font-medium"
+              className="text-xs px-4 py-2 rounded-xl border border-line text-muted hover:text-danger hover:border-danger/30 transition font-medium"
             >
               Rotate key…
             </button>

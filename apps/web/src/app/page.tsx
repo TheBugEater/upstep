@@ -3,19 +3,20 @@ import Link from "next/link";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { CodeShowcase } from "@/components/marketing/CodeShowcase";
-import { BoardPreview } from "@/components/marketing/BoardPreview";
+import { HeroDemo } from "@/components/marketing/HeroDemo";
+import { McpDemo } from "@/components/marketing/McpDemo";
 import { Pricing } from "@/components/marketing/Pricing";
 import { JsonLd } from "@/components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Upstep — Feedback Widget & Voting for Web and Mobile Apps",
+  title: "Upstep — Feedback Widget, Voting Boards & MCP for Your Product",
   description:
-    "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Collect bug reports, feature requests, and user votes. Free plan. No backend needed.",
+    "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Triage on fluid boards, and let AI agents manage feedback through the built-in MCP server. Free plan.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Upstep — Feedback Widget & Voting for Web and Mobile Apps",
+    title: "Upstep — Feedback Widget, Voting Boards & MCP for Your Product",
     description:
-      "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Collect bug reports, feature requests, and user votes. Free plan. No backend needed.",
+      "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Triage on fluid boards, and let AI agents manage feedback through the built-in MCP server. Free plan.",
     url: "/",
   },
 };
@@ -28,7 +29,7 @@ const SOFTWARE_LD = {
   operatingSystem: "Web, iOS, Android",
   url: "https://upstep.dev",
   description:
-    "Drop-in feedback and voting widget for web and mobile apps. Collect bug reports, feature requests, and user votes in minutes.",
+    "Drop-in feedback and voting widget for web and mobile apps with fluid triage boards and a built-in MCP server for AI agents.",
   offers: [
     { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
     { "@type": "Offer", name: "Pro", price: "19", priceCurrency: "USD" },
@@ -39,6 +40,8 @@ const SOFTWARE_LD = {
     "User voting on feedback",
     "Bug report collection",
     "Feature request management",
+    "Kanban triage boards",
+    "Built-in MCP server for AI agents",
     "React and React Native SDK",
     "Webhook and Slack integrations",
   ],
@@ -52,6 +55,7 @@ export default function HomePage() {
       <Hero />
       <Features />
       <HowItWorks />
+      <Mcp />
       <Integrate />
       <Pricing />
       <CTA />
@@ -69,24 +73,31 @@ function Hero() {
       <div className="absolute inset-0 bg-glow" />
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-canvas" />
 
-      <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-16 md:pt-28 md:pb-24">
-        <div className="grid lg:grid-cols-2 gap-14 items-center">
+      <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-24 md:pt-28 md:pb-32">
+        <div className="grid lg:grid-cols-2 gap-14 lg:gap-10 items-center">
           {/* Copy */}
           <div className="animate-fade-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-medium text-muted shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-clay" />
-              Feedback widget for web &amp; mobile apps
-            </span>
+            <Link
+              href="#mcp"
+              className="inline-flex items-center gap-2 rounded-full border border-clay/25 bg-clay/[0.07] px-3 py-1 text-xs font-medium text-clay shadow-sm hover:bg-clay/[0.12] transition"
+            >
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="absolute inline-flex w-full h-full rounded-full bg-clay animate-pulse-ring" />
+                <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-clay" />
+              </span>
+              New — built-in MCP server for AI agents
+              <span aria-hidden>→</span>
+            </Link>
 
             <h1 className="mt-6 font-serif text-5xl md:text-[3.75rem] leading-[1.05] tracking-tight text-ink">
               Feedback that{" "}
-              <span className="text-clay italic">moves you</span> forward
+              <span className="text-clay italic">ships itself</span>
             </h1>
 
             <p className="mt-6 text-lg text-muted leading-relaxed max-w-md">
-              Drop Upstep into your React, Next.js, or React Native app in
-              2 lines of code. Collect bug reports and feature requests,
-              let users vote on what matters most, and ship with confidence.
+              Drop Upstep into your app in 2 lines of code. Users report bugs
+              and vote on ideas, your team triages on a fluid board — and your
+              AI agent closes the loop over MCP.
             </p>
 
             <form action="/login" method="GET" className="mt-8 flex flex-wrap items-center gap-3">
@@ -125,9 +136,9 @@ function Hero() {
             </div>
           </div>
 
-          {/* Product preview — tasks & upvotes board */}
-          <div className="animate-fade-up [animation-delay:120ms]">
-            <BoardPreview />
+          {/* Live animated product demo */}
+          <div className="animate-fade-up [animation-delay:120ms] lg:pl-4 pb-8">
+            <HeroDemo />
           </div>
         </div>
       </div>
@@ -142,22 +153,22 @@ function Features() {
     {
       icon: "⚡",
       title: "2-line integration",
-      body: "Install the package, paste your API key, and you're live. No backend to build.",
+      body: "Install the package, paste your API key, and you're live. No backend to build, nothing to host.",
     },
     {
       icon: "▲",
-      title: "Smart voting",
-      body: "Anonymous or per-user up/down votes with built-in deduplication.",
+      title: "Voting that ranks itself",
+      body: "Anonymous or per-user votes with dedupe built in. Your roadmap sorts itself by demand.",
     },
     {
-      icon: "◷",
-      title: "Real-time triage",
-      body: "Filter by type and status, sort by votes, move items through your workflow.",
+      icon: "◫",
+      title: "Fluid triage boards",
+      body: "Drag cards across custom columns, filter by type and label, and watch everything glide.",
     },
     {
-      icon: "❖",
-      title: "Web & native",
-      body: "Drop-in SDKs for React, vanilla JS, and React Native with shake-to-feedback.",
+      icon: "✦",
+      title: "AI-native via MCP",
+      body: "Claude, Cursor, or any MCP client can list, triage, and create tasks straight from your inbox.",
     },
   ];
 
@@ -166,16 +177,16 @@ function Features() {
       <SectionHeading
         eyebrow="Everything you need"
         title="A feedback loop that runs itself"
-        sub={`From the moment a user taps “send” to the moment you ship the fix, Upstep handles the whole journey.`}
+        sub="From the moment a user taps “send” to the moment you ship the fix, Upstep handles the whole journey."
       />
 
       <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {items.map((f) => (
           <div
             key={f.title}
-            className="group flex flex-col rounded-2xl border border-line bg-card p-6 shadow-soft hover:shadow-lift hover:-translate-y-0.5 transition-all"
+            className="group flex flex-col rounded-2xl border border-line bg-card p-6 shadow-soft hover:shadow-lift hover:-translate-y-1 hover:border-clay/25 transition-all duration-300 ease-fluid"
           >
-            <div className="w-11 h-11 rounded-xl bg-clay/10 flex items-center justify-center text-clay text-lg mb-5 group-hover:bg-clay/15 transition">
+            <div className="w-11 h-11 rounded-xl bg-clay/10 flex items-center justify-center text-clay text-lg mb-5 group-hover:bg-clay/15 group-hover:scale-110 transition-all duration-300 ease-spring">
               {f.icon}
             </div>
             <h3 className="font-semibold text-ink text-[17px] mb-2">{f.title}</h3>
@@ -193,7 +204,7 @@ function HowItWorks() {
   const steps = [
     { n: "01", title: "Create a project", body: "Sign in and spin up a project. You get a unique API key instantly." },
     { n: "02", title: "Drop in the widget", body: "Add the SDK to your app with two lines of code. It mounts itself." },
-    { n: "03", title: "Triage & ship", body: "Watch feedback roll into your dashboard. Sort by votes, ship what matters." },
+    { n: "03", title: "Triage & ship", body: "Feedback rolls into your board sorted by votes. Ship what matters." },
   ];
 
   return (
@@ -213,6 +224,63 @@ function HowItWorks() {
               <p className="text-sm text-muted leading-relaxed max-w-xs">{s.body}</p>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ──────────────────────────── MCP ──────────────────────────────── */
+
+function Mcp() {
+  return (
+    <section id="mcp" className="relative overflow-hidden">
+      <div className="absolute inset-0 bg-glow opacity-70" />
+      <div className="relative max-w-6xl mx-auto px-6 py-24">
+        <div className="grid lg:grid-cols-2 gap-14 items-center">
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-clay">
+              Built-in MCP server
+            </span>
+            <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight text-ink">
+              Give your AI direct access to your users
+            </h2>
+            <p className="mt-5 text-muted leading-relaxed">
+              Connect Claude, Cursor, or any MCP client to your feedback inbox.
+              Your agent reads what users want, creates and updates tasks,
+              posts replies, and keeps the board tidy — scoped to a single
+              project by its API key.
+            </p>
+
+            <ul className="mt-8 space-y-4">
+              {[
+                ["Triage from your editor", "“What's the most-voted bug?” answered without leaving your flow."],
+                ["Agents that act", "Create tasks, change statuses, comment — every change lands on the live board."],
+                ["Nothing to deploy", "The server is part of Upstep. Point your client at one URL and go."],
+              ].map(([t, d]) => (
+                <li key={t} className="flex gap-3">
+                  <span className="mt-0.5 w-5 h-5 rounded-full bg-clay/15 text-clay flex items-center justify-center text-xs shrink-0">✓</span>
+                  <div>
+                    <span className="text-sm font-medium text-ink">{t}.</span>{" "}
+                    <span className="text-sm text-muted">{d}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-8 rounded-xl border border-line bg-card p-4 font-mono text-xs text-muted overflow-x-auto shadow-soft">
+              <p className="text-faint mb-1"># One command to connect Claude Code</p>
+              <p className="whitespace-nowrap">
+                <span className="text-clay">claude</span> mcp add --transport http upstep \
+              </p>
+              <p className="pl-4 whitespace-nowrap">https://upstep.dev/api/mcp \</p>
+              <p className="pl-4 whitespace-nowrap">
+                --header <span className="text-ink-soft">&quot;Authorization: Bearer YOUR_API_KEY&quot;</span>
+              </p>
+            </div>
+          </div>
+
+          <McpDemo />
         </div>
       </div>
     </section>
@@ -265,7 +333,7 @@ function Integrate() {
 function CTA() {
   return (
     <section className="max-w-6xl mx-auto px-6 pb-24">
-      <div className="relative overflow-hidden rounded-4xl bg-ink px-8 py-16 md:px-16 md:py-20 text-center">
+      <div className="relative overflow-hidden rounded-4xl bg-[#161513] px-8 py-16 md:px-16 md:py-20 text-center">
         <div className="absolute inset-0 bg-glow opacity-50" />
         <div className="relative">
           <h2 className="font-serif text-4xl md:text-5xl text-white tracking-tight leading-tight">

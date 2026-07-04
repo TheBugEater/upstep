@@ -3,8 +3,8 @@
 import type { FeedbackType } from "@upstep/types";
 
 export const TYPE_COLORS: Record<FeedbackType, string> = {
-  BUG: "bg-red-50 text-red-600 border-red-100",
-  FEATURE: "bg-blue-50 text-blue-600 border-blue-100",
+  BUG: "bg-danger/10 text-danger border-danger/25",
+  FEATURE: "bg-info/10 text-info border-info/25",
   GENERAL: "bg-surface text-muted border-line",
 };
 
@@ -67,11 +67,11 @@ export function ModalShell({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div
         className={`relative bg-canvas rounded-2xl border border-line shadow-lift w-full ${
           wide ? "max-w-lg" : "max-w-sm"
-        } p-6 max-h-[90vh] overflow-y-auto`}
+        } p-6 max-h-[90vh] overflow-y-auto animate-card-in`}
       >
         {children}
       </div>
@@ -83,7 +83,7 @@ export const inputCls =
   "w-full text-sm rounded-xl border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/50 transition";
 
 export const btnPrimary =
-  "px-4 py-2 rounded-xl bg-ink text-white text-sm font-medium hover:bg-ink/80 disabled:opacity-40 transition";
+  "px-4 py-2 rounded-xl bg-primary text-primary-fg text-sm font-medium hover:bg-primary/85 disabled:opacity-40 transition";
 
 export const btnGhost =
   "px-4 py-2 rounded-xl border border-line text-sm text-muted hover:text-ink transition";

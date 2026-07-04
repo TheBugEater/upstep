@@ -79,8 +79,8 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute inset-y-0 right-0 w-full sm:max-w-md bg-canvas border-l border-line shadow-lift flex flex-col overflow-hidden">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+      <div className="absolute inset-y-0 right-0 w-full sm:max-w-md bg-canvas border-l border-line shadow-lift flex flex-col overflow-hidden animate-[drawer-in_0.35s_cubic-bezier(0.32,0.72,0,1)_both]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 h-14 border-b border-line shrink-0">
           <div className="flex gap-1">
@@ -216,7 +216,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
                   <button
                     onClick={() => void addNewLabel()}
                     disabled={!newLabelName.trim() || savingLabel}
-                    className="ml-auto text-xs px-3 py-1.5 rounded-lg bg-ink text-white font-medium hover:bg-ink/80 disabled:opacity-40 transition"
+                    className="ml-auto text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-fg font-medium hover:bg-primary/85 disabled:opacity-40 transition"
                   >
                     {savingLabel ? "Adding…" : "Create & add"}
                   </button>
@@ -284,7 +284,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
               <button
                 onClick={() => void postComment()}
                 disabled={posting || !input.trim()}
-                className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-medium hover:bg-ink/80 disabled:opacity-40 transition shrink-0"
+                className="px-4 py-2 rounded-xl bg-primary text-primary-fg text-sm font-medium hover:bg-primary/85 disabled:opacity-40 transition shrink-0"
               >
                 Post
               </button>
@@ -303,10 +303,10 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
           </span>
           {confirmDelete ? (
             <span className="flex items-center gap-2">
-              <span className="text-xs text-red-500">Delete permanently?</span>
+              <span className="text-xs text-danger">Delete permanently?</span>
               <button
                 onClick={() => void actions.deleteItem(item.id)}
-                className="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+                className="text-xs px-3 py-1.5 rounded-lg bg-danger text-white font-semibold hover:bg-danger/85 transition"
               >
                 Delete
               </button>
@@ -320,7 +320,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="text-xs text-red-400 hover:text-red-600 transition"
+              className="text-xs text-danger hover:text-danger transition"
             >
               Delete
             </button>

@@ -90,7 +90,7 @@ export default async function AlternativePage({
           <ul className="space-y-2.5">
             {c.painPoints.map((p) => (
               <li key={p} className="flex items-start gap-3 text-sm text-ink-soft">
-                <span className="mt-0.5 w-4 h-4 rounded-full bg-red-50 border border-red-100 text-red-500 flex items-center justify-center shrink-0 text-[10px] font-bold">✕</span>
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-danger/10 border border-danger/25 text-danger flex items-center justify-center shrink-0 text-[10px] font-bold">✕</span>
                 {p}
               </li>
             ))}
@@ -158,7 +158,7 @@ export default async function AlternativePage({
 
 function Check({ yes }: { yes: boolean }) {
   return yes ? (
-    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-50 border border-green-100 text-green-600 text-[11px] font-bold mx-auto">✓</span>
+    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-success/10 border border-success/25 text-success text-[11px] font-bold mx-auto">✓</span>
   ) : (
     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-surface border border-line text-faint text-[11px] font-bold mx-auto">✕</span>
   );

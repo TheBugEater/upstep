@@ -37,14 +37,22 @@ export default async function DashboardPage({
     db.user.findUnique({ where: { id: session.user.id }, select: { plan: true } }),
   ]);
 
-  // Single aggregated query for per-status counts across all projects
-  const feedbackCounts = projects.length > 0
-    ? await db.feedback.groupBy({
-        by: ["projectId", "status"],
-        _count: { id: true },
-        where: { projectId: { in: projects.map((p) => p.id) } },
-      })
-    : [];
+  // Aggregate per-status counts and vote totals across all projects at once
+  const projectIds = projects.map((p) => p.id);
+  const [feedbackCounts, voteTotals] = projectIds.length
+    ? await Promise.all([
+        db.feedback.groupBy({
+          by: ["projectId", "status"],
+          _count: { id: true },
+          where: { projectId: { in: projectIds } },
+        }),
+        db.feedback.groupBy({
+          by: ["projectId"],
+          _sum: { upvotes: true },
+          where: { projectId: { in: projectIds } },
+        }),
+      ])
+    : [[], []];
 
   type CountMap = Record<string, Record<string, number>>;
   const countMap: CountMap = {};
@@ -52,8 +60,11 @@ export default async function DashboardPage({
     if (!countMap[row.projectId]) countMap[row.projectId] = {};
     countMap[row.projectId]![row.status] = row._count.id;
   }
+  const votesMap: Record<string, number> = {};
+  for (const row of voteTotals) votesMap[row.projectId] = row._sum.upvotes ?? 0;
 
   const totalFeedback = projects.reduce((n, p) => n + p._count.feedback, 0);
+  const totalVotes = Object.values(votesMap).reduce((n, v) => n + v, 0);
   const plan = getPlan(user?.plan);
   const atProjectLimit = projects.length >= plan.projectLimit;
 
@@ -63,10 +74,10 @@ export default async function DashboardPage({
 
       <div className="max-w-5xl mx-auto px-6 py-10">
         {/* Heading */}
-        <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
+        <div className="flex items-end justify-between flex-wrap gap-4 mb-8 animate-fade-up">
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="font-serif text-3xl tracking-tight text-ink">Projects</h1>
+              <h1 className="font-serif text-3xl tracking-tight text-ink">Apps</h1>
               <Link
                 href="/dashboard/billing"
                 className="text-[11px] font-semibold uppercase tracking-wide text-clay bg-clay-tint border border-clay/20 rounded-full px-2.5 py-1 hover:bg-clay-tint2 transition"
@@ -76,15 +87,15 @@ export default async function DashboardPage({
             </div>
             <p className="text-sm text-muted mt-1">
               {projects.length}
-              {isUnlimited(plan.projectLimit) ? "" : ` / ${formatLimit(plan.projectLimit)}`} project
+              {isUnlimited(plan.projectLimit) ? "" : ` / ${formatLimit(plan.projectLimit)}`} app
               {projects.length === 1 ? "" : "s"} · {totalFeedback} feedback item
-              {totalFeedback === 1 ? "" : "s"}
+              {totalFeedback === 1 ? "" : "s"} · {totalVotes} vote{totalVotes === 1 ? "" : "s"}
             </p>
           </div>
           {atProjectLimit ? (
             <Link
               href="/dashboard/billing"
-              className="inline-flex items-center gap-2 bg-ink text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-ink-soft transition shadow-soft"
+              className="inline-flex items-center gap-2 bg-primary text-primary-fg rounded-full px-5 py-2.5 text-sm font-medium hover:bg-primary/85 transition shadow-soft"
             >
               Upgrade to add more →
             </Link>
@@ -94,7 +105,7 @@ export default async function DashboardPage({
               className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay-hover transition shadow-soft"
             >
               <span aria-hidden className="text-base leading-none">+</span>
-              New project
+              New app
             </Link>
           )}
         </div>
@@ -102,24 +113,31 @@ export default async function DashboardPage({
         {projects.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="grid sm:grid-cols-2 gap-3">
-            {projects.map((p) => {
+          <div className="grid sm:grid-cols-2 gap-4">
+            {projects.map((p, i) => {
               const counts = countMap[p.id] ?? {};
               const openCount = counts["OPEN"] ?? 0;
               const inProgressCount = counts["IN_PROGRESS"] ?? 0;
+              const doneCount = counts["DONE"] ?? 0;
               const pendingCount = counts["PENDING"] ?? 0;
               const total = p._count.feedback;
+              const votes = votesMap[p.id] ?? 0;
+              const barTotal = Math.max(openCount + inProgressCount + doneCount, 1);
 
               return (
                 <Link
                   key={p.id}
                   href={`/dashboard/projects/${p.id}`}
-                  className="group rounded-2xl border border-line bg-card p-5 shadow-soft hover:shadow-lift hover:-translate-y-0.5 hover:border-clay/30 transition-all"
+                  className="group relative rounded-2xl border border-line bg-card p-5 shadow-soft hover:shadow-lift hover:-translate-y-1 hover:border-clay/30 transition-all duration-300 ease-fluid animate-fade-up overflow-hidden"
+                  style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
                 >
+                  {/* Brand wash on hover */}
+                  <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-clay/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
                   {/* Header row */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-9 h-9 rounded-xl bg-clay/10 text-clay flex items-center justify-center font-serif text-base shrink-0">
-                      {p.name[0]?.toUpperCase() ?? "P"}
+                  <div className="relative flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-clay/20 to-clay/5 text-clay border border-clay/15 flex items-center justify-center font-serif text-lg shrink-0 group-hover:scale-105 transition-transform duration-300 ease-spring">
+                      {p.name[0]?.toUpperCase() ?? "A"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-ink truncate leading-snug">{p.name}</p>
@@ -132,31 +150,30 @@ export default async function DashboardPage({
                       </p>
                     </div>
                     {pendingCount > 0 && (
-                      <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200 shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-clay/10 text-clay border border-clay/30 shrink-0">
                         {pendingCount} pending
                       </span>
                     )}
-                    <span className="text-muted text-sm opacity-0 group-hover:opacity-100 transition shrink-0">
+                    <span className="text-muted text-sm opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 shrink-0">
                       →
                     </span>
                   </div>
 
+                  {/* Status distribution */}
+                  <div className="relative flex h-1.5 rounded-full overflow-hidden bg-surface mb-3.5">
+                    <span className="bg-warning/70 transition-all duration-500" style={{ width: `${(openCount / barTotal) * 100}%` }} />
+                    <span className="bg-info/70 transition-all duration-500" style={{ width: `${(inProgressCount / barTotal) * 100}%` }} />
+                    <span className="bg-success/70 transition-all duration-500" style={{ width: `${(doneCount / barTotal) * 100}%` }} />
+                  </div>
+
                   {/* Stats row */}
-                  <div className="flex items-center gap-4 pt-3.5 border-t border-line">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-clay/70 shrink-0" />
-                      <span className="text-sm font-semibold text-ink">{openCount}</span>
-                      <span className="text-xs text-faint">open</span>
-                    </div>
-                    {inProgressCount > 0 && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                        <span className="text-sm font-semibold text-ink">{inProgressCount}</span>
-                        <span className="text-xs text-faint">in progress</span>
-                      </div>
-                    )}
-                    <span className="ml-auto text-xs text-faint">
-                      {total} total
+                  <div className="relative flex items-center gap-4">
+                    <Stat dot="bg-warning" n={openCount} label="open" />
+                    <Stat dot="bg-info" n={inProgressCount} label="active" />
+                    <Stat dot="bg-success" n={doneCount} label="done" />
+                    <span className="ml-auto inline-flex items-center gap-1 text-xs text-faint">
+                      <span className="text-clay text-[10px]">▲</span>
+                      {votes} · {total} total
                     </span>
                   </div>
                 </Link>
@@ -169,19 +186,29 @@ export default async function DashboardPage({
   );
 }
 
+function Stat({ dot, n, label }: { dot: string; n: number; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`w-1.5 h-1.5 rounded-full ${dot} shrink-0`} />
+      <span className="text-sm font-semibold text-ink">{n}</span>
+      <span className="text-xs text-faint">{label}</span>
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
-    <div className="rounded-2xl border border-dashed border-line-strong bg-card/50 py-20 text-center">
+    <div className="rounded-2xl border border-dashed border-line-strong bg-card/50 py-20 text-center animate-fade-up">
       <div className="w-12 h-12 rounded-2xl bg-clay/10 text-clay flex items-center justify-center text-xl mx-auto mb-4">
         +
       </div>
-      <p className="text-ink font-medium">No projects yet</p>
-      <p className="text-sm text-muted mt-1 mb-6">Create your first project to get an API key.</p>
+      <p className="text-ink font-medium">No apps yet</p>
+      <p className="text-sm text-muted mt-1 mb-6">Create your first app to get an API key.</p>
       <Link
         href="/dashboard/projects/new"
         className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay-hover transition"
       >
-        Create a project →
+        Create an app →
       </Link>
     </div>
   );

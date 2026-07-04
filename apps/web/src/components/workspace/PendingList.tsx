@@ -53,7 +53,7 @@ export function PendingList({ items, onDecide }: Props) {
               <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                 <TypePill type={f.type} />
                 {f.flagged && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium border bg-orange-50 text-orange-600 border-orange-100">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium border bg-clay/10 text-clay border-clay/25">
                     ⚑ Profanity flagged
                   </span>
                 )}
@@ -65,7 +65,7 @@ export function PendingList({ items, onDecide }: Props) {
               <button
                 onClick={() => void decide(f.id, true)}
                 disabled={busyId === f.id}
-                className="text-xs px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-60 transition"
+                className="text-xs px-4 py-2 rounded-xl bg-success text-white font-semibold hover:bg-success/85 disabled:opacity-60 transition"
               >
                 Approve
               </button>

@@ -64,7 +64,7 @@ export default function NewProjectPage() {
         </header>
 
         <div className="max-w-lg mx-auto px-6 py-12">
-          <div className="w-11 h-11 rounded-xl bg-green-100 text-green-600 flex items-center justify-center text-lg mb-5">
+          <div className="w-11 h-11 rounded-xl bg-success/15 text-success flex items-center justify-center text-lg mb-5">
             ✓
           </div>
           <h1 className="font-serif text-3xl tracking-tight text-ink">Save your API key</h1>
@@ -73,22 +73,22 @@ export default function NewProjectPage() {
             somewhere safe: your password manager, <code className="font-mono text-xs bg-surface border border-line rounded px-1 py-0.5">.env</code> file, or secrets manager.
           </p>
 
-          <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-3">
+          <div className="mt-8 rounded-2xl border border-warning/30 bg-warning/10 p-5">
+            <p className="text-xs font-semibold text-warning uppercase tracking-wide mb-3">
               Your API key, copy it now
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-sm font-mono bg-white border border-amber-200 rounded-xl px-4 py-3 text-ink break-all">
+              <code className="flex-1 text-sm font-mono bg-white border border-warning/30 rounded-xl px-4 py-3 text-ink break-all">
                 {created.apiKey}
               </code>
               <button
                 onClick={copyKey}
-                className="text-sm px-4 py-3 rounded-xl bg-amber-600 text-white font-medium hover:bg-amber-700 transition shrink-0"
+                className="text-sm px-4 py-3 rounded-xl bg-warning text-white font-medium hover:bg-warning/85 transition shrink-0"
               >
                 {copied ? "Copied ✓" : "Copy"}
               </button>
             </div>
-            <p className="text-xs text-amber-600 mt-3">
+            <p className="text-xs text-warning mt-3">
               After you leave this page, the key will always be masked in Settings. You can rotate it there if needed.
             </p>
           </div>
@@ -145,7 +145,7 @@ export default function NewProjectPage() {
             />
           </div>
 
-          {error && !limitHit && <p className="text-red-500 text-sm">{error}</p>}
+          {error && !limitHit && <p className="text-danger text-sm">{error}</p>}
 
           {limitHit ? (
             <div className="rounded-xl border border-clay/30 bg-clay-tint px-4 py-4">

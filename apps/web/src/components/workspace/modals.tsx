@@ -128,7 +128,7 @@ export function NewTaskModal({
               onClick={() => setInternal((v) => !v)}
               className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${
                 internal
-                  ? "bg-violet-50 text-violet-700 border-violet-200"
+                  ? "bg-violet-500/10 text-violet-500 border-violet-500/30"
                   : "bg-card text-muted border-line hover:border-line-strong"
               }`}
             >
@@ -169,7 +169,7 @@ export function NewTaskModal({
           </div>
         )}
 
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
 
         <div className="flex gap-2 pt-1">
           <button type="button" onClick={onClose} className={`flex-1 ${btnGhost}`}>
@@ -312,7 +312,7 @@ export function BoardFormModal({
                   </button>
                   <button
                     onClick={() => setColumnIds((prev) => prev.filter((x) => x !== sid))}
-                    className="text-xs text-faint hover:text-red-500 transition px-1"
+                    className="text-xs text-faint hover:text-danger transition px-1"
                     aria-label={`Remove ${s.name}`}
                   >
                     ✕
@@ -351,7 +351,7 @@ export function BoardFormModal({
           <span className="text-xs text-faint">— opens first for everyone</span>
         </label>
 
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
 
         <div className="flex gap-2 pt-1">
           {board && canDelete && (
@@ -359,14 +359,14 @@ export function BoardFormModal({
               <button
                 onClick={() => void deleteBoard()}
                 disabled={saving}
-                className="text-xs px-3 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-40 transition"
+                className="text-xs px-3 py-2 rounded-xl bg-danger text-white font-semibold hover:bg-danger/85 disabled:opacity-40 transition"
               >
                 Confirm delete
               </button>
             ) : (
               <button
                 onClick={() => setConfirmingDelete(true)}
-                className="text-xs px-3 py-2 rounded-xl border border-line text-red-400 hover:text-red-600 hover:border-red-200 transition"
+                className="text-xs px-3 py-2 rounded-xl border border-line text-danger hover:text-danger hover:border-danger/30 transition"
               >
                 Delete board…
               </button>
@@ -555,7 +555,7 @@ export function ManageStatusesModal({
               Add as a column on all boards
             </label>
           </div>
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
           <button
             onClick={() => void addStatus()}
             disabled={adding || !newName.trim()}
@@ -635,7 +635,7 @@ function StatusRow({
         onClick={onToggleDone}
         className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold transition shrink-0 ${
           status.isDone
-            ? "bg-green-50 text-green-700 border-green-200"
+            ? "bg-success/10 text-success border-success/30"
             : "bg-card text-faint border-line hover:text-muted hover:border-line-strong"
         }`}
         title="Cards in a done status move to the Completed tab"
@@ -662,7 +662,7 @@ function StatusRow({
         <span className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={onDeleteConfirm}
-            className="text-[10px] px-2 py-1 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+            className="text-[10px] px-2 py-1 rounded-lg bg-danger text-white font-semibold hover:bg-danger/85 transition"
           >
             Delete
           </button>
@@ -673,7 +673,7 @@ function StatusRow({
       ) : (
         <button
           onClick={onDeleteIntent}
-          className="text-xs text-faint hover:text-red-500 transition shrink-0 px-0.5"
+          className="text-xs text-faint hover:text-danger transition shrink-0 px-0.5"
           aria-label={`Delete ${status.name}`}
         >
           ✕

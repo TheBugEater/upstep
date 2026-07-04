@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
+import { McpCard } from "./McpCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ interface Integration {
 
 interface Props {
   projectId: string;
+  apiKey: string;
   isOwner: boolean;
   isPro: boolean;
 }
@@ -64,7 +66,7 @@ const ALL_EVENTS: IntegrationEvent[] = ["NEW_FEEDBACK", "STATUS_CHANGED", "NEW_V
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
+export function IntegrationsTab({ projectId, apiKey, isOwner, isPro }: Props) {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -192,7 +194,8 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
 
   if (!isPro) {
     return (
-      <div className="max-w-xl">
+      <div className="max-w-xl space-y-5">
+        <McpCard apiKey={apiKey} />
         <div className="rounded-2xl border border-line bg-card shadow-soft p-8 text-center">
           <div className="text-3xl mb-3">🔌</div>
           <h3 className="text-sm font-semibold text-ink mb-1">Integrations require a Pro plan</h3>
@@ -214,8 +217,11 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
 
   if (!isOwner) {
     return (
-      <div className="rounded-2xl border border-dashed border-line bg-surface/50 p-5 text-center max-w-xl">
-        <p className="text-sm text-muted">Integrations are managed by the project owner.</p>
+      <div className="max-w-xl space-y-5">
+        <McpCard apiKey={apiKey} />
+        <div className="rounded-2xl border border-dashed border-line bg-surface/50 p-5 text-center">
+          <p className="text-sm text-muted">Integrations are managed by the project owner.</p>
+        </div>
       </div>
     );
   }
@@ -230,6 +236,7 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
 
   return (
     <div className="space-y-5 max-w-xl">
+      <McpCard apiKey={apiKey} />
 
       {/* Existing integrations */}
       {!loading && integrations.length > 0 && (
@@ -295,7 +302,7 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
                       <button
                         onClick={() => void deleteIntegration(integration.id)}
                         disabled={deleting === integration.id}
-                        className="text-xs text-faint hover:text-red-500 transition disabled:opacity-40"
+                        className="text-xs text-faint hover:text-danger transition disabled:opacity-40"
                         aria-label="Delete integration"
                       >
                         {deleting === integration.id ? "..." : "✕"}
@@ -322,7 +329,7 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-ink mb-1">
-                            Webhook URL <span className="text-red-500">*</span>
+                            Webhook URL <span className="text-danger">*</span>
                           </label>
                           <input
                             type="url"
@@ -351,12 +358,12 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
                             ))}
                           </div>
                         </div>
-                        {formError && <p className="text-xs text-red-500">{formError}</p>}
+                        {formError && <p className="text-xs text-danger">{formError}</p>}
                         <div className="flex gap-2">
                           <button
                             type="submit"
                             disabled={saving}
-                            className="px-3 py-1.5 rounded-xl bg-ink text-white text-xs font-medium hover:bg-ink/80 transition disabled:opacity-40"
+                            className="px-3 py-1.5 rounded-xl bg-primary text-primary-fg text-xs font-medium hover:bg-primary/85 transition disabled:opacity-40"
                           >
                             {saving ? "Saving..." : "Save changes"}
                           </button>
@@ -476,7 +483,7 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
             {/* Webhook URL */}
             <div>
               <label className="block text-xs font-medium text-ink mb-1.5">
-                Webhook URL <span className="text-red-500">*</span>
+                Webhook URL <span className="text-danger">*</span>
               </label>
               <input
                 type="url"
@@ -501,7 +508,7 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
             {/* Events */}
             <div>
               <label className="block text-xs font-medium text-ink mb-2">
-                Notify me when… <span className="text-red-500">*</span>
+                Notify me when… <span className="text-danger">*</span>
               </label>
               <div className="space-y-2">
                 {ALL_EVENTS.map((event) => (
@@ -521,13 +528,13 @@ export function IntegrationsTab({ projectId, isOwner, isPro }: Props) {
               </div>
             </div>
 
-            {formError && <p className="text-xs text-red-500">{formError}</p>}
+            {formError && <p className="text-xs text-danger">{formError}</p>}
 
             <div className="flex items-center gap-2 pt-1">
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-2 rounded-xl bg-ink text-white text-sm font-medium hover:bg-ink/80 transition disabled:opacity-40"
+                className="px-4 py-2 rounded-xl bg-primary text-primary-fg text-sm font-medium hover:bg-primary/85 transition disabled:opacity-40"
               >
                 {saving ? "Connecting…" : "Connect"}
               </button>

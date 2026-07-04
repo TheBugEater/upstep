@@ -56,7 +56,7 @@ export default async function BillingPage({
         {upgraded && <UpgradeSuccessBanner plan={current.name} />}
 
         {!enabled && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mt-6 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             Billing isn&apos;t configured on this server yet. Add your Stripe keys to{" "}
             <code className="font-mono text-xs">.env</code> to enable checkout. Plan limits are still
             enforced.
@@ -112,7 +112,7 @@ export default async function BillingPage({
                 }`}
               >
                 {isCurrent && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-ink text-white text-[11px] font-semibold px-3 py-1 rounded-full">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-fg text-[11px] font-semibold px-3 py-1 rounded-full">
                     Current plan
                   </span>
                 )}
@@ -190,7 +190,7 @@ function UsageCard({
       {!unlimited && (
         <div className="mt-3 h-1.5 rounded-full bg-surface overflow-hidden">
           <div
-            className={`h-full rounded-full ${near ? "bg-amber-500" : "bg-clay"}`}
+            className={`h-full rounded-full ${near ? "bg-warning/100" : "bg-clay"}`}
             style={{ width: `${pct}%` }}
           />
         </div>

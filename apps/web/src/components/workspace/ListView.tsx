@@ -52,12 +52,12 @@ export function ListView({ items, statuses, actions }: Props) {
                 </span>
               ))}
               {f.internal && (
-                <span className="text-[10px] px-1.5 py-px rounded-full font-semibold border bg-violet-50 text-violet-700 border-violet-200">
+                <span className="text-[10px] px-1.5 py-px rounded-full font-semibold border bg-violet-500/10 text-violet-500 border-violet-500/30">
                   Dev only
                 </span>
               )}
               {f.flagged && (
-                <span className="text-[10px] px-1.5 py-px rounded-full font-medium border bg-orange-50 text-orange-600 border-orange-100">
+                <span className="text-[10px] px-1.5 py-px rounded-full font-medium border bg-clay/10 text-clay border-clay/25">
                   ⚑
                 </span>
               )}

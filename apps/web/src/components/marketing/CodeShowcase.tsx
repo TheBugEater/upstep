@@ -64,7 +64,7 @@ export function CodeShowcase() {
   const tab = TABS.find((t) => t.id === active) ?? TABS[0]!;
 
   return (
-    <div className="rounded-2xl border border-line-strong bg-[#1A1915] shadow-lift overflow-hidden">
+    <div className="rounded-2xl border border-line-strong bg-[#1C1B19] shadow-lift overflow-hidden">
       {/* Title bar */}
       <div className="flex items-center gap-2 px-4 h-11 border-b border-white/10">
         <span className="w-3 h-3 rounded-full bg-[#FF5F57]" />

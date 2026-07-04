@@ -58,7 +58,7 @@ export function SetupGuideButton({
       {open && (
         <div className="fixed inset-0 z-50">
           <div
-            className="absolute inset-0 bg-ink/30 backdrop-blur-sm animate-fade-in"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
             onClick={() => setOpen(false)}
           />
           <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-canvas shadow-lift flex flex-col animate-fade-up">
@@ -108,7 +108,7 @@ function SetupGuideContent({ apiKey, baseUrl }: { apiKey: string; baseUrl: strin
             key={f.id}
             onClick={() => { step("framework_selected", { properties: { framework: f.id } }); setFw(f.id); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-              fw === f.id ? "bg-ink text-white" : "bg-surface text-muted hover:text-ink"
+              fw === f.id ? "bg-primary text-primary-fg" : "bg-surface text-muted hover:text-ink"
             }`}
           >
             {f.label}
@@ -271,7 +271,7 @@ function Step({
   return (
     <div className={`relative pl-9 ${last ? "" : "pb-6"}`}>
       {!last && <div className="absolute left-[13px] top-7 bottom-0 w-px bg-line" />}
-      <span className="absolute left-0 top-0 w-7 h-7 rounded-full bg-ink text-white text-xs font-semibold flex items-center justify-center">
+      <span className="absolute left-0 top-0 w-7 h-7 rounded-full bg-primary text-primary-fg text-xs font-semibold flex items-center justify-center">
         {n}
       </span>
       <div className="text-sm font-semibold text-ink mb-2 pt-0.5">{title}</div>

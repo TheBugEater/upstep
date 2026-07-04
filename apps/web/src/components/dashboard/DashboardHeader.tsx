@@ -4,6 +4,7 @@ import { signOut } from "next-auth/react";
 import { useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function DashboardHeader({ email }: { email: string | null | undefined }) {
   const [open, setOpen] = useState(false);
@@ -14,7 +15,8 @@ export function DashboardHeader({ email }: { email: string | null | undefined })
       <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
         <Logo href="/dashboard" />
 
-        <div className="relative">
+        <div className="relative flex items-center gap-2">
+          <ThemeToggle className="!w-8 !h-8" />
           <button
             onClick={() => setOpen((v) => !v)}
             className="flex items-center gap-2 rounded-full pl-1 pr-2.5 py-1 hover:bg-surface transition"

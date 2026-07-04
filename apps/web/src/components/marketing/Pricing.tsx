@@ -67,7 +67,7 @@ export async function Pricing({ heading = true }: { heading?: boolean }) {
                     className={`block text-center w-full py-3 rounded-xl text-sm font-medium transition ${
                       popular
                         ? "bg-clay text-white hover:bg-clay-hover shadow-soft"
-                        : "bg-ink text-white hover:bg-ink-soft"
+                        : "bg-primary text-primary-fg hover:bg-primary/85"
                     }`}
                   />
                 )}

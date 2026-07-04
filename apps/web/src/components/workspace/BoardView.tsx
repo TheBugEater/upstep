@@ -17,6 +17,7 @@ interface Props {
 export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overColId, setOverColId] = useState<string | null>(null);
+  const [justDroppedId, setJustDroppedId] = useState<string | null>(null);
   const draggingRef = useRef(false);
 
   if (!board) {
@@ -44,7 +45,7 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props
     <div className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1">
       {board.columns.map((col) => {
         const colItems = items.filter((f) => f.statusId === col.statusId);
-        const isOver = overColId === col.statusId;
+        const isOver = overColId === col.statusId && dragId !== null;
         return (
           <div
             key={col.id}
@@ -55,29 +56,41 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props
             onDragLeave={() => setOverColId((c) => (c === col.statusId ? null : c))}
             onDrop={(e) => {
               e.preventDefault();
-              if (dragId) actions.moveItem(dragId, col.statusId);
+              if (dragId) {
+                actions.moveItem(dragId, col.statusId);
+                setJustDroppedId(dragId);
+                setTimeout(() => setJustDroppedId(null), 400);
+              }
               setDragId(null);
               setOverColId(null);
             }}
-            className={`flex-shrink-0 w-72 rounded-2xl border transition-colors self-start ${
-              isOver ? "border-clay/50 bg-clay-tint/40" : "border-line bg-surface/40"
+            className={`flex-shrink-0 w-72 rounded-2xl border self-start transition-all duration-300 ease-fluid ${
+              isOver
+                ? "border-clay/50 bg-clay-tint/50 shadow-glow scale-[1.01]"
+                : "border-line bg-surface/40"
             }`}
           >
             {/* Column header */}
             <div className="flex items-center gap-2 px-4 h-12 border-b border-line">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: col.status.color }} />
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 transition-transform duration-300 ${isOver ? "scale-150" : ""}`}
+                style={{ backgroundColor: col.status.color }}
+              />
               <span className="text-sm font-semibold text-ink truncate">{col.status.name}</span>
               {col.status.isDone && (
-                <span className="text-[9px] font-semibold uppercase tracking-wide text-green-600 bg-green-50 border border-green-100 rounded-full px-1.5 py-px shrink-0">
+                <span className="text-[9px] font-semibold uppercase tracking-wide text-success bg-success/10 border border-success/25 rounded-full px-1.5 py-px shrink-0">
                   done
                 </span>
               )}
-              <span className="ml-auto text-xs font-medium text-faint bg-card border border-line rounded-full px-2 py-0.5 shrink-0">
+              <span
+                key={colItems.length}
+                className="ml-auto text-xs font-medium text-faint bg-card border border-line rounded-full px-2 py-0.5 shrink-0 animate-pop"
+              >
                 {colItems.length}
               </span>
               <button
                 onClick={() => actions.openQuickAdd(col.statusId)}
-                className="text-muted hover:text-clay transition text-base leading-none shrink-0"
+                className="text-muted hover:text-clay hover:scale-125 transition-all duration-200 text-base leading-none shrink-0"
                 title={`Add task to ${col.status.name}`}
                 aria-label={`Add task to ${col.status.name}`}
               >
@@ -91,8 +104,14 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props
             {/* Cards */}
             <div className="p-2.5 space-y-2.5 min-h-[120px] max-h-[65vh] overflow-y-auto">
               {colItems.length === 0 ? (
-                <div className="text-center text-xs text-faint py-8">
-                  {isOver ? "Drop here" : "Nothing here"}
+                <div
+                  className={`text-center text-xs py-8 rounded-xl border border-dashed transition-all duration-300 ${
+                    isOver
+                      ? "border-clay/40 bg-clay/[0.06] text-clay font-medium"
+                      : "border-transparent text-faint"
+                  }`}
+                >
+                  {isOver ? "Drop it here" : "Nothing here"}
                 </div>
               ) : (
                 colItems.map((f) => (
@@ -100,6 +119,7 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props
                     key={f.id}
                     item={f}
                     isDragging={dragId === f.id}
+                    justDropped={justDroppedId === f.id}
                     onDragStart={() => {
                       setDragId(f.id);
                       draggingRef.current = true;
@@ -174,7 +194,7 @@ function ColumnComposer({
   }
 
   return (
-    <div className="px-2.5 pt-2.5">
+    <div className="px-2.5 pt-2.5 animate-card-in">
       <input
         ref={inputRef}
         value={title}
@@ -193,7 +213,7 @@ function ColumnComposer({
         }}
         placeholder={saving ? "Adding…" : "Card title — Enter to add"}
         disabled={saving}
-        className="w-full text-xs rounded-xl border border-clay/40 bg-card px-3 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/60 transition disabled:opacity-60"
+        className="w-full text-xs rounded-xl border border-clay/40 bg-card px-3 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/60 focus:ring-4 focus:ring-clay/10 transition disabled:opacity-60"
       />
     </div>
   );
@@ -204,12 +224,14 @@ function ColumnComposer({
 function BoardCard({
   item,
   isDragging,
+  justDropped,
   onDragStart,
   onDragEnd,
   onClick,
 }: {
   item: WorkspaceItem;
   isDragging: boolean;
+  justDropped: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
   onClick: () => void;
@@ -220,9 +242,9 @@ function BoardCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className={`group bg-card border border-line rounded-xl p-3 shadow-soft cursor-pointer hover:border-line-strong hover:shadow-md transition ${
-        isDragging ? "opacity-50 !cursor-grab" : ""
-      }`}
+      className={`group bg-card border border-line rounded-xl p-3 shadow-soft cursor-grab active:cursor-grabbing transition-all duration-200 ease-fluid hover:border-line-strong hover:shadow-lift hover:-translate-y-0.5 ${
+        isDragging ? "opacity-40 rotate-2 scale-[1.03] shadow-lift" : ""
+      } ${justDropped ? "animate-drop-settle border-clay/40" : ""}`}
     >
       <p className="text-sm font-semibold text-ink leading-snug line-clamp-2">
         {item.title ?? item.content}
@@ -248,18 +270,18 @@ function BoardCard({
       <div className="flex items-center gap-2 mt-2.5">
         <span className="inline-flex items-center gap-1 text-clay text-xs font-semibold">
           <span className="text-[10px]">▲</span>
-          {item.upvotes}
+          <span key={item.upvotes} className="inline-block animate-pop">{item.upvotes}</span>
         </span>
         <TypePill type={item.type} />
         {item.internal && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold border bg-violet-50 text-violet-700 border-violet-200">
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold border bg-violet-500/10 text-violet-500 border-violet-500/30">
             Dev
           </span>
         )}
         {item.flagged && (
           <span
             title="Flagged"
-            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium border bg-orange-50 text-orange-600 border-orange-100"
+            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium border bg-clay/10 text-clay border-clay/25"
           >
             ⚑
           </span>

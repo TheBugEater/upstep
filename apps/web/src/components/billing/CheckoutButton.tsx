@@ -55,7 +55,7 @@ export function CheckoutButton({
       <button onClick={start} disabled={loading} className={className}>
         {loading ? "Redirecting…" : label}
       </button>
-      {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
     </div>
   );
 }
