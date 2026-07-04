@@ -20,13 +20,14 @@ export function Footer() {
               ["Features", "/#features"],
               ["How it works", "/#how"],
               ["Pricing", "/pricing"],
-              ["Developers", "/#integrate"],
+              ["Use cases", "/use-cases"],
             ]}
           />
           <FooterCol
             title="Resources"
             links={[
-              ["Documentation", "#integrate"],
+              ["Documentation", "/#integrate"],
+              ["Integrations", "/integrations"],
               ["@upstep/js on npm", "https://www.npmjs.com/package/@upstep/js"],
               ["@upstep/react-native on npm", "https://www.npmjs.com/package/@upstep/react-native"],
             ]}
@@ -35,8 +36,9 @@ export function Footer() {
             title="Compare"
             links={[
               ["vs Canny", "/alternatives/canny"],
-              ["vs UserVoice", "/alternatives/uservoice"],
-              ["vs Productboard", "/alternatives/productboard"],
+              ["vs Featurebase", "/alternatives/featurebase"],
+              ["vs Frill", "/alternatives/frill"],
+              ["All alternatives", "/alternatives"],
             ]}
           />
           <FooterCol

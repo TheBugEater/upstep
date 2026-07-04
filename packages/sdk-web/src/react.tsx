@@ -38,14 +38,12 @@ const DARK: Palette = {
 };
 
 function usePalette(mode: ThemeMode): Palette {
-  const [isDark, setIsDark] = useState(() => {
-    if (mode === "dark") return true;
-    if (mode === "light") return false;
-    if (typeof window !== "undefined" && window.matchMedia) {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches;
-    }
-    return false;
-  });
+  // Initial value must be SSR-safe (no `window` access) so it matches the
+  // server-rendered markup exactly. React does not patch DOM attributes that
+  // mismatch during hydration, so if this returned the real client value here,
+  // the follow-up setState in the effect below (already holding that same
+  // value) would be a no-op and the stale server markup would stick forever.
+  const [isDark, setIsDark] = useState(() => mode === "dark");
 
   useEffect(() => {
     if (mode !== "auto" || typeof window === "undefined" || !window.matchMedia) {
@@ -177,9 +175,10 @@ export function FeedbackWidget({
   const { isOpen: open, open: openWidget, close: closeWidget, showBranding } = ctx;
   const [screen, setScreen] = useState<Screen>("list");
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 639px)").matches : false
-  );
+  // Same SSR-safe rule as usePalette above: start deterministic (false) so
+  // hydration never mismatches, and let the effect below drive the real
+  // transition once mounted.
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");

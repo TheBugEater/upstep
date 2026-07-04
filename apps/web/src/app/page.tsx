@@ -89,25 +89,40 @@ function Hero() {
               let users vote on what matters most, and ship with confidence.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft"
+            <form action="/login" method="GET" className="mt-8 flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                name="appName"
+                placeholder="Your app's name"
+                maxLength={80}
+                required
+                aria-label="Your app's name"
+                className="flex-1 min-w-[220px] px-5 py-3 bg-card border border-line rounded-full text-sm text-ink placeholder-faint shadow-sm focus:outline-none focus:border-clay focus:ring-4 focus:ring-clay/10 transition"
+              />
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft shrink-0"
               >
-                Start collecting feedback
+                Get started free
                 <span aria-hidden>→</span>
-              </Link>
-              <Link
-                href="#integrate"
-                className="inline-flex items-center gap-2 bg-card border border-line text-ink rounded-full px-6 py-3 text-sm font-medium hover:bg-surface transition"
-              >
-                View the docs
-              </Link>
-            </div>
+              </button>
+            </form>
+            <Link
+              href="#integrate"
+              className="mt-3 inline-block text-sm text-muted hover:text-ink transition"
+            >
+              or view the docs →
+            </Link>
 
-            <p className="mt-6 text-xs text-faint">
-              Free plan available · 2-line integration
-            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
+              <p className="text-xs text-faint">
+                Free plan available · 2-line integration · No credit card
+              </p>
+              <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
+                <span className="text-clay" aria-hidden>★</span>
+                10K+ feedback items processed
+              </p>
+            </div>
           </div>
 
           {/* Product preview — tasks & upvotes board */}
@@ -259,21 +274,31 @@ function CTA() {
           <p className="mt-4 text-white/60 max-w-md mx-auto">
             It takes two minutes to set up and zero infrastructure to run.
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-7 py-3.5 text-sm font-medium hover:bg-clay-hover transition shadow-soft"
+          <form
+            action="/login"
+            method="GET"
+            className="mt-8 flex flex-wrap items-center justify-center gap-3 max-w-md mx-auto"
+          >
+            <input
+              type="text"
+              name="appName"
+              placeholder="Your app's name"
+              maxLength={80}
+              required
+              aria-label="Your app's name"
+              className="flex-1 min-w-[200px] px-5 py-3.5 bg-white/10 border border-white/15 rounded-full text-sm text-white placeholder-white/40 focus:outline-none focus:border-clay focus:ring-4 focus:ring-clay/20 transition"
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-7 py-3.5 text-sm font-medium hover:bg-clay-hover transition shadow-soft shrink-0"
             >
               Get started free
               <span aria-hidden>→</span>
-            </Link>
-            <Link
-              href="#features"
-              className="inline-flex items-center gap-2 bg-white/10 text-white rounded-full px-7 py-3.5 text-sm font-medium hover:bg-white/15 transition border border-white/10"
-            >
-              Explore features
-            </Link>
-          </div>
+            </button>
+          </form>
+          <p className="mt-4 text-xs text-white/40">
+            Free plan · No credit card · Trusted for 10K+ feedback items and counting
+          </p>
         </div>
       </div>
     </section>

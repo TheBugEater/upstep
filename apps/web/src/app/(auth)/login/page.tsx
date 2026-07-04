@@ -1,13 +1,26 @@
 "use client";
 
+import { Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { Logo, LogoMark } from "@/components/Logo";
 import { BoardPreview } from "@/components/marketing/BoardPreview";
 import Link from "next/link";
 import { useOnRamp } from "@onramp-sdk/react";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const { step } = useOnRamp();
+  const appName = useSearchParams().get("appName")?.trim();
+  const callbackUrl = appName ? `/dashboard?newProject=${encodeURIComponent(appName)}` : "/dashboard";
+
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Left — form */}
@@ -21,14 +34,18 @@ export default function LoginPage() {
 
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-sm">
-            <h1 className="font-serif text-3xl tracking-tight text-ink">Welcome back</h1>
+            <h1 className="font-serif text-3xl tracking-tight text-ink">
+              {appName ? `Let's set up ${appName}` : "Welcome back"}
+            </h1>
             <p className="mt-2 text-sm text-muted">
-              Sign in to manage feedback for your projects.
+              {appName
+                ? "Sign in and we'll create your project automatically."
+                : "Sign in to manage feedback for your projects."}
             </p>
 
             <div className="mt-8 space-y-3">
               <button
-                onClick={() => { step("oauth_clicked", { properties: { provider: "github" } }); signIn("github", { callbackUrl: "/dashboard" }); }}
+                onClick={() => { step("oauth_clicked", { properties: { provider: "github" } }); signIn("github", { callbackUrl }); }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-ink text-white rounded-xl text-sm font-medium hover:bg-ink-soft transition shadow-sm"
               >
                 <GitHubIcon />
@@ -36,7 +53,7 @@ export default function LoginPage() {
               </button>
 
               <button
-                onClick={() => { step("oauth_clicked", { properties: { provider: "google" } }); signIn("google", { callbackUrl: "/dashboard" }); }}
+                onClick={() => { step("oauth_clicked", { properties: { provider: "google" } }); signIn("google", { callbackUrl }); }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-card border border-line text-ink rounded-xl text-sm font-medium hover:bg-surface transition"
               >
                 <GoogleIcon />

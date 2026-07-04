@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { nanoid } from "nanoid";
 import { getPlan, formatLimit } from "@/lib/plans";
+import { createProjectWithDefaults } from "@/lib/projects";
 
 // ─── GET /api/projects ────────────────────────────────────────────────────────
 
@@ -54,13 +54,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const project = await db.project.create({
-    data: {
-      name: parsed.data.name,
-      apiKey: `upstep_${nanoid(32)}`,
-      ownerId: session.user.id,
-    },
-  });
+  const project = await createProjectWithDefaults(parsed.data.name, session.user.id);
 
-  return NextResponse.json(project, { status: 201 });
+  const { statuses: _statuses, ...projectRest } = project;
+  return NextResponse.json(projectRest, { status: 201 });
 }

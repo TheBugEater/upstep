@@ -4,10 +4,29 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { getPlan, formatLimit, isUnlimited } from "@/lib/plans";
+import { createProjectWithDefaults } from "@/lib/projects";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ newProject?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  // Visitors who typed an app name into the landing page CTA land here right
+  // after their first OAuth sign-in. Turn that into their first project so
+  // signing up feels like a continuation, not a fresh start. Guarded to
+  // first-time accounts only so reloading this URL can't spawn duplicates.
+  const { newProject } = await searchParams;
+  if (newProject?.trim()) {
+    const existingCount = await db.project.count({ where: { ownerId: session.user.id } });
+    if (existingCount === 0) {
+      const project = await createProjectWithDefaults(newProject.trim().slice(0, 80), session.user.id);
+      redirect(`/dashboard/projects/${project.id}`);
+    }
+    redirect("/dashboard");
+  }
 
   const [projects, user] = await Promise.all([
     db.project.findMany({
