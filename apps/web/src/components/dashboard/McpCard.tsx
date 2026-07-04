@@ -8,9 +8,11 @@ const TOOL_LIST = [
   ["get_project_overview", "counts, columns, top-voted"],
   ["list_feedback", "browse & search by votes"],
   ["get_feedback", "full item + comments"],
-  ["create_feedback", "add tasks to the board"],
+  ["create_feedback", "Dev-only tasks, hidden from users"],
   ["update_feedback", "move columns, edit"],
   ["add_comment", "reply as the team"],
+  ["list_boards", "see every board"],
+  ["create_board", "separate agent workspace"],
 ] as const;
 
 /** Connect-your-AI card shown on the Integrations tab. Available on all plans. */
@@ -53,8 +55,9 @@ export function McpCard({ apiKey }: { apiKey: string }) {
               </span>
             </div>
             <p className="text-xs text-muted mt-1 max-w-md leading-relaxed">
-              Let Claude, Cursor, or any MCP client read, triage, and create
-              feedback in this project. Access is scoped by your project API key.
+              Connect Claude Code, Cursor, Windsurf, Copilot, or any MCP client.
+              Your agent can triage feedback, file Dev-only tasks users never
+              see, and run its own board. Scoped by your project API key.
             </p>
           </div>
           <span className="w-9 h-9 rounded-xl bg-clay/10 text-clay flex items-center justify-center text-base shrink-0">✦</span>

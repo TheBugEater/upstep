@@ -55,7 +55,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     (parsed.data.status === "OPEN" || parsed.data.status === "IN_PROGRESS") &&
     !feedback.statusId
   ) {
-    // Approving an item with no board column yet (e.g. from Pending review) —
+    // Approving an item with no board column yet (e.g. from Pending review) - 
     // drop it into the first non-done column so it shows up on the board.
     const firstStatus = await db.status.findFirst({
       where: { projectId: id, isDone: false },

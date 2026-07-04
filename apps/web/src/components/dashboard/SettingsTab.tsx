@@ -182,7 +182,7 @@ export function SettingsTab({
         <div className="rounded-2xl border border-line bg-card shadow-soft p-6">
           <h3 className="text-sm font-semibold text-ink mb-1">API Key</h3>
           <p className="text-xs text-muted mb-4">
-            Used in your SDK to authorise writes to this project. The key is masked for security —
+            Used in your SDK to authorise writes to this project. The key is masked for security - 
             copy it when you need to use it.
           </p>
 

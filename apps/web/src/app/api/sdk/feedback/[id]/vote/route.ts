@@ -48,14 +48,14 @@ export async function POST(
   const fingerprint = getFingerprint(req);
 
   if (endUserId) {
-    // Authenticated path — upsert with deduplication
+    // Authenticated path - upsert with deduplication
     const existing = await db.vote.findUnique({
       where: { feedbackId_endUserId: { feedbackId: id, endUserId } },
     });
 
     if (existing) {
       if (existing.value === value) {
-        // Same vote again — remove it (toggle off)
+        // Same vote again - remove it (toggle off)
         await db.vote.delete({ where: { id: existing.id } });
         await adjustCounts(id, value, -1);
         return NextResponse.json({ removed: true }, { headers: CORS });
@@ -69,7 +69,7 @@ export async function POST(
 
     await db.vote.create({ data: { feedbackId: id, value, endUserId } });
   } else {
-    // Anonymous path — fingerprint only, no uniqueness enforced
+    // Anonymous path - fingerprint only, no uniqueness enforced
     await db.vote.create({ data: { feedbackId: id, value, fingerprint } });
   }
 

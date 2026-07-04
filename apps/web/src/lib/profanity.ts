@@ -1,7 +1,7 @@
 /**
  * Lightweight profanity detector for feedback content.
  *
- * This is intentionally simple — a word-list match with light normalization to
+ * This is intentionally simple - a word-list match with light normalization to
  * catch common leetspeak / separator evasions. It is a heuristic to *flag*
  * content for review, not a guarantee. Feedback is still gated by the project's
  * moderation queue.

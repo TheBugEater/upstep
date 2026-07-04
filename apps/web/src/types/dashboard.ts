@@ -22,7 +22,7 @@ export interface ProjectBoard {
   columns: BoardColumnDef[];
 }
 
-/** A feedback item as the dashboard workspace sees it — with board placement. */
+/** A feedback item as the dashboard workspace sees it - with board placement. */
 export interface WorkspaceItem extends Feedback {
   statusId?: string | null;
   boardStatus?: ProjectStatus | null;

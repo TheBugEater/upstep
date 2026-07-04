@@ -67,7 +67,7 @@ export function ListView({ items, statuses, actions }: Props) {
           {/* Type */}
           <TypePill type={f.type} className="hidden sm:inline shrink-0" />
 
-          {/* Status select — stops row click */}
+          {/* Status select - stops row click */}
           <div onClick={(e) => e.stopPropagation()} className="shrink-0">
             <select
               value={f.statusId ?? ""}

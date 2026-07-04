@@ -21,7 +21,7 @@ export const INTEGRATIONS: Record<string, Integration> = {
     steps: [
       "Install the package: npm install @upstep/js",
       "Wrap your app in <UpstepProvider apiKey=\"...\">",
-      "Drop <FeedbackWidget /> anywhere inside — it renders its own launcher button and modal.",
+      "Drop <FeedbackWidget /> anywhere inside, it renders its own launcher button and modal.",
     ],
     codeLang: "tsx",
     code: `import { UpstepProvider, FeedbackWidget } from "@upstep/js/react";
@@ -42,7 +42,7 @@ export default function App({ children }) {
     category: "Framework",
     headline: "Feedback widget for Next.js (App Router)",
     intro:
-      "The widget needs to run on the client, so wrap it in its own \"use client\" component and mount that once from your root layout — the same pattern Upstep uses to dogfood itself on this site.",
+      "The widget needs to run on the client, so wrap it in its own \"use client\" component and mount that once from your root layout, the same pattern Upstep uses to dogfood itself on this site.",
     steps: [
       "Install: npm install @upstep/js",
       "Create a small \"use client\" wrapper component that renders UpstepProvider + FeedbackWidget",
@@ -63,7 +63,7 @@ export function Feedback() {
 // app/layout.tsx
 // import { Feedback } from "@/components/Feedback";
 // <body>{children}<Feedback /></body>`,
-    notes: ["Use NEXT_PUBLIC_ prefixed env vars — the key ships to the browser bundle by design, the same way it does in a script tag."],
+    notes: ["Use NEXT_PUBLIC_ prefixed env vars, the key ships to the browser bundle by design, the same way it does in a script tag."],
   },
 
   remix: {
@@ -98,7 +98,7 @@ export default function App() {
     category: "Framework",
     headline: "Feedback widget for Gatsby sites",
     intro:
-      "Use Gatsby's wrapRootElement API in gatsby-browser.js — the standard place to inject a provider that should persist across page navigations.",
+      "Use Gatsby's wrapRootElement API in gatsby-browser.js, the standard place to inject a provider that should persist across page navigations.",
     steps: [
       "Install: npm install @upstep/js",
       "Create gatsby-browser.js (and gatsby-ssr.js for parity) in your project root",
@@ -122,7 +122,7 @@ export const wrapRootElement = ({ element }) => (
     category: "Build tool",
     headline: "Feedback widget for Vite apps",
     intro:
-      "For a plain Vite + TypeScript/JS app (no React), use the framework-agnostic widget class — one import, one init call in your entry file.",
+      "For a plain Vite + TypeScript/JS app (no React), use the framework-agnostic widget class, one import, one init call in your entry file.",
     steps: [
       "Install: npm install @upstep/js",
       "Import and call Upstep.init() in your main entry file (e.g. main.ts)",
@@ -140,7 +140,7 @@ Upstep.init({ apiKey: "upstep_xxx" });`,
     category: "Framework",
     headline: "Feedback widget for Vue apps",
     intro:
-      "There's no Vue-specific package, but the vanilla widget is framework-agnostic — call it once when your root component mounts.",
+      "There's no Vue-specific package, but the vanilla widget is framework-agnostic, call it once when your root component mounts.",
     steps: [
       "Install: npm install @upstep/js",
       "In App.vue, call Upstep.init() inside onMounted so it only runs in the browser",
@@ -165,7 +165,7 @@ onMounted(() => {
       "Nuxt renders on the server first, so mount the widget from a client-only plugin using Nuxt's .client.ts naming convention.",
     steps: [
       "Install: npm install @upstep/js",
-      "Create plugins/upstep.client.ts — the .client suffix tells Nuxt to only run it in the browser",
+      "Create plugins/upstep.client.ts, the .client suffix tells Nuxt to only run it in the browser",
       "Call Upstep.init() inside the plugin",
     ],
     codeLang: "ts",
@@ -183,7 +183,7 @@ export default defineNuxtPlugin(() => {
     category: "Framework",
     headline: "Feedback widget for Svelte apps",
     intro:
-      "Call Upstep.init() from onMount in your root layout — onMount only runs client-side, so it's safe with SvelteKit's SSR.",
+      "Call Upstep.init() from onMount in your root layout, onMount only runs client-side, so it's safe with SvelteKit's SSR.",
     steps: [
       "Install: npm install @upstep/js",
       "In src/routes/+layout.svelte, call Upstep.init() inside onMount",
@@ -207,7 +207,7 @@ export default defineNuxtPlugin(() => {
     category: "Framework",
     headline: "Feedback widget for Astro sites",
     intro:
-      "Astro ships zero JS by default, so the simplest path is the plain script tag — drop it in your base layout and it loads once, on every page.",
+      "Astro ships zero JS by default, so the simplest path is the plain script tag, drop it in your base layout and it loads once, on every page.",
     steps: [
       "Open your shared layout (e.g. src/layouts/Layout.astro)",
       "Add the script tag before </body> with your API key as a data attribute",
@@ -226,7 +226,7 @@ export default defineNuxtPlugin(() => {
     category: "Framework",
     headline: "Feedback widget for Angular apps",
     intro:
-      "Call Upstep.init() once from your root component's ngOnInit — it mounts the launcher button and stays mounted across route changes.",
+      "Call Upstep.init() once from your root component's ngOnInit, it mounts the launcher button and stays mounted across route changes.",
     steps: [
       "Install: npm install @upstep/js",
       "In app.component.ts, call Upstep.init() inside ngOnInit",
@@ -249,11 +249,11 @@ export class AppComponent implements OnInit {
     category: "No-code / CMS",
     headline: "Feedback widget for WordPress sites",
     intro:
-      "No plugin required — paste the script tag into your theme's footer using a header/footer plugin, or your theme editor directly.",
+      "No plugin required, paste the script tag into your theme's footer using a header/footer plugin, or your theme editor directly.",
     steps: [
-      "Install a footer-code plugin (e.g. \"Insert Headers and Footers\" / WPCode) — or edit your theme's footer.php if you're comfortable with that",
+      "Install a footer-code plugin (e.g. \"Insert Headers and Footers\" / WPCode), or edit your theme's footer.php if you're comfortable with that",
       "Paste the script tag into the site-wide footer field",
-      "Save — the launcher button appears on every page of your site",
+      "Save, the launcher button appears on every page of your site",
     ],
     codeLang: "html",
     code: `<script
@@ -269,7 +269,7 @@ export class AppComponent implements OnInit {
     category: "No-code / CMS",
     headline: "Feedback widget for Webflow sites",
     intro:
-      "Webflow has a built-in custom code slot for exactly this — no export or dev handoff needed.",
+      "Webflow has a built-in custom code slot for exactly this, no export or dev handoff needed.",
     steps: [
       "Open Project Settings → Custom Code",
       "Paste the script tag into the Footer Code box (applies site-wide)",
@@ -309,10 +309,10 @@ export class AppComponent implements OnInit {
     category: "Build tool",
     headline: "Feedback widget for any HTML site",
     intro:
-      "No build step, no framework — one script tag before your closing </body> is the entire integration.",
+      "No build step, no framework, one script tag before your closing </body> is the entire integration.",
     steps: [
       "Paste the script tag into your HTML, right before </body>",
-      "That's it — no npm install, no bundler required",
+      "That's it, no npm install, no bundler required",
     ],
     codeLang: "html",
     code: `<script
@@ -328,7 +328,7 @@ export class AppComponent implements OnInit {
     category: "Mobile",
     headline: "Feedback SDK for React Native apps",
     intro:
-      "A dedicated React Native package with a provider, a launcher button, a bottom sheet, and an optional shake-to-report gesture — no web view involved.",
+      "A dedicated React Native package with a provider, a launcher button, a bottom sheet, and an optional shake-to-report gesture, no web view involved.",
     steps: [
       "Install: npm install @upstep/react-native react-native-safe-area-context",
       "Wrap your app in <FeedbackProvider apiKey=\"...\">",
@@ -355,7 +355,7 @@ export default function App() {
     category: "Mobile",
     headline: "Feedback SDK for Expo apps",
     intro:
-      "Upstep's React Native SDK has no custom native modules beyond react-native-safe-area-context, so it installs cleanly in a managed Expo project — no native linking or prebuild required.",
+      "Upstep's React Native SDK has no custom native modules beyond react-native-safe-area-context, so it installs cleanly in a managed Expo project, no native linking or prebuild required.",
     steps: [
       "Install: npx expo install @upstep/react-native react-native-safe-area-context",
       "Wrap your app in <FeedbackProvider apiKey=\"...\">",

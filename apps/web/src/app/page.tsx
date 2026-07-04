@@ -5,16 +5,17 @@ import { Footer } from "@/components/marketing/Footer";
 import { CodeShowcase } from "@/components/marketing/CodeShowcase";
 import { HeroDemo } from "@/components/marketing/HeroDemo";
 import { McpDemo } from "@/components/marketing/McpDemo";
+import { FeatureCards } from "@/components/marketing/FeatureCards";
 import { Pricing } from "@/components/marketing/Pricing";
 import { JsonLd } from "@/components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Upstep — Feedback Widget, Voting Boards & MCP for Your Product",
+  title: "Upstep | Feedback Widget, Voting Boards & MCP for Your Product",
   description:
     "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Triage on fluid boards, and let AI agents manage feedback through the built-in MCP server. Free plan.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Upstep — Feedback Widget, Voting Boards & MCP for Your Product",
+    title: "Upstep | Feedback Widget, Voting Boards & MCP for Your Product",
     description:
       "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Triage on fluid boards, and let AI agents manage feedback through the built-in MCP server. Free plan.",
     url: "/",
@@ -53,7 +54,7 @@ export default function HomePage() {
       <JsonLd data={SOFTWARE_LD} />
       <Nav />
       <Hero />
-      <Features />
+      <FeatureCards />
       <HowItWorks />
       <Mcp />
       <Integrate />
@@ -85,7 +86,7 @@ function Hero() {
                 <span className="absolute inline-flex w-full h-full rounded-full bg-clay animate-pulse-ring" />
                 <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-clay" />
               </span>
-              New — built-in MCP server for AI agents
+              New: built-in MCP server for AI agents
               <span aria-hidden>→</span>
             </Link>
 
@@ -96,7 +97,7 @@ function Hero() {
 
             <p className="mt-6 text-lg text-muted leading-relaxed max-w-md">
               Drop Upstep into your app in 2 lines of code. Users report bugs
-              and vote on ideas, your team triages on a fluid board — and your
+              and vote on ideas, your team triages on a fluid board, and your
               AI agent closes the loop over MCP.
             </p>
 
@@ -141,58 +142,6 @@ function Hero() {
             <HeroDemo />
           </div>
         </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────── Features ──────────────────────────── */
-
-function Features() {
-  const items = [
-    {
-      icon: "⚡",
-      title: "2-line integration",
-      body: "Install the package, paste your API key, and you're live. No backend to build, nothing to host.",
-    },
-    {
-      icon: "▲",
-      title: "Voting that ranks itself",
-      body: "Anonymous or per-user votes with dedupe built in. Your roadmap sorts itself by demand.",
-    },
-    {
-      icon: "◫",
-      title: "Fluid triage boards",
-      body: "Drag cards across custom columns, filter by type and label, and watch everything glide.",
-    },
-    {
-      icon: "✦",
-      title: "AI-native via MCP",
-      body: "Claude, Cursor, or any MCP client can list, triage, and create tasks straight from your inbox.",
-    },
-  ];
-
-  return (
-    <section id="features" className="max-w-6xl mx-auto px-6 py-24">
-      <SectionHeading
-        eyebrow="Everything you need"
-        title="A feedback loop that runs itself"
-        sub="From the moment a user taps “send” to the moment you ship the fix, Upstep handles the whole journey."
-      />
-
-      <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {items.map((f) => (
-          <div
-            key={f.title}
-            className="group flex flex-col rounded-2xl border border-line bg-card p-6 shadow-soft hover:shadow-lift hover:-translate-y-1 hover:border-clay/25 transition-all duration-300 ease-fluid"
-          >
-            <div className="w-11 h-11 rounded-xl bg-clay/10 flex items-center justify-center text-clay text-lg mb-5 group-hover:bg-clay/15 group-hover:scale-110 transition-all duration-300 ease-spring">
-              {f.icon}
-            </div>
-            <h3 className="font-semibold text-ink text-[17px] mb-2">{f.title}</h3>
-            <p className="text-sm text-muted leading-relaxed">{f.body}</p>
-          </div>
-        ))}
       </div>
     </section>
   );
@@ -246,16 +195,17 @@ function Mcp() {
               Give your AI direct access to your users
             </h2>
             <p className="mt-5 text-muted leading-relaxed">
-              Connect Claude, Cursor, or any MCP client to your feedback inbox.
-              Your agent reads what users want, creates and updates tasks,
-              posts replies, and keeps the board tidy — scoped to a single
-              project by its API key.
+              Connect Claude Code, Cursor, Windsurf, Copilot, or any MCP
+              client to your feedback inbox. Your agent reads what users want,
+              creates and updates tasks, posts replies, and keeps the board
+              tidy. Access is scoped to a single project by its API key.
             </p>
 
             <ul className="mt-8 space-y-4">
               {[
                 ["Triage from your editor", "“What's the most-voted bug?” answered without leaving your flow."],
-                ["Agents that act", "Create tasks, change statuses, comment — every change lands on the live board."],
+                ["Internal by default", "Agent tasks are created Dev-only, and it can spin up its own board. Users never see the machinery."],
+                ["Agents that act", "Create tasks, change statuses, comment. Every change lands on the live board."],
                 ["Nothing to deploy", "The server is part of Upstep. Point your client at one URL and go."],
               ].map(([t, d]) => (
                 <li key={t} className="flex gap-3">

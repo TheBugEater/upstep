@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 /* Looping product demo: a ghost cursor opens the feedback widget, types a
  * message, submits it, the item lands in the board, votes roll in and the
- * list re-sorts, then the team ships the top item. Pure CSS transforms —
+ * list re-sorts, then the team ships the top item. Pure CSS transforms - 
  * every position change animates. */
 
 const ROW_H = 62;
@@ -92,7 +92,7 @@ export function HeroDemo() {
       for (;;) {
         const submission = SUBMISSIONS[round % SUBMISSIONS.length]!;
 
-        // 1 — visitor opens the widget and types feedback
+        // 1 - visitor opens the widget and types feedback
         await moveTo(widgetBtnRef.current);
         await click();
         setTypedType(submission.type);
@@ -104,7 +104,7 @@ export function HeroDemo() {
         }
         await sleep(350);
 
-        // 2 — send it: widget closes, card drops into the board
+        // 2 - send it: widget closes, card drops into the board
         await moveTo(sendBtnRef.current, 600);
         await click();
         setSending(true);
@@ -121,7 +121,7 @@ export function HeroDemo() {
         await sleep(1300);
         setToast(null);
 
-        // 3 — votes roll in; the item climbs the board as rows re-sort
+        // 3 - votes roll in; the item climbs the board as rows re-sort
         const target = freshId;
         for (const jump of [11, 23, 31, 18]) {
           await moveTo(voteRefs.current.get(target), 500);
@@ -135,7 +135,7 @@ export function HeroDemo() {
         }
         await sleep(700);
 
-        // 4 — the team triages it, then ships it
+        // 4 - the team triages it, then ships it
         setItems((prev) =>
           prev.map((it) => (it.id === target ? { ...it, status: "IN_PROGRESS" } : it))
         );
@@ -149,7 +149,7 @@ export function HeroDemo() {
         setCursor((c) => ({ ...c, shown: false }));
         await sleep(900);
 
-        // 5 — reset for the next loop
+        // 5 - reset for the next loop
         setItems(INITIAL);
         round++;
         await sleep(1200);
@@ -187,7 +187,7 @@ export function HeroDemo() {
           </span>
         </div>
 
-        {/* Rows — absolutely positioned so re-sorting glides */}
+        {/* Rows - absolutely positioned so re-sorting glides */}
         <div className="relative m-2.5" style={{ height: sorted.length * ROW_H }}>
           {sorted.map((it, idx) => (
             <div

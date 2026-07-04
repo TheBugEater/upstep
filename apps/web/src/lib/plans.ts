@@ -1,7 +1,7 @@
 /**
  * Single source of truth for pricing tiers.
  *
- * Limits use `Infinity` to mean "unlimited" — never serialize a Plan directly
+ * Limits use `Infinity` to mean "unlimited" - never serialize a Plan directly
  * into a Client Component (Infinity becomes null over JSON). Read PLANS inside
  * Server Components, or pass only the primitive fields you need.
  */
@@ -52,7 +52,7 @@ export interface Plan {
   features: string[];
   /** Whether the "Powered by Upstep" badge is shown in the widget. */
   branding: boolean;
-  /** Stripe recurring (multi-currency) price id — undefined for free / unconfigured. */
+  /** Stripe recurring (multi-currency) price id - undefined for free / unconfigured. */
   stripePriceId: string | undefined;
   /** Highlighted as the recommended tier on the pricing page. */
   popular?: boolean;

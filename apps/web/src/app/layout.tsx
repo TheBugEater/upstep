@@ -30,7 +30,7 @@ const BASE_URL = (process.env.AUTH_URL ?? "https://upstep.dev").replace(/\/$/, "
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "Upstep — Feedback Widget & Voting for Web and Mobile Apps",
+    default: "Upstep | Feedback Widget & Voting for Web and Mobile Apps",
     template: "%s | Upstep",
   },
   description:

@@ -19,7 +19,7 @@ export async function generateMetadata({
   const i = INTEGRATIONS[slug];
   if (!i) return {};
   return {
-    title: `${i.name} Feedback Widget — Upstep`,
+    title: `${i.name} Feedback Widget | Upstep`,
     description: `Add a feedback and voting widget to your ${i.name} app in minutes. ${i.intro}`,
     alternates: { canonical: `/integrations/${slug}` },
     openGraph: {

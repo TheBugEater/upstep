@@ -47,7 +47,7 @@ export function Nav() {
             <span aria-hidden className="opacity-70">→</span>
           </Link>
 
-          {/* Hamburger — mobile only */}
+          {/* Hamburger - mobile only */}
           <button
             onClick={() => setMenuOpen((v) => !v)}
             className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-ink hover:bg-surface transition text-lg"

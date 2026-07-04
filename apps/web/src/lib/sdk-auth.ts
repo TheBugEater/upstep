@@ -11,11 +11,11 @@ export async function getProjectFromRequest(req: NextRequest) {
   });
 }
 
-/** Derives a stable anonymous fingerprint from the request — not used for hard deduplication */
+/** Derives a stable anonymous fingerprint from the request - not used for hard deduplication */
 export function getFingerprint(req: NextRequest): string {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const ua = req.headers.get("user-agent") ?? "unknown";
-  // Simple hash — good enough for soft rate-limiting, not a security boundary
+  // Simple hash - good enough for soft rate-limiting, not a security boundary
   let hash = 0;
   for (const char of `${ip}:${ua}`) {
     hash = (hash << 5) - hash + char.charCodeAt(0);

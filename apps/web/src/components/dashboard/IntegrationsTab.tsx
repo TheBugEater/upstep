@@ -48,7 +48,7 @@ const INTEGRATION_TYPES: { type: IntegrationType; label: string; description: st
   {
     type: "WEBHOOK",
     label: "Webhook",
-    description: "POST a JSON payload to any URL — great for Zapier, n8n, or custom backends.",
+    description: "POST a JSON payload to any URL, great for Zapier, n8n, or custom backends.",
     placeholder: "https://your-server.com/webhook",
     color: "#374151",
     icon: "⟐",
@@ -385,7 +385,7 @@ export function IntegrationsTab({ projectId, apiKey, isOwner, isPro }: Props) {
         </div>
       )}
 
-      {/* Empty state — pick a type to connect */}
+      {/* Empty state - pick a type to connect */}
       {!loading && integrations.length === 0 && !showForm && (
         <div className="rounded-2xl border border-line bg-card shadow-soft p-6">
           <h3 className="text-sm font-semibold text-ink mb-1">Connect an integration</h3>

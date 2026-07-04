@@ -63,7 +63,7 @@ export default async function Image() {
             </span>
           </div>
 
-          {/* Headline — three explicit lines, no wrapping */}
+          {/* Headline - three explicit lines, no wrapping */}
           <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 26 }}>
             <span style={{ fontSize: 68, fontWeight: 800, color: "#F5F4F0", letterSpacing: "-0.045em", lineHeight: 1.0 }}>
               Feedback that
@@ -94,7 +94,7 @@ export default async function Image() {
           </div>
         </div>
 
-        {/* Right: feedback list panel — white card matching BoardPreview */}
+        {/* Right: feedback list panel - white card matching BoardPreview */}
         <div style={{ display: "flex", flexDirection: "column", flex: 1, paddingLeft: 48, position: "relative", zIndex: 1, justifyContent: "center" }}>
           <div style={{ display: "flex", flexDirection: "column", background: "#FFFFFF", border: "1px solid #E8E6DF", borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 4px rgba(26,25,21,0.05), 0 20px 48px rgba(26,25,21,0.18)" }}>
 
@@ -132,7 +132,7 @@ export default async function Image() {
                   key={i}
                   style={{ display: "flex", alignItems: "center", gap: 13, padding: "10px 18px", borderBottom: i < ROWS.length - 1 ? "1px solid #E8E6DF" : "none" }}
                 >
-                  {/* Upvote block — same as BoardPreview */}
+                  {/* Upvote block - same as BoardPreview */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 40, minHeight: 42, borderRadius: 10, border: "1px solid #E8E6DF", background: "#F5F4EE", paddingTop: 4, paddingBottom: 4 }}>
                     <span style={{ fontSize: 10, color: "#D97757", lineHeight: 1, marginBottom: 2 }}>+</span>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#1A1915", lineHeight: 1 }}>{row.votes}</span>

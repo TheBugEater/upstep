@@ -5,7 +5,7 @@ import { Footer } from "@/components/marketing/Footer";
 import { INTEGRATIONS, type Integration } from "./data";
 
 export const metadata: Metadata = {
-  title: "Integrations — Add Upstep to Any Stack",
+  title: "Integrations. Add Upstep to Any Stack",
   description:
     "Drop the Upstep feedback widget into React, Next.js, Vue, Svelte, Astro, WordPress, Shopify, React Native, Expo, and more.",
   alternates: { canonical: "/integrations" },

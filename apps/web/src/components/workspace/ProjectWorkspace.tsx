@@ -111,6 +111,15 @@ export function ProjectWorkspace({
     if (saved === "list" || saved === "board") setView(saved);
   }, [projectId]);
 
+  // Deep links like /dashboard/projects/[id]?tab=integrations (used by the
+  // "Connect AI" quick action on the apps page)
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t === "integrations" || t === "settings" || t === "pending" || t === "completed") {
+      setTab(t);
+    }
+  }, []);
+
   function switchView(v: View) {
     setView(v);
     localStorage.setItem(`upstep:view:${projectId}`, v);
@@ -162,7 +171,7 @@ export function ProjectWorkspace({
       setItems(data.filter((f) => f.status !== "PENDING"));
       setPending(data.filter((f) => f.status === "PENDING"));
     } catch {
-      /* transient network error — next poll will retry */
+      /* transient network error - next poll will retry */
     }
   }, [projectId]);
 

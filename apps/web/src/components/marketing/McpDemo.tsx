@@ -14,14 +14,16 @@ type Line =
 const SCRIPT: Line[] = [
   { kind: "user", text: "what should we build next?" },
   { kind: "tool", text: 'upstep · list_feedback({ sort: "votes" })' },
-  { kind: "result", text: '14 open items · top: "Dark mode" — 128 votes' },
+  { kind: "result", text: '14 open items · top: "Dark mode" with 128 votes' },
   { kind: "assistant", text: "Dark mode is the clear winner: 128 votes and climbing. Want me to put it on the board?" },
-  { kind: "user", text: "yes, and tell voters it's happening" },
-  { kind: "tool", text: 'upstep · update_feedback({ id: "fb_8c21", status: "IN_PROGRESS" })' },
-  { kind: "result", text: "Status → In progress · 128 voters notified" },
-  { kind: "tool", text: 'upstep · add_comment({ text: "On it — shipping this sprint 🚀" })' },
-  { kind: "result", text: "Comment posted to the public board" },
-  { kind: "assistant", text: "Done. It's In progress on your board and every voter just got the good news." },
+  { kind: "user", text: "yes, and track the refactor internally" },
+  { kind: "tool", text: 'upstep · update_feedback({ id: "fb_8c21", status_name: "In progress" })' },
+  { kind: "result", text: "Moved to In progress on the user board" },
+  { kind: "tool", text: 'upstep · create_feedback({ title: "Refactor theme tokens", internal: true })' },
+  { kind: "result", text: "Created as Dev-only · hidden from the public widget" },
+  { kind: "tool", text: 'upstep · add_comment({ text: "On it, shipping this sprint 🚀" })' },
+  { kind: "result", text: "Reply posted · 128 voters see the update" },
+  { kind: "assistant", text: "Done. Users see Dark mode moving; the refactor task stays on your internal board." },
 ];
 
 class Stopped extends Error {}
@@ -87,7 +89,7 @@ export function McpDemo() {
         <span className="w-3 h-3 rounded-full bg-[#FF5F57]" />
         <span className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
         <span className="w-3 h-3 rounded-full bg-[#28C840]" />
-        <span className="ml-3 text-xs text-white/40 font-mono">claude · upstep mcp</span>
+        <span className="ml-3 text-xs text-white/40 font-mono">your agent ⇄ upstep mcp</span>
         <span className="ml-auto inline-flex items-center gap-1.5 text-[10px] text-white/40">
           <span className="w-1.5 h-1.5 rounded-full bg-[#28C840]" />
           connected

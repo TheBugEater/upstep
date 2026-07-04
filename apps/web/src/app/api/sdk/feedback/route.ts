@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       projectId: project.id,
       ...(type ? { type: type as never } : {}),
       // If caller explicitly filters by status, honour it.
-      // Otherwise hide PENDING — unless the item belongs to the requesting user.
+      // Otherwise hide PENDING - unless the item belongs to the requesting user.
       // Also exclude items whose custom board status is marked as done.
       internal: false,
       NOT: { boardStatus: { isDone: true } },
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Fire notifications — non-blocking, never fails the request
+  // Fire notifications - non-blocking, never fails the request
   void triggerIntegrations({
     event: "NEW_FEEDBACK",
     project: { id: project.id, name: project.name },

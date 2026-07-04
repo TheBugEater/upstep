@@ -280,7 +280,7 @@ export function BoardFormModal({
 
         <div>
           <label className="text-xs font-medium text-muted mb-2 block">
-            Columns <span className="text-faint">— top to bottom = left to right</span>
+            Columns <span className="text-faint"> - top to bottom = left to right</span>
           </label>
           <div className="space-y-1.5">
             {columnIds.map((sid, i) => {
@@ -321,7 +321,7 @@ export function BoardFormModal({
               );
             })}
             {columnIds.length === 0 && (
-              <p className="text-xs text-faint py-2">No columns — add at least one below.</p>
+              <p className="text-xs text-faint py-2">No columns, add at least one below.</p>
             )}
           </div>
 
@@ -348,7 +348,7 @@ export function BoardFormModal({
             className="rounded border-line"
           />
           <span className="text-sm text-ink">Default board</span>
-          <span className="text-xs text-faint">— opens first for everyone</span>
+          <span className="text-xs text-faint"> - opens first for everyone</span>
         </label>
 
         {error && <p className="text-xs text-danger">{error}</p>}
@@ -441,7 +441,7 @@ export function ManageStatusesModal({
         }),
       });
       if (!res.ok) {
-        setError("Failed to create status — the name may already exist.");
+        setError("Failed to create status, the name may already exist.");
         return;
       }
       onCreated((await res.json()) as ProjectStatus, addToBoards);

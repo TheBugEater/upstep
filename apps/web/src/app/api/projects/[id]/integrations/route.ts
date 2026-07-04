@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const isOwner = await requireOwner(id, session.user.id);
   if (!isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  // Plan gate — integrations require PRO or BUSINESS
+  // Plan gate - integrations require PRO or BUSINESS
   const project = await db.project.findUnique({
     where: { id },
     select: { owner: { select: { plan: true } } },

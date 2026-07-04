@@ -400,9 +400,9 @@ export default function App() {
       <FeedbackSheet />
       {/*
         FeedbackSheet has three built-in screens:
-          - Feed list  — shows all items sorted by upvotes; tap to upvote
-          - Feed detail — full description + developer comments
-          - Create     — title + description + type selector
+          - Feed list , shows all items sorted by upvotes; tap to upvote
+          - Feed detail, full description + developer comments
+          - Create    , title + description + type selector
       */}
     </FeedbackProvider>
   );
@@ -492,7 +492,7 @@ function buildAiPrompt(framework: FrameworkId, apiKey: string, baseUrl: string):
   } app. Before writing any code, ask me these questions one at a time and wait for my answers:
 
 1. Do users log in to this app? If yes, what does the signed-in user object look like and how do I access it (e.g. \`session.user.id\`, \`useUser().id\`, \`auth.currentUser.uid\`)?
-2. Where should the Feedback button appear — on every screen, or only specific pages?
+2. Where should the Feedback button appear, on every screen, or only specific pages?
 3. Do you want a floating button (default) or should it open from your own UI element like a menu item or settings row?
 
 Once I answer, wire up the integration using these details:
@@ -508,9 +508,9 @@ ${SNIPPETS[framework](apiKey, baseUrl)}
 
 Rules to follow when writing the code:
 - If the user has a signed-in user id available, ALWAYS pass it as \`userId\` to the provider and call \`identify(userId)\` whenever auth state changes. This deduplicates votes per user and is strongly recommended.
-- ${framework === "next" ? 'Wrap the provider and widget in a "use client" component — they use browser APIs and cannot run in a Server Component.' : "Mount the provider once at the app root so the widget is available on every screen."}
+- ${framework === "next" ? 'Wrap the provider and widget in a "use client" component, they use browser APIs and cannot run in a Server Component.' : "Mount the provider once at the app root so the widget is available on every screen."}
 - The widget talks to ${baseUrl}/api/sdk/* using an x-api-key header. No extra backend setup is needed.
-- Change nothing else in the codebase — only add what is necessary to mount Upstep.
+- Change nothing else in the codebase, only add what is necessary to mount Upstep.
 
 After wiring it up, tell me exactly where you placed the code and how to verify a test submission appears in the dashboard.`;
 }

@@ -5,12 +5,12 @@ import { Footer } from "@/components/marketing/Footer";
 import { COMPETITORS } from "./data";
 
 export const metadata: Metadata = {
-  title: "Upstep Alternatives — Compare vs Canny, Featurebase, Frill & More",
+  title: "Upstep Alternatives. Compare vs Canny, Featurebase, Frill & More",
   description:
     "See how Upstep compares to Canny, UserVoice, Productboard, Featurebase, Frill, Upvoty, Nolt, Sleekplan, Hellonext, Usersnap, Marker.io, Beamer, and Fider on pricing and features.",
   alternates: { canonical: "/alternatives" },
   openGraph: {
-    title: "Upstep Alternatives — Feature & Pricing Comparisons",
+    title: "Upstep Alternatives. Feature & Pricing Comparisons",
     description:
       "Compare Upstep against the most popular feedback and roadmap tools on the market.",
     url: "/alternatives",
@@ -35,7 +35,7 @@ export default function AlternativesIndexPage() {
         </h1>
         <p className="text-lg text-muted leading-relaxed max-w-2xl mb-14">
           Looking for a feedback widget, roadmap tool, or bug-report inbox? Here's how Upstep
-          stacks up against the tools developers compare it to most — pricing, features, and
+          stacks up against the tools developers compare it to most, pricing, features, and
           the honest tradeoffs.
         </p>
 

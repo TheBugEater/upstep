@@ -35,7 +35,7 @@ export async function detectCurrency(): Promise<Currency> {
   if (EUR_COUNTRIES.has(country)) return "EUR";
   if (country) return "USD";
 
-  // No geo header (e.g. local dev) — fall back to the browser locale.
+  // No geo header (e.g. local dev) - fall back to the browser locale.
   const lang = (h.get("accept-language") ?? "").toLowerCase();
   if (lang.includes("en-gb")) return "GBP";
   if (/\b(de|fr|es|it|nl|pt|fi|ga|el|et|lv|lt|sl|sk|mt|hr)\b/.test(lang)) return "EUR";

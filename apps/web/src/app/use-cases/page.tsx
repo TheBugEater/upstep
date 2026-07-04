@@ -5,7 +5,7 @@ import { Footer } from "@/components/marketing/Footer";
 import { USE_CASES } from "./data";
 
 export const metadata: Metadata = {
-  title: "Use Cases — Feedback Widget for Every Kind of Team",
+  title: "Use Cases. Feedback Widget for Every Kind of Team",
   description:
     "See how SaaS teams, indie hackers, agencies, mobile app developers, and more use Upstep to collect and prioritize feedback.",
   alternates: { canonical: "/use-cases" },
@@ -33,7 +33,7 @@ export default function UseCasesIndexPage() {
           Built for how you actually work
         </h1>
         <p className="text-lg text-muted leading-relaxed max-w-2xl mb-14">
-          Same widget, same free plan — here's how different teams put it to work.
+          Same widget, same free plan, here's how different teams put it to work.
         </p>
 
         <div className="grid sm:grid-cols-2 gap-4">

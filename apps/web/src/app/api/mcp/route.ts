@@ -4,14 +4,14 @@ import { db } from "@/lib/db";
 import { triggerIntegrations } from "@/lib/integrations";
 
 /**
- * Upstep MCP server — Streamable HTTP transport (JSON responses).
+ * Upstep MCP server - Streamable HTTP transport (JSON responses).
  *
  * Any MCP client (Claude Code, Claude Desktop, Cursor, …) can connect with:
  *   claude mcp add --transport http upstep https://upstep.dev/api/mcp \
  *     --header "Authorization: Bearer <project API key>"
  *
  * The API key scopes every tool to a single project, so an agent can browse,
- * triage, create, and comment on feedback — nothing else.
+ * triage, create, and comment on feedback - nothing else.
  */
 
 const PROTOCOL_VERSION = "2025-06-18";
@@ -96,6 +96,12 @@ const addCommentArgs = z.object({
   author_name: z.string().max(80).optional(),
 });
 
+const createBoardArgs = z.object({
+  name: z.string().min(1).max(80),
+  columns: z.array(z.string().min(1).max(60)).min(1).max(8),
+  done_column: z.string().optional(),
+});
+
 const TOOLS = [
   {
     name: "get_project_overview",
@@ -130,7 +136,7 @@ const TOOLS = [
   {
     name: "create_feedback",
     description:
-      "Create a feedback item or internal task on the board. Set internal=true (default) for team/dev tasks that users shouldn't see in the widget.",
+      "Create a feedback item or internal task. internal=true (the default) marks it Dev-only: it shows on the team board but is hidden from the public widget, so agent work never leaks into the user-facing roadmap.",
     inputSchema: {
       type: "object",
       properties: {
@@ -176,6 +182,29 @@ const TOOLS = [
     name: "list_statuses",
     description: "List the project's board columns (statuses) with their colors and done-flags.",
     inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "list_boards",
+    description: "List the project's boards and their columns. Useful to see which board is the user-facing default and which are internal workspaces.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "create_board",
+    description:
+      "Create a separate board (e.g. an agent workspace) with its own columns, keeping the user-facing default board untouched. Missing statuses are created automatically.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Board name, e.g. \"Agent tasks\"" },
+        columns: {
+          type: "array",
+          items: { type: "string" },
+          description: "Column names in order, e.g. [\"Backlog\", \"Doing\", \"Shipped\"]. Reuses existing statuses with the same name.",
+        },
+        done_column: { type: "string", description: "Which column counts as done (defaults to the last one)" },
+      },
+      required: ["name", "columns"],
+    },
   },
 ];
 
@@ -436,6 +465,77 @@ async function callTool(project: Project, name: string, args: Record<string, unk
       );
     }
 
+    case "list_boards": {
+      const boards = await db.board.findMany({
+        where: { projectId: project.id },
+        orderBy: { createdAt: "asc" },
+        include: {
+          columns: { orderBy: { order: "asc" }, include: { status: true } },
+        },
+      });
+      return toolText(
+        boards.map((b) => ({
+          name: b.name,
+          is_default: b.isDefault,
+          columns: b.columns.map((c) => ({ name: c.status.name, is_done: c.status.isDone })),
+        }))
+      );
+    }
+
+    case "create_board": {
+      const parsed = createBoardArgs.safeParse(args);
+      if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
+      const { name, columns, done_column } = parsed.data;
+
+      const existingBoard = await db.board.findFirst({
+        where: { projectId: project.id, name: { equals: name, mode: "insensitive" } },
+      });
+      if (existingBoard) return toolError(`A board named "${name}" already exists.`);
+
+      const doneName = (done_column ?? columns[columns.length - 1]!).toLowerCase();
+      const statuses = await db.status.findMany({ where: { projectId: project.id } });
+      const maxOrder = statuses.reduce((n, s) => Math.max(n, s.order), 0);
+      const palette = ["#94a3b8", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899", "#22c55e"];
+
+      const columnStatusIds: string[] = [];
+      for (const [i, colName] of columns.entries()) {
+        let status = statuses.find((s) => s.name.toLowerCase() === colName.toLowerCase());
+        if (!status) {
+          status = await db.status.create({
+            data: {
+              projectId: project.id,
+              name: colName,
+              color: palette[i % palette.length]!,
+              order: maxOrder + i + 1,
+              isDone: colName.toLowerCase() === doneName,
+            },
+          });
+        }
+        columnStatusIds.push(status.id);
+      }
+
+      const board = await db.board.create({
+        data: {
+          projectId: project.id,
+          name,
+          isDefault: false,
+          columns: {
+            create: columnStatusIds.map((statusId, order) => ({ statusId, order })),
+          },
+        },
+        include: { columns: { orderBy: { order: "asc" }, include: { status: true } } },
+      });
+
+      return toolText({
+        created_board: {
+          name: board.name,
+          is_default: false,
+          columns: board.columns.map((c) => ({ name: c.status.name, is_done: c.status.isDone })),
+        },
+        note: "The user-facing default board is untouched. Use create_feedback with internal=true and a status_name from this board to keep agent work off the public widget.",
+      });
+    }
+
     default:
       return toolError(`Unknown tool: ${name}`);
   }
@@ -471,13 +571,15 @@ export async function POST(req: NextRequest) {
         capabilities: { tools: {} },
         serverInfo: {
           name: "upstep",
-          title: `Upstep — ${project.name}`,
+          title: `Upstep | ${project.name}`,
           version: "1.0.0",
         },
         instructions:
           `Feedback inbox and task board for the project "${project.name}". ` +
           "Use get_project_overview first to see what's inside, list_feedback to browse by votes, " +
-          "and update_feedback with a status_name to move items across the board.",
+          "and update_feedback with a status_name to move items across the board. " +
+          "Keep agent work internal: create_feedback defaults to internal=true (Dev-only, hidden from the public widget), " +
+          "and create_board gives you a separate workspace without touching the user-facing default board.",
       });
 
     case "ping":
@@ -509,7 +611,7 @@ export function GET() {
   return new NextResponse(null, { status: 405, headers: { Allow: "POST, DELETE" } });
 }
 
-// Session teardown — we're stateless, so acknowledge and move on.
+// Session teardown - we're stateless, so acknowledge and move on.
 export function DELETE() {
   return new NextResponse(null, { status: 200 });
 }

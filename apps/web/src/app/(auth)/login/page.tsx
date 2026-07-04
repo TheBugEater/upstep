@@ -23,7 +23,7 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Left — form */}
+      {/* Left - form */}
       <div className="flex flex-col px-6 py-8 bg-canvas">
         <div className="flex items-center justify-between">
           <Logo />
@@ -80,7 +80,7 @@ function LoginForm() {
         <p className="text-center text-xs text-faint">© {new Date().getFullYear()} Upstep</p>
       </div>
 
-      {/* Right — brand panel */}
+      {/* Right - brand panel */}
       <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-[#161513] p-12">
         <div className="absolute inset-0 bg-grid opacity-[0.07]" />
         <div className="absolute inset-0 bg-glow opacity-60" />

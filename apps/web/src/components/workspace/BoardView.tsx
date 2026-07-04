@@ -23,7 +23,7 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props
   if (!board) {
     return (
       <div className="text-center py-16 text-muted">
-        <p className="text-sm">No board configured{isOwner ? " — create one above." : "."}</p>
+        <p className="text-sm">No board configured{isOwner ? ", create one above." : "."}</p>
       </div>
     );
   }
@@ -211,7 +211,7 @@ function ColumnComposer({
         onBlur={() => {
           if (!title.trim()) setOpen(false);
         }}
-        placeholder={saving ? "Adding…" : "Card title — Enter to add"}
+        placeholder={saving ? "Adding…" : "Card title. Enter to add"}
         disabled={saving}
         className="w-full text-xs rounded-xl border border-clay/40 bg-card px-3 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/60 focus:ring-4 focus:ring-clay/10 transition disabled:opacity-60"
       />

@@ -19,11 +19,11 @@ export async function generateMetadata({
   const c = COMPETITORS[slug];
   if (!c) return {};
   return {
-    title: `Best ${c.name} Alternative — ${c.headline}`,
+    title: `Best ${c.name} Alternative. ${c.headline}`,
     description: `Looking for a ${c.name} alternative? Upstep is a developer-first feedback widget with a free plan, 2-line integration, and React Native support. No redirects, no per-seat pricing.`,
     alternates: { canonical: `/alternatives/${slug}` },
     openGraph: {
-      title: `Best ${c.name} Alternative — Upstep`,
+      title: `Best ${c.name} Alternative | Upstep`,
       description: `Looking for a ${c.name} alternative? Upstep is a developer-first feedback widget with a free plan, 2-line integration, and React Native support.`,
       url: `/alternatives/${slug}`,
     },
@@ -43,7 +43,7 @@ export default async function AlternativePage({
     "@context": "https://schema.org",
     "@type": "Article",
     headline: c.headline,
-    description: `Compare Upstep vs ${c.name} — features, pricing, and which is right for your team.`,
+    description: `Compare Upstep vs ${c.name}, features, pricing, and which is right for your team.`,
     url: `https://upstep.dev/alternatives/${slug}`,
   };
 
@@ -76,7 +76,7 @@ export default async function AlternativePage({
             href="/login"
             className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft"
           >
-            Try Upstep free — no credit card
+            Try Upstep free, no credit card
             <span aria-hidden>→</span>
           </Link>
         </div>
@@ -100,7 +100,7 @@ export default async function AlternativePage({
         {/* Comparison table */}
         <section className="mb-14">
           <h2 className="font-serif text-2xl text-ink mb-6">
-            Upstep vs {c.name} — feature comparison
+            Upstep vs {c.name}, feature comparison
           </h2>
           <div className="rounded-2xl border border-line overflow-hidden shadow-soft">
             <table className="w-full text-sm">

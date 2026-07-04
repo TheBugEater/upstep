@@ -125,17 +125,22 @@ export default async function DashboardPage({
               const barTotal = Math.max(openCount + inProgressCount + doneCount, 1);
 
               return (
-                <Link
+                <div
                   key={p.id}
-                  href={`/dashboard/projects/${p.id}`}
                   className="group relative rounded-2xl border border-line bg-card p-5 shadow-soft hover:shadow-lift hover:-translate-y-1 hover:border-clay/30 transition-all duration-300 ease-fluid animate-fade-up overflow-hidden"
                   style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
                 >
+                  {/* Whole card opens the app (stretched link, under the chips) */}
+                  <Link
+                    href={`/dashboard/projects/${p.id}`}
+                    aria-label={`Open ${p.name}`}
+                    className="absolute inset-0 z-0"
+                  />
                   {/* Brand wash on hover */}
-                  <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-clay/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-clay/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                   {/* Header row */}
-                  <div className="relative flex items-center gap-3 mb-4">
+                  <div className="pointer-events-none relative flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-clay/20 to-clay/5 text-clay border border-clay/15 flex items-center justify-center font-serif text-lg shrink-0 group-hover:scale-105 transition-transform duration-300 ease-spring">
                       {p.name[0]?.toUpperCase() ?? "A"}
                     </div>
@@ -160,14 +165,14 @@ export default async function DashboardPage({
                   </div>
 
                   {/* Status distribution */}
-                  <div className="relative flex h-1.5 rounded-full overflow-hidden bg-surface mb-3.5">
+                  <div className="pointer-events-none relative flex h-1.5 rounded-full overflow-hidden bg-surface mb-3.5">
                     <span className="bg-warning/70 transition-all duration-500" style={{ width: `${(openCount / barTotal) * 100}%` }} />
                     <span className="bg-info/70 transition-all duration-500" style={{ width: `${(inProgressCount / barTotal) * 100}%` }} />
                     <span className="bg-success/70 transition-all duration-500" style={{ width: `${(doneCount / barTotal) * 100}%` }} />
                   </div>
 
                   {/* Stats row */}
-                  <div className="relative flex items-center gap-4">
+                  <div className="pointer-events-none relative flex items-center gap-4">
                     <Stat dot="bg-warning" n={openCount} label="open" />
                     <Stat dot="bg-info" n={inProgressCount} label="active" />
                     <Stat dot="bg-success" n={doneCount} label="done" />
@@ -176,7 +181,26 @@ export default async function DashboardPage({
                       {votes} · {total} total
                     </span>
                   </div>
-                </Link>
+
+                  {/* Quick actions */}
+                  <div className="relative z-10 mt-4 pt-3.5 border-t border-line flex items-center gap-2">
+                    <Link
+                      href={`/dashboard/projects/${p.id}?tab=integrations`}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted hover:text-clay border border-line hover:border-clay/30 rounded-full px-2.5 py-1 transition"
+                      title="Connect Claude Code, Cursor, or any MCP client"
+                    >
+                      <span className="text-clay">✦</span>
+                      Connect AI
+                    </Link>
+                    <Link
+                      href={`/dashboard/projects/${p.id}?tab=settings`}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted hover:text-ink border border-line hover:border-line-strong rounded-full px-2.5 py-1 transition"
+                    >
+                      API key
+                    </Link>
+                    <span className="pointer-events-none ml-auto text-[10px] text-faint">MCP ready</span>
+                  </div>
+                </div>
               );
             })}
           </div>
