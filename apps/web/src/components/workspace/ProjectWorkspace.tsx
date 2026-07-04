@@ -5,6 +5,7 @@ import type { FeedbackType, Label } from "@upstep/types";
 import type { ProjectBoard, ProjectStatus, WorkspaceItem } from "@/types/dashboard";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import { IntegrationsTab } from "@/components/dashboard/IntegrationsTab";
+import { McpCard } from "@/components/dashboard/McpCard";
 import { BoardView } from "./BoardView";
 import { ListView } from "./ListView";
 import { DetailDrawer } from "./DetailDrawer";
@@ -16,7 +17,7 @@ import {
 } from "./modals";
 import { TYPES, TYPE_LABELS } from "./ui";
 
-type Tab = "feedback" | "completed" | "pending" | "integrations" | "settings";
+type Tab = "feedback" | "completed" | "pending" | "mcp" | "integrations" | "settings";
 type View = "board" | "list";
 type SortMode = "newest" | "votes";
 
@@ -51,6 +52,7 @@ export interface WorkspaceActions {
 interface Props {
   projectId: string;
   apiKey: string;
+  baseUrl: string;
   moderationEnabled: boolean;
   isOwner: boolean;
   ownerPlan: string;
@@ -65,6 +67,7 @@ interface Props {
 export function ProjectWorkspace({
   projectId,
   apiKey,
+  baseUrl,
   moderationEnabled,
   isOwner,
   ownerPlan,
@@ -111,11 +114,11 @@ export function ProjectWorkspace({
     if (saved === "list" || saved === "board") setView(saved);
   }, [projectId]);
 
-  // Deep links like /dashboard/projects/[id]?tab=integrations (used by the
+  // Deep links like /dashboard/projects/[id]?tab=mcp (used by the
   // "Connect AI" quick action on the apps page)
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("tab");
-    if (t === "integrations" || t === "settings" || t === "pending" || t === "completed") {
+    if (t === "mcp" || t === "integrations" || t === "settings" || t === "pending" || t === "completed") {
       setTab(t);
     }
   }, []);
@@ -411,6 +414,9 @@ export function ProjectWorkspace({
               <span className="sm:hidden">Pending</span>
               <Badge count={pending.length} cls="bg-clay text-white" />
             </TabBtn>
+            <TabBtn active={tab === "mcp"} onClick={() => setTab("mcp")}>
+              <span className="text-clay">✦</span> MCP
+            </TabBtn>
             <TabBtn active={tab === "integrations"} onClick={() => setTab("integrations")}>
               Integrations
             </TabBtn>
@@ -582,12 +588,18 @@ export function ProjectWorkspace({
 
       {tab === "pending" && <PendingList items={pending} onDecide={decidePending} />}
 
+      {tab === "mcp" && (
+        <div className="max-w-2xl">
+          <McpCard apiKey={apiKey} baseUrl={baseUrl} />
+        </div>
+      )}
+
       {tab === "integrations" && (
         <IntegrationsTab
           projectId={projectId}
-          apiKey={apiKey}
           isOwner={isOwner}
           isPro={ownerPlan === "PRO" || ownerPlan === "BUSINESS"}
+          onOpenMcpTab={() => setTab("mcp")}
         />
       )}
 

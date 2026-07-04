@@ -185,7 +185,7 @@ export default async function DashboardPage({
                   {/* Quick actions */}
                   <div className="relative z-10 mt-4 pt-3.5 border-t border-line flex items-center gap-2">
                     <Link
-                      href={`/dashboard/projects/${p.id}?tab=integrations`}
+                      href={`/dashboard/projects/${p.id}?tab=mcp`}
                       className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted hover:text-clay border border-line hover:border-clay/30 rounded-full px-2.5 py-1 transition"
                       title="Connect Claude Code, Cursor, or any MCP client"
                     >

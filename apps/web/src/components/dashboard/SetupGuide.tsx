@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useOnRamp } from "@onramp-sdk/react";
+import { McpCard } from "./McpCard";
 
 type FrameworkId = "react" | "next" | "js" | "script" | "native";
 
@@ -148,6 +149,8 @@ function SetupGuideContent({ apiKey, baseUrl }: { apiKey: string; baseUrl: strin
 
       <Patterns framework={fw} />
 
+      <McpSetup apiKey={apiKey} baseUrl={baseUrl} />
+
       <AiPrompt framework={fw} apiKey={apiKey} baseUrl={baseUrl} />
     </div>
   );
@@ -192,6 +195,41 @@ function Patterns({ framework }: { framework: FrameworkId }) {
             </p>
             <CodeBlock code={trigger} />
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ──────────────────────── Connect your AI agent ─────────────────────── */
+// Separate from AiPrompt below: this connects an AI agent to the feedback
+// inbox over MCP (triage, tasks, replies). AiPrompt instead generates a
+// prompt for coding assistants to write the widget integration itself.
+
+function McpSetup({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-6 rounded-xl border border-line bg-surface/40 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface/70 transition"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium text-ink">
+          <span className="text-clay">✦</span>
+          Connect your AI agent (MCP)
+        </span>
+        <span className={`text-faint text-xs transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4">
+          <p className="text-xs text-muted mb-3 leading-relaxed">
+            Let Claude Code, Cursor, or any MCP client triage this project&apos;s
+            inbox directly, list feedback, file Dev-only tasks, move cards, and
+            reply to voters, without leaving your editor.
+          </p>
+          <McpCard apiKey={apiKey} baseUrl={baseUrl} />
         </div>
       )}
     </div>

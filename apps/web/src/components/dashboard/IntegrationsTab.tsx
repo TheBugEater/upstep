@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { McpCard } from "./McpCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,9 +20,9 @@ interface Integration {
 
 interface Props {
   projectId: string;
-  apiKey: string;
   isOwner: boolean;
   isPro: boolean;
+  onOpenMcpTab: () => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -66,7 +65,7 @@ const ALL_EVENTS: IntegrationEvent[] = ["NEW_FEEDBACK", "STATUS_CHANGED", "NEW_V
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function IntegrationsTab({ projectId, apiKey, isOwner, isPro }: Props) {
+export function IntegrationsTab({ projectId, isOwner, isPro, onOpenMcpTab }: Props) {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -195,7 +194,7 @@ export function IntegrationsTab({ projectId, apiKey, isOwner, isPro }: Props) {
   if (!isPro) {
     return (
       <div className="max-w-xl space-y-5">
-        <McpCard apiKey={apiKey} />
+        <McpPointer onOpenMcpTab={onOpenMcpTab} />
         <div className="rounded-2xl border border-line bg-card shadow-soft p-8 text-center">
           <div className="text-3xl mb-3">🔌</div>
           <h3 className="text-sm font-semibold text-ink mb-1">Integrations require a Pro plan</h3>
@@ -218,7 +217,7 @@ export function IntegrationsTab({ projectId, apiKey, isOwner, isPro }: Props) {
   if (!isOwner) {
     return (
       <div className="max-w-xl space-y-5">
-        <McpCard apiKey={apiKey} />
+        <McpPointer onOpenMcpTab={onOpenMcpTab} />
         <div className="rounded-2xl border border-dashed border-line bg-surface/50 p-5 text-center">
           <p className="text-sm text-muted">Integrations are managed by the project owner.</p>
         </div>
@@ -236,7 +235,7 @@ export function IntegrationsTab({ projectId, apiKey, isOwner, isPro }: Props) {
 
   return (
     <div className="space-y-5 max-w-xl">
-      <McpCard apiKey={apiKey} />
+      <McpPointer onOpenMcpTab={onOpenMcpTab} />
 
       {/* Existing integrations */}
       {!loading && integrations.length > 0 && (
@@ -557,5 +556,25 @@ export function IntegrationsTab({ projectId, apiKey, isOwner, isPro }: Props) {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── MCP pointer ────────────────────────────────────────────────────────────
+// Slack/Discord/webhooks live here; the MCP server gets its own tab since
+// connecting an AI agent is a bigger workflow than a notification hook.
+
+function McpPointer({ onOpenMcpTab }: { onOpenMcpTab: () => void }) {
+  return (
+    <button
+      onClick={onOpenMcpTab}
+      className="w-full flex items-center gap-3 rounded-2xl border border-clay/25 bg-clay/[0.04] hover:bg-clay/[0.07] p-4 text-left transition"
+    >
+      <span className="w-9 h-9 rounded-xl bg-clay/10 text-clay flex items-center justify-center text-base shrink-0">✦</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-ink">Looking for the MCP server?</p>
+        <p className="text-xs text-muted mt-0.5">Connect Claude Code, Cursor, or any MCP client on the MCP tab.</p>
+      </div>
+      <span className="text-muted text-sm shrink-0">→</span>
+    </button>
   );
 }

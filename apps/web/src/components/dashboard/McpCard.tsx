@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 
-const MCP_URL = "https://upstep.dev/api/mcp";
-
 const TOOL_LIST = [
   ["get_project_overview", "counts, columns, top-voted"],
   ["list_feedback", "browse & search by votes"],
@@ -15,18 +13,19 @@ const TOOL_LIST = [
   ["create_board", "separate agent workspace"],
 ] as const;
 
-/** Connect-your-AI card shown on the Integrations tab. Available on all plans. */
-export function McpCard({ apiKey }: { apiKey: string }) {
+/** Connect-your-AI card shown on the MCP tab. Available on all plans. */
+export function McpCard({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
   const [tab, setTab] = useState<"claude" | "cursor">("claude");
   const [copied, setCopied] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
+  const mcpUrl = `${baseUrl.replace(/\/$/, "")}/api/mcp`;
   const key = revealed ? apiKey : "YOUR_API_KEY";
-  const claudeCmd = `claude mcp add --transport http upstep ${MCP_URL} --header "Authorization: Bearer ${key}"`;
+  const claudeCmd = `claude mcp add --transport http upstep ${mcpUrl} --header "Authorization: Bearer ${key}"`;
   const cursorJson = `{
   "mcpServers": {
     "upstep": {
-      "url": "${MCP_URL}",
+      "url": "${mcpUrl}",
       "headers": { "Authorization": "Bearer ${key}" }
     }
   }
