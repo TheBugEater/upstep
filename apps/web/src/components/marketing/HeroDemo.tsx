@@ -118,7 +118,14 @@ export function HeroDemo() {
           { id: freshId, title: submission.title, type: submission.type, votes: 1, status: "OPEN" as Status, fresh: true },
         ]);
         setToast("New feedback received");
-        await sleep(1300);
+        await sleep(500);
+        // The entrance animation's fill-mode holds its final transform after
+        // it finishes, which would otherwise pin this row at translateY(0)
+        // forever (masking whatever the sort order says) — drop the class
+        // once the pop-in has actually played so rank-based position takes
+        // back over.
+        setItems((prev) => prev.map((it) => (it.id === freshId ? { ...it, fresh: false } : it)));
+        await sleep(800);
         setToast(null);
 
         // 3 - votes roll in one rank at a time; each burst clears the next
@@ -255,7 +262,7 @@ export function HeroDemo() {
 
       {/* Toast */}
       <div
-        className={`absolute left-1/2 -translate-x-1/2 -top-4 transition-all duration-400 ease-spring ${
+        className={`absolute z-20 left-1/2 -translate-x-1/2 -top-4 transition-all duration-400 ease-spring ${
           toast ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
         }`}
       >
@@ -264,8 +271,9 @@ export function HeroDemo() {
         </span>
       </div>
 
-      {/* Floating feedback widget */}
-      <div className="absolute -bottom-6 -right-3 sm:-right-6 flex flex-col items-end gap-3">
+      {/* Floating feedback widget - above the board rows (which use z-index
+          up to 10 while climbing) so the panel never gets buried mid-vote */}
+      <div className="absolute z-20 -bottom-6 -right-3 sm:-right-6 flex flex-col items-end gap-3">
         <div
           className={`w-72 rounded-2xl border border-line bg-card shadow-lift p-4 origin-bottom-right transition-all duration-300 ease-spring ${
             widgetOpen ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 translate-y-3 pointer-events-none"
@@ -320,7 +328,7 @@ export function HeroDemo() {
 
       {/* Ghost cursor */}
       <div
-        className="absolute z-10 pointer-events-none transition-all duration-700 ease-fluid"
+        className="absolute z-30 pointer-events-none transition-all duration-700 ease-fluid"
         style={{
           left: `${cursor.x}%`,
           top: `${cursor.y}%`,

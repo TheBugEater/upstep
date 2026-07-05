@@ -68,23 +68,36 @@ export function FeatureCards() {
       {/* Stage */}
       <div className="mt-14" style={{ perspective: "1400px" }}>
         <TiltCard>
-          <div className="relative h-[300px] sm:h-[280px] [transform-style:preserve-3d]">
-            {SLIDES.map((s, i) => {
-              const offset = (i - active + SLIDES.length) % SLIDES.length;
-              return (
-                <div
-                  key={s.id}
-                  className="absolute inset-0 p-6"
-                  style={sceneStyle(offset)}
-                >
-                  {s.id === "agent" && <AgentFlowScene active={offset === 0} />}
-                  {s.id === "voting" && <VotingScene active={offset === 0} />}
-                  {s.id === "triage" && <TriageScene active={offset === 0} />}
-                  {s.id === "mcp" && <McpScene active={offset === 0} />}
-                  {s.id === "integration" && <IntegrationScene active={offset === 0} />}
-                </div>
-              );
-            })}
+          <div className="p-6 [transform-style:preserve-3d]">
+            {/* Heading + description for the active scene, so the stage
+                reads as something rather than a mostly-empty animation */}
+            <div key={active} className="flex items-start gap-3 animate-fade-up">
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay/10 text-clay text-base"
+                style={{ transform: "translateZ(24px)" }}
+              >
+                {SLIDES[active]!.icon}
+              </span>
+              <div style={{ transform: "translateZ(16px)" }}>
+                <h3 className="text-[15px] font-semibold text-ink leading-snug">{SLIDES[active]!.title}</h3>
+                <p className="mt-1 text-[13px] text-muted leading-relaxed max-w-md">{SLIDES[active]!.body}</p>
+              </div>
+            </div>
+
+            <div className="relative mt-5 h-[190px] sm:h-[180px] [transform-style:preserve-3d]">
+              {SLIDES.map((s, i) => {
+                const offset = (i - active + SLIDES.length) % SLIDES.length;
+                return (
+                  <div key={s.id} className="absolute inset-0" style={sceneStyle(offset)}>
+                    {s.id === "agent" && <AgentFlowScene active={offset === 0} />}
+                    {s.id === "voting" && <VotingScene active={offset === 0} />}
+                    {s.id === "triage" && <TriageScene active={offset === 0} />}
+                    {s.id === "mcp" && <McpScene active={offset === 0} />}
+                    {s.id === "integration" && <IntegrationScene active={offset === 0} />}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </TiltCard>
       </div>
@@ -297,19 +310,8 @@ function AgentFlowScene({ active }: { active: boolean }) {
   });
 
   return (
-    <div className="relative flex h-full flex-col [transform-style:preserve-3d]" aria-hidden>
-      <div className="absolute right-0 top-0 hidden sm:flex items-center -space-x-1.5" style={{ transform: "translateZ(28px)" }}>
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-clay text-white text-[11px] font-semibold ring-2 ring-card">You</span>
-        <span
-          className={`flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-fg text-xs ring-2 ring-card transition-transform duration-300 ${
-            step === 1 || step === 2 || step === 4 ? "scale-110" : ""
-          }`}
-        >
-          ✦
-        </span>
-      </div>
-
-      <div className="mt-1 grid grid-cols-2 gap-3" style={{ transform: "translateZ(14px)" }}>
+    <div className="relative flex h-full flex-col justify-center [transform-style:preserve-3d]" aria-hidden>
+      <div className="grid grid-cols-2 gap-3" style={{ transform: "translateZ(14px)" }}>
         <MiniBoard label="User board" tone="public">
           <MiniCard
             title="Dark mode"
