@@ -14,6 +14,7 @@ import {
   NewTaskModal,
   BoardFormModal,
   ManageStatusesModal,
+  ManageLabelsModal,
 } from "./modals";
 import { TYPES, TYPE_LABELS, TYPE_COLORS } from "./ui";
 
@@ -102,6 +103,7 @@ export function ProjectWorkspace({
   });
   const [boardModal, setBoardModal] = useState<"new" | "edit" | null>(null);
   const [showStatuses, setShowStatuses] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
   // Suppress background refresh right after an optimistic mutation so a
@@ -209,7 +211,7 @@ export function ProjectWorkspace({
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable) return;
-      if (tab !== "feedback" || selectedId || quickAdd.open || boardModal || showStatuses) return;
+      if (tab !== "feedback" || selectedId || quickAdd.open || boardModal || showStatuses || showLabels) return;
       if (e.key === "n") {
         e.preventDefault();
         setQuickAdd({ open: true, statusId: null });
@@ -220,7 +222,7 @@ export function ProjectWorkspace({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tab, selectedId, quickAdd.open, boardModal, showStatuses]);
+  }, [tab, selectedId, quickAdd.open, boardModal, showStatuses, showLabels]);
 
   // ── Item mutations (optimistic) ────────────────────────────────────────────
   const moveItem = useCallback(
@@ -394,6 +396,32 @@ export function ProjectWorkspace({
     );
   }, []);
 
+  // ── Label catalogue mutations ───────────────────────────────────────────────
+  const applyLabelUpdate = useCallback((updated: Label) => {
+    setLabels((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+    setItems((prev) =>
+      prev.map((f) =>
+        f.labels ? { ...f, labels: f.labels.map((l) => (l.id === updated.id ? updated : l)) } : f
+      )
+    );
+  }, []);
+
+  const removeLabel = useCallback((labelId: string) => {
+    setLabels((prev) => prev.filter((l) => l.id !== labelId));
+    setItems((prev) =>
+      prev.map((f) => (f.labels ? { ...f, labels: f.labels.filter((l) => l.id !== labelId) } : f))
+    );
+    // Drop the id from any board's saved filters too, so a deleted label
+    // can't silently keep narrowing a board forever.
+    setBoards((prev) =>
+      prev.map((b) => {
+        if (!b.filters?.labelIds?.includes(labelId)) return b;
+        return { ...b, filters: { ...b.filters, labelIds: b.filters.labelIds.filter((id) => id !== labelId) } };
+      })
+    );
+    setLabelFilter((prev) => (prev === labelId ? null : prev));
+  }, []);
+
   const actions: WorkspaceActions = useMemo(
     () => ({
       moveItem,
@@ -477,6 +505,12 @@ export function ProjectWorkspace({
                   className="text-xs text-muted hover:text-ink transition"
                 >
                   Statuses
+                </button>
+                <button
+                  onClick={() => setShowLabels(true)}
+                  className="text-xs text-muted hover:text-ink transition"
+                >
+                  Labels
                 </button>
                 <button
                   onClick={() => setBoardModal("new")}
@@ -683,6 +717,7 @@ export function ProjectWorkspace({
             setBoardModal(null);
           }}
           onClose={() => setBoardModal(null)}
+          onCreateLabel={createLabel}
         />
       )}
 
@@ -698,6 +733,18 @@ export function ProjectWorkspace({
           onUpdated={applyStatusUpdate}
           onDeleted={removeStatus}
           onClose={() => setShowStatuses(false)}
+        />
+      )}
+
+      {/* Manage labels */}
+      {showLabels && (
+        <ManageLabelsModal
+          projectId={projectId}
+          labels={labels}
+          onCreated={(label) => setLabels((prev) => (prev.some((l) => l.id === label.id) ? prev : [...prev, label]))}
+          onUpdated={applyLabelUpdate}
+          onDeleted={removeLabel}
+          onClose={() => setShowLabels(false)}
         />
       )}
     </div>

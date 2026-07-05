@@ -13,6 +13,7 @@ import {
   TYPE_COLORS,
   TYPE_LABELS,
   STATUS_PALETTE,
+  LABEL_PALETTE,
   StatusDot,
 } from "./ui";
 
@@ -203,6 +204,7 @@ export function BoardFormModal({
   onSaved,
   onDeleted,
   onClose,
+  onCreateLabel,
 }: {
   projectId: string;
   statuses: ProjectStatus[];
@@ -212,6 +214,7 @@ export function BoardFormModal({
   onSaved: (board: ProjectBoard) => void;
   onDeleted: (boardId: string) => void;
   onClose: () => void;
+  onCreateLabel: (name: string, color: string) => Promise<Label | null>;
 }) {
   const isMain = board?.isDefault ?? false;
 
@@ -227,8 +230,29 @@ export function BoardFormModal({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [showNewLabel, setShowNewLabel] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [newLabelColor, setNewLabelColor] = useState(LABEL_PALETTE[0]!);
+  const [savingLabel, setSavingLabel] = useState(false);
+
   const available = statuses.filter((s) => !columnIds.includes(s.id));
   const hasFilters = labelIds.length > 0 || types.length > 0 || !!createdAfter || !!createdBefore;
+
+  async function addLabel() {
+    const trimmed = newLabelName.trim();
+    if (!trimmed || savingLabel) return;
+    setSavingLabel(true);
+    try {
+      const label = await onCreateLabel(trimmed, newLabelColor);
+      if (label) {
+        setLabelIds((prev) => (prev.includes(label.id) ? prev : [...prev, label.id]));
+        setNewLabelName("");
+        setShowNewLabel(false);
+      }
+    } finally {
+      setSavingLabel(false);
+    }
+  }
 
   function moveColumn(index: number, dir: -1 | 1) {
     setColumnIds((prev) => {
@@ -406,33 +430,79 @@ export function BoardFormModal({
                 </div>
               </div>
 
-              {labels.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-medium text-muted mb-1.5">Labels</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {labels.map((l) => {
-                      const active = labelIds.includes(l.id);
-                      return (
-                        <button
-                          key={l.id}
-                          type="button"
-                          onClick={() => toggle(labelIds, setLabelIds, l.id)}
-                          className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-medium border transition ${
-                            active ? "text-white border-transparent" : "bg-card border-line text-muted hover:border-line-strong"
-                          }`}
-                          style={active ? { backgroundColor: l.color, borderColor: l.color } : {}}
-                        >
-                          <span
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: active ? "rgba(255,255,255,0.7)" : l.color }}
-                          />
-                          {l.name}
-                        </button>
-                      );
-                    })}
-                  </div>
+              <div>
+                <p className="text-[11px] font-medium text-muted mb-1.5">Labels</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {labels.map((l) => {
+                    const active = labelIds.includes(l.id);
+                    return (
+                      <button
+                        key={l.id}
+                        type="button"
+                        onClick={() => toggle(labelIds, setLabelIds, l.id)}
+                        className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-medium border transition ${
+                          active ? "text-white border-transparent" : "bg-card border-line text-muted hover:border-line-strong"
+                        }`}
+                        style={active ? { backgroundColor: l.color, borderColor: l.color } : {}}
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: active ? "rgba(255,255,255,0.7)" : l.color }}
+                        />
+                        {l.name}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setShowNewLabel((v) => !v)}
+                    className="text-[11px] px-2.5 py-1 rounded-full border border-dashed border-line text-faint hover:text-muted hover:border-line-strong transition"
+                  >
+                    + New label
+                  </button>
                 </div>
-              )}
+
+                {showNewLabel && (
+                  <div className="mt-2.5 rounded-xl border border-line bg-card p-3">
+                    <input
+                      autoFocus
+                      value={newLabelName}
+                      onChange={(e) => setNewLabelName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void addLabel();
+                        }
+                      }}
+                      placeholder="Label name"
+                      maxLength={50}
+                      className={`${inputCls} mb-2`}
+                    />
+                    <div className="flex items-center gap-1.5">
+                      {LABEL_PALETTE.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setNewLabelColor(c)}
+                          className={`w-5 h-5 rounded-full transition ${
+                            newLabelColor === c ? "ring-2 ring-offset-1 ring-ink/30" : ""
+                          }`}
+                          style={{ backgroundColor: c }}
+                          aria-label={`Color ${c}`}
+                        />
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => void addLabel()}
+                        disabled={!newLabelName.trim() || savingLabel}
+                        className="ml-auto text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-fg font-medium hover:bg-primary/85 disabled:opacity-40 transition"
+                      >
+                        {savingLabel ? "Adding…" : "Create & add"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="flex flex-wrap gap-3">
                 <div>
@@ -786,6 +856,221 @@ function StatusRow({
           onClick={onDeleteIntent}
           className="text-xs text-faint hover:text-danger transition shrink-0 px-0.5"
           aria-label={`Delete ${status.name}`}
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Manage labels ────────────────────────────────────────────────────────────
+
+export function ManageLabelsModal({
+  projectId,
+  labels,
+  onCreated,
+  onUpdated,
+  onDeleted,
+  onClose,
+}: {
+  projectId: string;
+  labels: Label[];
+  onCreated: (label: Label) => void;
+  onUpdated: (label: Label) => void;
+  onDeleted: (labelId: string) => void;
+  onClose: () => void;
+}) {
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState(LABEL_PALETTE[0]!);
+  const [adding, setAdding] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function patchLabel(id: string, patch: Partial<Label>): Promise<boolean> {
+    const res = await fetch(`/api/projects/${projectId}/labels/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) return false;
+    onUpdated((await res.json()) as Label);
+    return true;
+  }
+
+  async function addLabel() {
+    if (!newName.trim() || adding) return;
+    setAdding(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/labels`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim(), color: newColor }),
+      });
+      if (!res.ok) {
+        setError("Failed to create label, the name may already exist.");
+        return;
+      }
+      onCreated((await res.json()) as Label);
+      setNewName("");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function deleteLabel(id: string) {
+    setBusyId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/labels/${id}`, { method: "DELETE" });
+      if (res.ok) onDeleted(id);
+      else setError("Failed to delete the label.");
+    } finally {
+      setBusyId(null);
+      setConfirmDeleteId(null);
+    }
+  }
+
+  return (
+    <ModalShell onClose={onClose} wide>
+      <div className="space-y-4">
+        <div>
+          <h3 className="font-semibold text-ink">Labels</h3>
+          <p className="text-xs text-muted mt-0.5">
+            Shared across the project. Deleting a label removes it from every task and board filter.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {labels.length === 0 && (
+            <p className="text-xs text-faint py-2">No labels yet, add one below.</p>
+          )}
+          {labels.map((l) => (
+            <LabelRow
+              key={l.id}
+              label={l}
+              busy={busyId === l.id}
+              confirmingDelete={confirmDeleteId === l.id}
+              onRename={(name) => void patchLabel(l.id, { name })}
+              onRecolor={(color) => void patchLabel(l.id, { color })}
+              onDeleteIntent={() => setConfirmDeleteId(l.id)}
+              onDeleteConfirm={() => void deleteLabel(l.id)}
+              onDeleteCancel={() => setConfirmDeleteId(null)}
+            />
+          ))}
+        </div>
+
+        <div className="border-t border-line pt-4 space-y-3">
+          <p className="text-xs font-medium text-muted">Add new label</p>
+          <div className="flex gap-2">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void addLabel();
+                }
+              }}
+              placeholder="Label name"
+              maxLength={50}
+              className={inputCls}
+            />
+            <input
+              type="color"
+              value={newColor}
+              onChange={(e) => setNewColor(e.target.value)}
+              className="w-9 h-9 rounded-lg cursor-pointer border border-line shrink-0"
+              aria-label="Label color"
+            />
+          </div>
+          {error && <p className="text-xs text-danger">{error}</p>}
+          <button
+            onClick={() => void addLabel()}
+            disabled={adding || !newName.trim()}
+            className={`w-full ${btnPrimary}`}
+          >
+            {adding ? "Adding…" : "Add label"}
+          </button>
+        </div>
+
+        <button onClick={onClose} className={`w-full ${btnGhost}`}>
+          Done
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
+function LabelRow({
+  label,
+  busy,
+  confirmingDelete,
+  onRename,
+  onRecolor,
+  onDeleteIntent,
+  onDeleteConfirm,
+  onDeleteCancel,
+}: {
+  label: Label;
+  busy: boolean;
+  confirmingDelete: boolean;
+  onRename: (name: string) => void;
+  onRecolor: (color: string) => void;
+  onDeleteIntent: () => void;
+  onDeleteConfirm: () => void;
+  onDeleteCancel: () => void;
+}) {
+  const [name, setName] = useState(label.name);
+
+  function commitName() {
+    const trimmed = name.trim();
+    if (trimmed && trimmed !== label.name) onRename(trimmed);
+    else setName(label.name);
+  }
+
+  return (
+    <div
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl border border-line bg-surface ${
+        busy ? "opacity-60 pointer-events-none" : ""
+      }`}
+    >
+      <input
+        type="color"
+        value={label.color}
+        onChange={(e) => onRecolor(e.target.value)}
+        className="w-6 h-6 rounded cursor-pointer border border-line shrink-0"
+        aria-label={`Color for ${label.name}`}
+      />
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={commitName}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        maxLength={50}
+        className="flex-1 min-w-0 text-sm text-ink bg-transparent focus:outline-none focus:bg-card rounded-lg px-2 py-1 border border-transparent focus:border-clay/40 transition"
+      />
+      {confirmingDelete ? (
+        <span className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={onDeleteConfirm}
+            className="text-[10px] px-2 py-1 rounded-lg bg-danger text-white font-semibold hover:bg-danger/85 transition"
+          >
+            Delete
+          </button>
+          <button onClick={onDeleteCancel} className="text-[10px] text-muted hover:text-ink transition">
+            Cancel
+          </button>
+        </span>
+      ) : (
+        <button
+          onClick={onDeleteIntent}
+          className="text-xs text-faint hover:text-danger transition shrink-0 px-0.5"
+          aria-label={`Delete ${label.name}`}
         >
           ✕
         </button>
