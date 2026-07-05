@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { FeedbackType } from "@upstep/types";
+import type { ProjectStatus } from "@/types/dashboard";
 
 export const TYPE_COLORS: Record<FeedbackType, string> = {
   BUG: "bg-danger/10 text-danger border-danger/25",
@@ -39,6 +41,62 @@ export function StatusDot({ color, className = "" }: { color: string; className?
       className={`w-2 h-2 rounded-full inline-block shrink-0 ${className}`}
       style={{ backgroundColor: color }}
     />
+  );
+}
+
+/** Colored status picker: current status as a pill button, opens a small
+ *  popover of every status (also colored) to pick from. Used anywhere a
+ *  bare native <select> would hide which status is which at a glance. */
+export function StatusMenu({
+  statuses,
+  value,
+  onChange,
+  className = "",
+}: {
+  statuses: ProjectStatus[];
+  value: string | null | undefined;
+  onChange: (id: string) => void;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = statuses.find((s) => s.id === value);
+
+  return (
+    <div className={`relative ${className}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-line bg-card hover:border-line-strong transition font-medium text-ink-soft"
+      >
+        <StatusDot color={current?.color ?? "#94a3b8"} />
+        <span className="max-w-[110px] truncate">{current?.name ?? "No status"}</span>
+        <span className="text-faint">▾</span>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-30 min-w-[150px] rounded-xl border border-line bg-card shadow-lift p-1.5">
+            {statuses.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => {
+                  onChange(s.id);
+                  setOpen(false);
+                }}
+                className={`w-full flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg hover:bg-surface transition text-left ${
+                  s.id === value ? "font-semibold text-ink" : "text-ink-soft"
+                }`}
+              >
+                <StatusDot color={s.color} />
+                <span className="flex-1 truncate">{s.name}</span>
+                {s.isDone && <span className="text-[9px] text-faint shrink-0">done</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

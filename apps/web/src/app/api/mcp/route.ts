@@ -16,6 +16,14 @@ import { triggerIntegrations } from "@/lib/integrations";
 
 const PROTOCOL_VERSION = "2025-06-18";
 
+/** Shape stored in Board.filters — mirrors the dashboard's BoardFilters type. */
+type BoardFiltersJson = {
+  labelIds?: string[];
+  types?: ("BUG" | "FEATURE" | "GENERAL")[];
+  createdAfter?: string;
+  createdBefore?: string;
+};
+
 type Project = NonNullable<Awaited<ReturnType<typeof authenticate>>>;
 
 async function authenticate(req: NextRequest) {
@@ -80,6 +88,7 @@ const createFeedbackArgs = z.object({
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).default("GENERAL"),
   status_name: z.string().optional().describe("Board column to place the task in"),
   internal: z.boolean().default(true),
+  labels: z.array(z.string().min(1).max(50)).max(10).optional(),
 });
 
 const updateFeedbackArgs = z.object({
@@ -88,6 +97,8 @@ const updateFeedbackArgs = z.object({
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
   title: z.string().min(1).max(200).optional(),
   content: z.string().min(1).max(5000).optional(),
+  add_labels: z.array(z.string().min(1).max(50)).max(10).optional(),
+  remove_labels: z.array(z.string().min(1).max(50)).max(10).optional(),
 });
 
 const addCommentArgs = z.object({
@@ -96,10 +107,30 @@ const addCommentArgs = z.object({
   author_name: z.string().max(80).optional(),
 });
 
+const createLabelArgs = z.object({
+  name: z.string().min(1).max(50),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be a 6-digit hex color like #6366f1")
+    .optional(),
+});
+
+const boardFiltersArgs = z
+  .object({
+    label_names: z.array(z.string()).max(10).optional(),
+    types: z.array(z.enum(["BUG", "FEATURE", "GENERAL"])).optional(),
+    created_after: z.string().optional().describe("ISO date; only tasks created on or after this date"),
+    created_before: z.string().optional().describe("ISO date; only tasks created on or before this date"),
+  })
+  .optional();
+
 const createBoardArgs = z.object({
   name: z.string().min(1).max(80),
   columns: z.array(z.string().min(1).max(60)).min(1).max(8),
   done_column: z.string().optional(),
+  filters: boardFiltersArgs.describe(
+    "Narrows what shows on this board. Omit for a board that shows everything matching its columns."
+  ),
 });
 
 const TOOLS = [
@@ -145,6 +176,11 @@ const TOOLS = [
         type: { type: "string", enum: ["BUG", "FEATURE", "GENERAL"], description: "Item type (default GENERAL)" },
         status_name: { type: "string", description: "Name of the board column to place it in (default: first column)" },
         internal: { type: "boolean", description: "Hide from the public widget (default true)" },
+        labels: {
+          type: "array",
+          items: { type: "string" },
+          description: "Label names to attach, up to 10. Created automatically if they don't already exist.",
+        },
       },
       required: ["title"],
     },
@@ -152,7 +188,7 @@ const TOOLS = [
   {
     name: "update_feedback",
     description:
-      "Update a feedback item: move it to a board column by status_name (e.g. \"In progress\", \"Done\"), or change its title, content, or type.",
+      "Update a feedback item: move it to a board column by status_name (e.g. \"In progress\", \"Done\"), change its title, content, or type, or add/remove labels.",
     inputSchema: {
       type: "object",
       properties: {
@@ -161,6 +197,16 @@ const TOOLS = [
         type: { type: "string", enum: ["BUG", "FEATURE", "GENERAL"] },
         title: { type: "string" },
         content: { type: "string" },
+        add_labels: {
+          type: "array",
+          items: { type: "string" },
+          description: "Label names to attach, up to 10. Created automatically if they don't already exist.",
+        },
+        remove_labels: {
+          type: "array",
+          items: { type: "string" },
+          description: "Label names to remove, up to 10.",
+        },
       },
       required: ["id"],
     },
@@ -184,14 +230,31 @@ const TOOLS = [
     inputSchema: { type: "object", properties: {} },
   },
   {
+    name: "list_labels",
+    description: "List the project's labels with their colors.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "create_label",
+    description: "Create a new label. Most of the time you don't need this, create_feedback and update_feedback create labels automatically when you reference a name that doesn't exist yet; use this when you want a specific color.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Label name" },
+        color: { type: "string", description: "Hex color like #6366f1 (default: an auto-assigned color)" },
+      },
+      required: ["name"],
+    },
+  },
+  {
     name: "list_boards",
-    description: "List the project's boards and their columns. Useful to see which board is the user-facing default and which are internal workspaces.",
+    description: "List the project's boards, their columns, and any filters a board has. The main board is marked is_default and always shows everything.",
     inputSchema: { type: "object", properties: {} },
   },
   {
     name: "create_board",
     description:
-      "Create a separate board (e.g. an agent workspace) with its own columns, keeping the user-facing default board untouched. Missing statuses are created automatically.",
+      "Create a separate board (e.g. an agent workspace, or a filtered view) with its own columns, keeping the main board untouched. Missing statuses are created automatically. Optionally scope it with filters so it only shows matching tasks, by label, type, or a creation-date range.",
     inputSchema: {
       type: "object",
       properties: {
@@ -202,6 +265,24 @@ const TOOLS = [
           description: "Column names in order, e.g. [\"Backlog\", \"Doing\", \"Shipped\"]. Reuses existing statuses with the same name.",
         },
         done_column: { type: "string", description: "Which column counts as done (defaults to the last one)" },
+        filters: {
+          type: "object",
+          properties: {
+            label_names: {
+              type: "array",
+              items: { type: "string" },
+              description: "Only show tasks with at least one of these labels. Created automatically if missing.",
+            },
+            types: {
+              type: "array",
+              items: { type: "string", enum: ["BUG", "FEATURE", "GENERAL"] },
+              description: "Only show tasks of these types",
+            },
+            created_after: { type: "string", description: "ISO date; only tasks created on or after this date" },
+            created_before: { type: "string", description: "ISO date; only tasks created on or before this date" },
+          },
+          description: "Omit entirely for a board that shows everything matching its columns.",
+        },
       },
       required: ["name", "columns"],
     },
@@ -261,6 +342,30 @@ async function resolveStatus(projectId: string, statusName: string) {
   return (
     statuses.find((s) => s.name.toLowerCase() === statusName.toLowerCase()) ?? null
   );
+}
+
+const LABEL_PALETTE = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899"];
+
+/** Finds each label by name (case-insensitive), creating any that don't
+ *  exist yet. Labels are low-stakes compared to statuses, so agents can
+ *  reference a new name directly instead of needing a separate create step. */
+async function resolveOrCreateLabels(projectId: string, names: string[]): Promise<string[]> {
+  if (names.length === 0) return [];
+  const existing = await db.label.findMany({ where: { projectId } });
+  const ids: string[] = [];
+  for (const raw of names) {
+    const name = raw.trim();
+    if (!name) continue;
+    let label = existing.find((l) => l.name.toLowerCase() === name.toLowerCase());
+    if (!label) {
+      label = await db.label.create({
+        data: { projectId, name, color: LABEL_PALETTE[existing.length % LABEL_PALETTE.length]! },
+      });
+      existing.push(label);
+    }
+    ids.push(label.id);
+  }
+  return ids;
 }
 
 async function callTool(project: Project, name: string, args: Record<string, unknown>) {
@@ -340,7 +445,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
     case "create_feedback": {
       const parsed = createFeedbackArgs.safeParse(args);
       if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
-      const { title, content, type, status_name, internal } = parsed.data;
+      const { title, content, type, status_name, internal, labels } = parsed.data;
 
       let boardStatus = status_name ? await resolveStatus(project.id, status_name) : null;
       if (status_name && !boardStatus) {
@@ -355,6 +460,8 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         });
       }
 
+      const labelIds = await resolveOrCreateLabels(project.id, labels ?? []);
+
       const created = await db.feedback.create({
         data: {
           projectId: project.id,
@@ -364,6 +471,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
           internal,
           status: boardStatus?.isDone ? "DONE" : "OPEN",
           statusId: boardStatus?.id ?? null,
+          ...(labelIds.length ? { labels: { connect: labelIds.map((id) => ({ id })) } } : {}),
         },
         select: feedbackSelect,
       });
@@ -380,7 +488,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
     case "update_feedback": {
       const parsed = updateFeedbackArgs.safeParse(args);
       if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
-      const { id, status_name, type, title, content } = parsed.data;
+      const { id, status_name, type, title, content, add_labels, remove_labels } = parsed.data;
 
       const existing = await db.feedback.findFirst({ where: { id, projectId: project.id } });
       if (!existing) return toolError("Feedback not found in this project.");
@@ -396,6 +504,19 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         statusPatch = { statusId: target.id, status: target.isDone ? "DONE" : "OPEN" };
       }
 
+      const addLabelIds = await resolveOrCreateLabels(project.id, add_labels ?? []);
+      let removeLabelIds: string[] = [];
+      if (remove_labels?.length) {
+        const toRemove = await db.label.findMany({
+          where: { projectId: project.id, name: { in: remove_labels, mode: "insensitive" } },
+          select: { id: true },
+        });
+        removeLabelIds = toRemove.map((l) => l.id);
+      }
+      const labelsPatch: { connect?: { id: string }[]; disconnect?: { id: string }[] } = {};
+      if (addLabelIds.length) labelsPatch.connect = addLabelIds.map((id) => ({ id }));
+      if (removeLabelIds.length) labelsPatch.disconnect = removeLabelIds.map((id) => ({ id }));
+
       const updated = await db.feedback.update({
         where: { id },
         data: {
@@ -403,6 +524,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
           ...(type ? { type } : {}),
           ...(title ? { title } : {}),
           ...(content ? { content } : {}),
+          ...(Object.keys(labelsPatch).length ? { labels: labelsPatch } : {}),
         },
         select: feedbackSelect,
       });
@@ -465,6 +587,31 @@ async function callTool(project: Project, name: string, args: Record<string, unk
       );
     }
 
+    case "list_labels": {
+      const labels = await db.label.findMany({
+        where: { projectId: project.id },
+        orderBy: { name: "asc" },
+      });
+      return toolText(labels.map((l) => ({ name: l.name, color: l.color })));
+    }
+
+    case "create_label": {
+      const parsed = createLabelArgs.safeParse(args);
+      if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
+      const existing = await db.label.findFirst({
+        where: { projectId: project.id, name: { equals: parsed.data.name, mode: "insensitive" } },
+      });
+      if (existing) return toolError(`A label named "${parsed.data.name}" already exists.`);
+      const label = await db.label.create({
+        data: {
+          projectId: project.id,
+          name: parsed.data.name,
+          color: parsed.data.color ?? LABEL_PALETTE[0]!,
+        },
+      });
+      return toolText({ created: { name: label.name, color: label.color } });
+    }
+
     case "list_boards": {
       const boards = await db.board.findMany({
         where: { projectId: project.id },
@@ -473,19 +620,35 @@ async function callTool(project: Project, name: string, args: Record<string, unk
           columns: { orderBy: { order: "asc" }, include: { status: true } },
         },
       });
+      const labelIds = boards.flatMap((b) => (b.filters as BoardFiltersJson | null)?.labelIds ?? []);
+      const labelsById = labelIds.length
+        ? new Map((await db.label.findMany({ where: { id: { in: labelIds } } })).map((l) => [l.id, l.name]))
+        : new Map<string, string>();
+
       return toolText(
-        boards.map((b) => ({
-          name: b.name,
-          is_default: b.isDefault,
-          columns: b.columns.map((c) => ({ name: c.status.name, is_done: c.status.isDone })),
-        }))
+        boards.map((b) => {
+          const f = b.filters as BoardFiltersJson | null;
+          return {
+            name: b.name,
+            is_default: b.isDefault,
+            columns: b.columns.map((c) => ({ name: c.status.name, is_done: c.status.isDone })),
+            filters: f
+              ? {
+                  label_names: (f.labelIds ?? []).map((id) => labelsById.get(id)).filter(Boolean),
+                  types: f.types ?? [],
+                  created_after: f.createdAfter ?? null,
+                  created_before: f.createdBefore ?? null,
+                }
+              : null,
+          };
+        })
       );
     }
 
     case "create_board": {
       const parsed = createBoardArgs.safeParse(args);
       if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
-      const { name, columns, done_column } = parsed.data;
+      const { name, columns, done_column, filters } = parsed.data;
 
       const existingBoard = await db.board.findFirst({
         where: { projectId: project.id, name: { equals: name, mode: "insensitive" } },
@@ -514,11 +677,20 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         columnStatusIds.push(status.id);
       }
 
+      const filterLabelIds = await resolveOrCreateLabels(project.id, filters?.label_names ?? []);
+      const filtersJson: BoardFiltersJson = {};
+      if (filterLabelIds.length) filtersJson.labelIds = filterLabelIds;
+      if (filters?.types?.length) filtersJson.types = filters.types;
+      if (filters?.created_after) filtersJson.createdAfter = filters.created_after;
+      if (filters?.created_before) filtersJson.createdBefore = filters.created_before;
+      const hasFilters = Object.keys(filtersJson).length > 0;
+
       const board = await db.board.create({
         data: {
           projectId: project.id,
           name,
           isDefault: false,
+          ...(hasFilters ? { filters: filtersJson } : {}),
           columns: {
             create: columnStatusIds.map((statusId, order) => ({ statusId, order })),
           },
@@ -531,8 +703,9 @@ async function callTool(project: Project, name: string, args: Record<string, unk
           name: board.name,
           is_default: false,
           columns: board.columns.map((c) => ({ name: c.status.name, is_done: c.status.isDone })),
+          filters: hasFilters ? filters : null,
         },
-        note: "The user-facing default board is untouched. Use create_feedback with internal=true and a status_name from this board to keep agent work off the public widget.",
+        note: "The main board is untouched. Use create_feedback with internal=true and a status_name from this board to keep agent work off the public widget.",
       });
     }
 
@@ -579,7 +752,10 @@ export async function POST(req: NextRequest) {
           "Use get_project_overview first to see what's inside, list_feedback to browse by votes, " +
           "and update_feedback with a status_name to move items across the board. " +
           "Keep agent work internal: create_feedback defaults to internal=true (Dev-only, hidden from the public widget), " +
-          "and create_board gives you a separate workspace without touching the user-facing default board.",
+          "and create_board gives you a separate workspace without touching the main board. " +
+          "Attach labels with create_feedback/update_feedback (they're created automatically from a name), " +
+          "and give create_board a filters object (labels, type, or a creation-date range) for a board that only shows a slice of the inbox. " +
+          "The main board never takes filters, it always shows everything.",
       });
 
     case "ping":

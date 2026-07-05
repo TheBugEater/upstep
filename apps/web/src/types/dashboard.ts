@@ -1,4 +1,4 @@
-import type { Feedback, Label } from "@upstep/types";
+import type { Feedback, FeedbackType, Label } from "@upstep/types";
 
 export interface ProjectStatus {
   id: string;
@@ -15,10 +15,20 @@ export interface BoardColumnDef {
   status: ProjectStatus;
 }
 
+/** Saved filter for a non-default board. The main board ignores this and
+ *  always shows everything. */
+export interface BoardFilters {
+  labelIds?: string[];
+  types?: FeedbackType[];
+  createdAfter?: string; // ISO date
+  createdBefore?: string; // ISO date
+}
+
 export interface ProjectBoard {
   id: string;
   name: string;
   isDefault: boolean;
+  filters?: BoardFilters | null;
   columns: BoardColumnDef[];
 }
 

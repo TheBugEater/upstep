@@ -32,10 +32,20 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
 // ─── POST /api/projects/[id]/boards ───────────────────────────────────────────
 
+const filtersSchema = z
+  .object({
+    labelIds: z.array(z.string()).optional(),
+    types: z.array(z.enum(["BUG", "FEATURE", "GENERAL"])).optional(),
+    createdAfter: z.string().optional(),
+    createdBefore: z.string().optional(),
+  })
+  .nullable()
+  .optional();
+
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   columnStatusIds: z.array(z.string()).min(1),
-  isDefault: z.boolean().optional(),
+  filters: filtersSchema,
 });
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
@@ -59,11 +69,25 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid status IDs" }, { status: 400 });
   }
 
+  if (parsed.data.filters?.labelIds?.length) {
+    const labels = await db.label.findMany({
+      where: { projectId: id, id: { in: parsed.data.filters.labelIds } },
+      select: { id: true },
+    });
+    if (labels.length !== parsed.data.filters.labelIds.length) {
+      return NextResponse.json({ error: "Invalid label IDs" }, { status: 400 });
+    }
+  }
+
+  // New boards are never the default/main board, so this is a regular
+  // filterable board. That identity is fixed at project creation and isn't
+  // exposed anywhere for change.
   const board = await db.board.create({
     data: {
       projectId: id,
       name: parsed.data.name,
-      isDefault: parsed.data.isDefault ?? false,
+      isDefault: false,
+      ...(parsed.data.filters ? { filters: parsed.data.filters } : {}),
       columns: {
         create: parsed.data.columnStatusIds.map((statusId, order) => ({ statusId, order })),
       },

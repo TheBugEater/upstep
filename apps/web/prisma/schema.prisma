@@ -241,6 +241,10 @@ model Board {
   projectId String
   name      String
   isDefault Boolean  @default(false)
+  // Non-default boards can narrow what shows up on them (labels, types, a
+  // date range). The default/main board always ignores this and shows
+  // everything, so it stays null for that board.
+  filters   Json?
   createdAt DateTime @default(now())
 
   project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)

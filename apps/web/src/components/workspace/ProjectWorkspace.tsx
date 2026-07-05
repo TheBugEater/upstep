@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FeedbackType, Label } from "@upstep/types";
-import type { ProjectBoard, ProjectStatus, WorkspaceItem } from "@/types/dashboard";
+import type { BoardFilters, ProjectBoard, ProjectStatus, WorkspaceItem } from "@/types/dashboard";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import { IntegrationsTab } from "@/components/dashboard/IntegrationsTab";
 import { McpCard } from "@/components/dashboard/McpCard";
@@ -15,7 +15,7 @@ import {
   BoardFormModal,
   ManageStatusesModal,
 } from "./modals";
-import { TYPES, TYPE_LABELS } from "./ui";
+import { TYPES, TYPE_LABELS, TYPE_COLORS } from "./ui";
 
 type Tab = "feedback" | "completed" | "pending" | "mcp" | "integrations" | "settings";
 type View = "board" | "list";
@@ -153,6 +153,21 @@ export function ProjectWorkspace({
         : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }, [items, search, typeFilter, labelFilter, sortBy]);
+
+  // The main board always shows everything; other boards additionally apply
+  // their own saved filters (labels, type, date range) on top of the
+  // toolbar's search/type/label filters above.
+  const boardFiltered = useMemo(() => {
+    const f = activeBoard?.filters;
+    if (activeBoard?.isDefault || !f) return filtered;
+    return filtered.filter((item) => {
+      if (f.labelIds?.length && !(item.labels ?? []).some((l) => f.labelIds!.includes(l.id))) return false;
+      if (f.types?.length && !f.types.includes(item.type)) return false;
+      if (f.createdAfter && new Date(item.createdAt) < new Date(f.createdAfter)) return false;
+      if (f.createdBefore && new Date(item.createdAt) > new Date(f.createdBefore)) return false;
+      return true;
+    });
+  }, [filtered, activeBoard]);
 
   const activeItems = useMemo(() => filtered.filter((f) => !isDone(f)), [filtered, isDone]);
   const completedItems = useMemo(() => filtered.filter(isDone), [filtered, isDone]);
@@ -442,10 +457,8 @@ export function ProjectWorkspace({
                       : "bg-card text-muted border-line hover:border-line-strong hover:text-ink"
                   }`}
                 >
+                  {b.isDefault && <span className="mr-1 text-clay">★</span>}
                   {b.name}
-                  {b.isDefault && boards.length > 1 && (
-                    <span className="ml-1 opacity-50">·</span>
-                  )}
                 </button>
               ))}
             </div>
@@ -557,10 +570,18 @@ export function ProjectWorkspace({
             </button>
           </div>
 
+          {view === "board" && activeBoard && !activeBoard.isDefault && activeBoard.filters && (
+            <BoardFilterChips
+              filters={activeBoard.filters}
+              labels={labels}
+              onEdit={() => setBoardModal("edit")}
+            />
+          )}
+
           {view === "board" ? (
             <BoardView
               board={activeBoard}
-              items={filtered}
+              items={boardFiltered}
               statuses={statuses}
               isOwner={isOwner}
               actions={actions}
@@ -642,16 +663,13 @@ export function ProjectWorkspace({
         <BoardFormModal
           projectId={projectId}
           statuses={statuses}
+          labels={labels}
           board={boardModal === "edit" ? activeBoard : null}
-          canDelete={boards.length > 1}
+          canDelete={!activeBoard?.isDefault}
           onSaved={(board) => {
             setBoards((prev) => {
               const exists = prev.some((b) => b.id === board.id);
-              const next = exists ? prev.map((b) => (b.id === board.id ? board : b)) : [...prev, board];
-              // Only one default board at a time
-              return board.isDefault
-                ? next.map((b) => (b.id === board.id ? b : { ...b, isDefault: false }))
-                : next;
+              return exists ? prev.map((b) => (b.id === board.id ? board : b)) : [...prev, board];
             });
             setActiveBoardId(board.id);
             setBoardModal(null);
@@ -682,6 +700,57 @@ export function ProjectWorkspace({
           onClose={() => setShowStatuses(false)}
         />
       )}
+    </div>
+  );
+}
+
+// ─── Board filter chips ─────────────────────────────────────────────────────
+// Shown above a non-default board so it's obvious *why* fewer cards appear
+// than on the main board, with a one-click way back into the editor.
+
+function BoardFilterChips({
+  filters,
+  labels,
+  onEdit,
+}: {
+  filters: BoardFilters;
+  labels: Label[];
+  onEdit: () => void;
+}) {
+  const labelChips = (filters.labelIds ?? [])
+    .map((id) => labels.find((l) => l.id === id))
+    .filter((l): l is Label => !!l);
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap mb-3 text-xs">
+      <span className="text-faint shrink-0">Filtered by</span>
+      {filters.types?.map((t) => (
+        <span key={t} className={`px-2 py-0.5 rounded-full font-medium border ${TYPE_COLORS[t]}`}>
+          {TYPE_LABELS[t]}
+        </span>
+      ))}
+      {labelChips.map((l) => (
+        <span
+          key={l.id}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-white"
+          style={{ backgroundColor: l.color }}
+        >
+          {l.name}
+        </span>
+      ))}
+      {filters.createdAfter && (
+        <span className="px-2 py-0.5 rounded-full border border-line bg-card text-muted">
+          after {new Date(filters.createdAfter).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+        </span>
+      )}
+      {filters.createdBefore && (
+        <span className="px-2 py-0.5 rounded-full border border-line bg-card text-muted">
+          before {new Date(filters.createdBefore).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+        </span>
+      )}
+      <button onClick={onEdit} className="text-clay hover:text-clay-hover transition font-medium ml-1">
+        Edit filters
+      </button>
     </div>
   );
 }

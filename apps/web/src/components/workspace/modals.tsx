@@ -104,23 +104,6 @@ export function NewTaskModal({
             </div>
           </div>
 
-          {statuses.length > 0 && (
-            <div>
-              <p className="text-[11px] font-medium text-muted mb-1.5">Column</p>
-              <select
-                value={statusId ?? ""}
-                onChange={(e) => setStatusId(e.target.value || null)}
-                className="text-xs rounded-xl border border-line bg-card py-1.5 pl-2.5 pr-7 text-ink focus:outline-none focus:border-clay/40 transition cursor-pointer"
-              >
-                {statuses.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <div>
             <p className="text-[11px] font-medium text-muted mb-1.5">Visibility</p>
             <button
@@ -136,6 +119,31 @@ export function NewTaskModal({
             </button>
           </div>
         </div>
+
+        {statuses.length > 0 && (
+          <div>
+            <p className="text-[11px] font-medium text-muted mb-1.5">Status</p>
+            <div className="flex flex-wrap gap-1.5">
+              {statuses.map((s) => {
+                const active = statusId === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setStatusId(s.id)}
+                    className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-medium border transition ${
+                      active ? "text-white border-transparent" : "bg-card border-line text-muted hover:border-line-strong"
+                    }`}
+                    style={active ? { backgroundColor: s.color, borderColor: s.color } : {}}
+                  >
+                    <StatusDot color={active ? "rgba(255,255,255,0.7)" : s.color} />
+                    {s.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {labels.length > 0 && (
           <div>
@@ -189,6 +197,7 @@ export function NewTaskModal({
 export function BoardFormModal({
   projectId,
   statuses,
+  labels,
   board,
   canDelete,
   onSaved,
@@ -197,22 +206,29 @@ export function BoardFormModal({
 }: {
   projectId: string;
   statuses: ProjectStatus[];
+  labels: Label[];
   board: ProjectBoard | null; // null = create mode
   canDelete: boolean;
   onSaved: (board: ProjectBoard) => void;
   onDeleted: (boardId: string) => void;
   onClose: () => void;
 }) {
+  const isMain = board?.isDefault ?? false;
+
   const [name, setName] = useState(board?.name ?? "");
   const [columnIds, setColumnIds] = useState<string[]>(
     board ? board.columns.map((c) => c.statusId) : statuses.map((s) => s.id)
   );
-  const [isDefault, setIsDefault] = useState(board?.isDefault ?? false);
+  const [labelIds, setLabelIds] = useState<string[]>(board?.filters?.labelIds ?? []);
+  const [types, setTypes] = useState<FeedbackType[]>(board?.filters?.types ?? []);
+  const [createdAfter, setCreatedAfter] = useState(board?.filters?.createdAfter?.slice(0, 10) ?? "");
+  const [createdBefore, setCreatedBefore] = useState(board?.filters?.createdBefore?.slice(0, 10) ?? "");
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const available = statuses.filter((s) => !columnIds.includes(s.id));
+  const hasFilters = labelIds.length > 0 || types.length > 0 || !!createdAfter || !!createdBefore;
 
   function moveColumn(index: number, dir: -1 | 1) {
     setColumnIds((prev) => {
@@ -224,6 +240,10 @@ export function BoardFormModal({
     });
   }
 
+  function toggle<T>(list: T[], setList: (v: T[]) => void, value: T) {
+    setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  }
+
   async function save() {
     if (!name.trim() || columnIds.length === 0 || saving) return;
     setSaving(true);
@@ -232,10 +252,21 @@ export function BoardFormModal({
       const url = board
         ? `/api/projects/${projectId}/boards/${board.id}`
         : `/api/projects/${projectId}/boards`;
+      const body: Record<string, unknown> = { name: name.trim(), columnStatusIds: columnIds };
+      if (!isMain) {
+        body.filters = hasFilters
+          ? {
+              ...(labelIds.length ? { labelIds } : {}),
+              ...(types.length ? { types } : {}),
+              ...(createdAfter ? { createdAfter } : {}),
+              ...(createdBefore ? { createdBefore } : {}),
+            }
+          : null;
+      }
       const res = await fetch(url, {
         method: board ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), columnStatusIds: columnIds, isDefault }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         setError("Failed to save the board.");
@@ -340,16 +371,96 @@ export function BoardFormModal({
           )}
         </div>
 
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isDefault}
-            onChange={(e) => setIsDefault(e.target.checked)}
-            className="rounded border-line"
-          />
-          <span className="text-sm text-ink">Default board</span>
-          <span className="text-xs text-faint"> - opens first for everyone</span>
-        </label>
+        {isMain ? (
+          <div className="flex items-start gap-2.5 rounded-xl border border-line bg-surface px-3.5 py-3">
+            <span className="text-clay text-sm shrink-0">★</span>
+            <p className="text-xs text-muted leading-relaxed">
+              This is the <span className="font-medium text-ink">main board</span>. It always
+              shows every task, ignores filters, and can&apos;t be deleted.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <label className="text-xs font-medium text-muted mb-2 block">
+              Filters <span className="text-faint"> - only matching tasks show on this board</span>
+            </label>
+            <div className="space-y-3 rounded-xl border border-line bg-surface p-3.5">
+              <div>
+                <p className="text-[11px] font-medium text-muted mb-1.5">Type</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {TYPES.map((t) => {
+                    const active = types.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => toggle(types, setTypes, t)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${
+                          active ? TYPE_COLORS[t] : "bg-card text-muted border-line hover:border-line-strong"
+                        }`}
+                      >
+                        {TYPE_LABELS[t]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {labels.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-medium text-muted mb-1.5">Labels</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {labels.map((l) => {
+                      const active = labelIds.includes(l.id);
+                      return (
+                        <button
+                          key={l.id}
+                          type="button"
+                          onClick={() => toggle(labelIds, setLabelIds, l.id)}
+                          className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full font-medium border transition ${
+                            active ? "text-white border-transparent" : "bg-card border-line text-muted hover:border-line-strong"
+                          }`}
+                          style={active ? { backgroundColor: l.color, borderColor: l.color } : {}}
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: active ? "rgba(255,255,255,0.7)" : l.color }}
+                          />
+                          {l.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3">
+                <div>
+                  <p className="text-[11px] font-medium text-muted mb-1.5">Created after</p>
+                  <input
+                    type="date"
+                    value={createdAfter}
+                    onChange={(e) => setCreatedAfter(e.target.value)}
+                    className="text-xs rounded-lg border border-line bg-card py-1.5 px-2.5 text-ink focus:outline-none focus:border-clay/40 transition"
+                  />
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-muted mb-1.5">Created before</p>
+                  <input
+                    type="date"
+                    value={createdBefore}
+                    onChange={(e) => setCreatedBefore(e.target.value)}
+                    className="text-xs rounded-lg border border-line bg-card py-1.5 px-2.5 text-ink focus:outline-none focus:border-clay/40 transition"
+                  />
+                </div>
+              </div>
+
+              {!hasFilters && (
+                <p className="text-[11px] text-faint">No filters set, this board will show everything.</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {error && <p className="text-xs text-danger">{error}</p>}
 
