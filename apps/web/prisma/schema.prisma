@@ -1,3 +1,10 @@
+// After changing this file, always create a migration:
+//   pnpm --filter @upstep/web exec prisma migrate dev --name <description>
+// Never use `prisma db push` for a change meant to ship — it syncs the dev
+// database directly and creates no migration file, so Railway's deploy step
+// (`prisma migrate deploy`, see railway.toml) has nothing to apply and
+// production silently falls behind the schema until it errors at runtime.
+
 generator client {
   provider = "prisma-client-js"
 }
