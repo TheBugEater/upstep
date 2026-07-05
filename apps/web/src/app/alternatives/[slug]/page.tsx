@@ -129,9 +129,33 @@ export default async function AlternativePage({
         </section>
 
         {/* Verdict */}
-        <section className="mb-16 rounded-2xl bg-clay/5 border border-clay/15 p-7">
+        <section className="mb-8 rounded-2xl bg-clay/5 border border-clay/15 p-7">
           <h2 className="font-serif text-xl text-ink mb-3">The bottom line</h2>
           <p className="text-muted leading-relaxed">{c.verdict}</p>
+        </section>
+
+        {/* Also unique to Upstep, shared across every comparison */}
+        <section className="mb-16 rounded-2xl border border-line bg-card p-7 shadow-soft">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-7 h-7 rounded-lg bg-clay/10 text-clay flex items-center justify-center text-sm shrink-0">✦</span>
+            <h2 className="font-serif text-xl text-ink">Also unique to Upstep</h2>
+          </div>
+          <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
+            {[
+              ["Built-in MCP server", "Claude Code, Cursor, or any MCP client can triage this project's inbox directly, without leaving your editor."],
+              ["Fluid triage boards", "Custom columns and drag-to-reorder, tuned to feel instant instead of clunky."],
+              ["Dev-only tasks", `${c.name} doesn't separate internal work from the public roadmap. Upstep does, agent and team tasks stay off the board your users see.`],
+              ["Separate agent workspace", "Your AI can run its own board for internal tasks, entirely apart from user feedback."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-clay/15 text-clay flex items-center justify-center text-[10px] shrink-0">✓</span>
+                <div>
+                  <span className="text-sm font-medium text-ink">{t}.</span>{" "}
+                  <span className="text-sm text-muted">{d}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* CTA */}

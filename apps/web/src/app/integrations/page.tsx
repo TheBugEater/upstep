@@ -7,7 +7,7 @@ import { INTEGRATIONS, type Integration } from "./data";
 export const metadata: Metadata = {
   title: "Integrations. Add Upstep to Any Stack",
   description:
-    "Drop the Upstep feedback widget into React, Next.js, Vue, Svelte, Astro, WordPress, Shopify, React Native, Expo, and more.",
+    "Drop the Upstep feedback widget into React, Next.js, Vue, Svelte, Astro, WordPress, Shopify, React Native, Expo, and more. Plus a built-in MCP server so your AI agent can triage what comes in.",
   alternates: { canonical: "/integrations" },
   openGraph: {
     title: "Upstep Integrations",
@@ -37,7 +37,9 @@ export default function IntegrationsIndexPage() {
         </h1>
         <p className="text-lg text-muted leading-relaxed max-w-2xl mb-14">
           A typed React SDK, a framework-agnostic script for everything else, and a native
-          React Native package for mobile. Pick your platform below.
+          React Native package for mobile. Pick your platform below, then connect the{" "}
+          <Link href="/#mcp" className="text-clay hover:underline">built-in MCP server</Link>{" "}
+          so Claude Code, Cursor, or any MCP client can triage what comes in.
         </p>
 
         {categories.map((cat) => (

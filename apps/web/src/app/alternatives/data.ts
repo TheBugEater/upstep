@@ -36,9 +36,10 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "Slack & webhook integrations", upstep: true, them: true },
       { label: "2-line code integration", upstep: true, them: false },
       { label: "White-label (remove branding)", upstep: true, them: false },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
-      "If you want a public roadmap board, Canny is a solid choice. If you want feedback to live inside your product, a widget your users can open without leaving your app | Upstep is the better fit, and it starts free.",
+      "If you want a public roadmap board, Canny is a solid choice. If you want feedback to live inside your product, a widget your users can open without leaving your app, Upstep is the better fit, and it starts free.",
   },
 
   uservoice: {
@@ -65,9 +66,10 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "Slack & webhook integrations", upstep: true, them: true },
       { label: "2-line code integration", upstep: true, them: false },
       { label: "No annual contract required", upstep: true, them: false },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
-      "UserVoice is built for enterprise teams with six-figure budgets and dedicated customer success teams. If you're a developer or small team that wants to start collecting feedback today, free, embedded, and without a sales call | Upstep is the answer.",
+      "UserVoice is built for enterprise teams with six-figure budgets and dedicated customer success teams. If you're a developer or small team that wants to start collecting feedback today, free, embedded, and without a sales call, Upstep is the answer.",
   },
 
   productboard: {
@@ -94,6 +96,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "Bug report + feature request types", upstep: true, them: true },
       { label: "Slack & webhook integrations", upstep: true, them: true },
       { label: "No per-seat pricing", upstep: true, them: false },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
       "Productboard is a product management suite. If you just need a feedback widget that slots into your app, lets users vote, and surfaces what to build next, Upstep gets you there in minutes, not sprints.",
@@ -123,6 +126,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "User voting on feedback", upstep: true, them: true },
       { label: "2-line code integration", upstep: true, them: false },
       { label: "Free plan (no credit card)", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
       "Featurebase makes sense if you want to replace your entire support stack, inbox, live chat, and feedback, under one per-seat bill. If you just need a lightweight widget for feedback and votes without a metered AI fee running in the background, Upstep is simpler and free to start.",
@@ -152,6 +156,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "User voting on feedback", upstep: true, them: true },
       { label: "Public roadmap + widget together", upstep: true, them: true },
       { label: "Bug report + feature request types", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
       "Frill is a well-designed tool once you're paying for it. If you want to start collecting feedback today without a credit card, and keep your own branding without an upsell, Upstep gets you there free.",
@@ -181,9 +186,10 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "User voting on feedback", upstep: true, them: true },
       { label: "Status tracking (open/in progress/done)", upstep: true, them: true },
       { label: "Bug report + feature request types", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
-      "Upvoty is a clean, purpose-built tool if you're running one product and don't mind the monthly fee. If you want to start free, or you're running more than one app | Upstep doesn't charge you per project.",
+      "Upvoty is a clean, purpose-built tool if you're running one product and don't mind the monthly fee. If you want to start free, or you're running more than one app, Upstep doesn't charge you per project.",
   },
 
   nolt: {
@@ -210,9 +216,10 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "User voting on feedback", upstep: true, them: true },
       { label: "Public roadmap", upstep: true, them: true },
       { label: "Custom statuses", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
-      "Nolt does one thing well: a clean, hosted feedback board. If you want that feedback loop living inside your product instead of a separate page, and you want to start for free | Upstep is the closer fit.",
+      "Nolt does one thing well: a clean, hosted feedback board. If you want that feedback loop living inside your product instead of a separate page, and you want to start for free, Upstep is the closer fit.",
   },
 
   sleekplan: {
@@ -238,6 +245,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "User voting on feedback", upstep: true, them: true },
       { label: "Public roadmap + changelog", upstep: true, them: true },
       { label: "Bug report + feature request types", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
       "Sleekplan is good value if you're already committed to paying for a feedback tool. If you'd rather not pay until you outgrow a free plan, Upstep covers the same core loop, widget, votes, statuses, at no cost to start.",
@@ -266,9 +274,10 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "User voting on feedback", upstep: true, them: true },
       { label: "Slack & webhook integrations", upstep: true, them: true },
       { label: "Bug report + feature request types", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
-      "Hellonext is built for teams that want feedback folded into a broader customer-ops platform. If you want the feedback widget without the rest of the suite, and without the monthly bill | Upstep is the leaner choice.",
+      "Hellonext is built for teams that want feedback folded into a broader customer-ops platform. If you want the feedback widget without the rest of the suite, and without the monthly bill, Upstep is the leaner choice.",
   },
 
   usersnap: {
@@ -294,6 +303,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "Embeddable widget (no redirect)", upstep: true, them: true },
       { label: "Third-party integrations (Jira, Slack, etc.)", upstep: true, them: true },
       { label: "Status tracking (open/in progress/done)", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
       "If your priority is annotated bug screenshots for QA, Usersnap is purpose-built for that. If you want bug reports and feature voting living in the same free widget, Upstep covers both without the $99/month floor.",
@@ -322,6 +332,7 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "Embeddable widget (no redirect)", upstep: true, them: true },
       { label: "Unlimited guest reporters", upstep: true, them: true },
       { label: "Webhook integrations", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
       "Marker.io is a great fit for internal QA workflows and client sign-off on visual bugs. If you also want end users to submit and vote on feature ideas, in the same widget, without a per-seat bill, Upstep does both from a free plan.",
@@ -351,9 +362,10 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "Public feature voting", upstep: true, them: false },
       { label: "In-app widget", upstep: true, them: true },
       { label: "Status tracking (open/in progress/done)", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
-      "Beamer is built first for changelogs and announcements, with feedback bolted on as a paid extra. If feedback and voting are the point, not an add-on | Upstep gives you that as the core product, free to start.",
+      "Beamer is built first for changelogs and announcements, with feedback bolted on as a paid extra. If feedback and voting are the point, not an add-on, Upstep gives you that as the core product, free to start.",
   },
 
   fider: {
@@ -379,8 +391,9 @@ export const COMPETITORS: Record<string, Competitor> = {
       { label: "Public board + upvoting", upstep: true, them: true },
       { label: "REST API & webhooks", upstep: true, them: true },
       { label: "OAuth login for end users", upstep: true, them: true },
+      { label: "Built-in MCP server for AI agents", upstep: true, them: false },
     ],
     verdict:
-      "Fider is a genuinely solid choice if you want full control and don't mind running the server yourself. If you'd rather drop in a widget and skip the ops work, with a managed free plan | Upstep gets you there without a Docker Compose file.",
+      "Fider is a genuinely solid choice if you want full control and don't mind running the server yourself. If you'd rather drop in a widget and skip the ops work, with a managed free plan, Upstep gets you there without a Docker Compose file.",
   },
 };

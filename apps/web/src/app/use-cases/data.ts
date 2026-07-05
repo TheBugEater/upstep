@@ -100,7 +100,7 @@ export const USE_CASES: Record<string, UseCase> = {
     ],
     benefits: [
       { title: "A public board sorted by votes", body: "Contributors see the most-requested ideas first, instead of scrolling a chronological issue list." },
-      { title: "Free plan, no strings", body: "Open source projects rarely have a budget line for tooling | Upstep's free plan doesn't require one." },
+      { title: "Free plan, no strings", body: "Open source projects rarely have a budget line for tooling. Upstep's free plan doesn't require one." },
       { title: "Webhook integration", body: "Pipe new feedback into whatever you already use to track project work." },
     ],
     ctaNote: "Free to start, a good fit for a project with no ops budget.",

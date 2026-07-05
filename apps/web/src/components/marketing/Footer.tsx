@@ -21,6 +21,7 @@ export function Footer() {
               ["How it works", "/#how"],
               ["Pricing", "/pricing"],
               ["Use cases", "/use-cases"],
+              ["Blog", "/blog"],
             ]}
           />
           <FooterCol

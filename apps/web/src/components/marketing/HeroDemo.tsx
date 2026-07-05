@@ -121,17 +121,20 @@ export function HeroDemo() {
         await sleep(1300);
         setToast(null);
 
-        // 3 - votes roll in; the item climbs the board as rows re-sort
+        // 3 - votes roll in one rank at a time; each burst clears the next
+        // item up the board, so the counter climbs slowly and the card
+        // visibly overtakes its neighbor instead of teleporting to the top.
         const target = freshId;
-        for (const jump of [11, 23, 31, 18]) {
+        for (const jump of [45, 20, 35, 30]) {
           await moveTo(voteRefs.current.get(target), 500);
           await click();
           setVotePop(target);
           setItems((prev) =>
             prev.map((it) => (it.id === target ? { ...it, votes: it.votes + jump } : it))
           );
-          await sleep(520);
+          await sleep(950);
           setVotePop(null);
+          await sleep(300);
         }
         await sleep(700);
 
@@ -195,9 +198,21 @@ export function HeroDemo() {
               className={`absolute inset-x-0 transition-transform duration-500 ease-fluid ${
                 it.fresh ? "animate-card-in" : ""
               }`}
-              style={{ transform: `translateY(${idx * ROW_H}px)`, height: ROW_H }}
+              style={{
+                transform: `translateY(${idx * ROW_H}px)`,
+                height: ROW_H,
+                // Lift the row that's actively climbing above its neighbors so
+                // the two labels don't paint on top of each other mid-transit.
+                zIndex: votePop === it.id ? 10 : 1,
+              }}
             >
-              <div className="flex items-center gap-3 mx-1 h-[54px] px-3 rounded-xl border border-line bg-card hover:bg-surface/60 transition-colors">
+              <div
+                className={`flex items-center gap-3 mx-1 h-[54px] px-3 rounded-xl border transition-all duration-300 ${
+                  votePop === it.id
+                    ? "border-clay/40 bg-clay-tint shadow-glow"
+                    : "border-line bg-card hover:bg-surface/60"
+                }`}
+              >
                 <div
                   ref={(el) => {
                     if (el) voteRefs.current.set(it.id, el);
@@ -209,11 +224,8 @@ export function HeroDemo() {
                   }`}
                 >
                   <span className="text-clay text-[10px] leading-none">▲</span>
-                  <span
-                    key={it.votes}
-                    className="text-[13px] font-semibold text-ink leading-tight animate-pop"
-                  >
-                    {it.votes}
+                  <span className="text-[13px] font-semibold text-ink leading-tight tabular-nums">
+                    <VoteCounter value={it.votes} />
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -327,4 +339,40 @@ export function HeroDemo() {
       </div>
     </div>
   );
+}
+
+/** Tweens its displayed number up to `value` instead of snapping, so a vote
+ *  burst reads as a count climbing rather than a number teleporting. */
+export function VoteCounter({ value }: { value: number }) {
+  const [display, setDisplay] = useState(value);
+  const displayRef = useRef(value);
+  const rafRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (displayRef.current === value) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      displayRef.current = value;
+      setDisplay(value);
+      return;
+    }
+    const from = displayRef.current;
+    const to = value;
+    const duration = 650;
+    const start = performance.now();
+
+    function tick(now: number) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const next = Math.round(from + (to - from) * eased);
+      displayRef.current = next;
+      setDisplay(next);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [value]);
+
+  return <>{display}</>;
 }
