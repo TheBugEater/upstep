@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 
 export const runtime = "nodejs";
-export const alt = "Upstep | Feedback that moves you forward";
+export const alt = "Upstep | Feedback that ships itself";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -33,6 +33,7 @@ const STATUS_COLOR: Record<"OPEN" | "IN_PROGRESS" | "DONE", ColorSwatch> = {
 export default async function Image() {
   const logoData = await readFile(path.join(process.cwd(), "public/logo.png"));
   const logoSrc = `data:image/png;base64,${logoData.toString("base64")}`;
+  const visibleRows = ROWS.slice(0, 4);
 
   return new ImageResponse(
     (
@@ -55,7 +56,7 @@ export default async function Image() {
         {/* Left: content */}
         <div style={{ display: "flex", flexDirection: "column", width: 560, position: "relative", zIndex: 1 }}>
           {/* Brand row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 52 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 36 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logoSrc} width={44} height={44} style={{ borderRadius: 11 }} alt="" />
             <span style={{ fontSize: 23, fontWeight: 700, color: "#F5F4F0", letterSpacing: "-0.02em" }}>
@@ -63,27 +64,45 @@ export default async function Image() {
             </span>
           </div>
 
-          {/* Headline - three explicit lines, no wrapping */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 26 }}>
-            <span style={{ fontSize: 68, fontWeight: 800, color: "#F5F4F0", letterSpacing: "-0.045em", lineHeight: 1.0 }}>
+          {/* MCP / AI agent badge - mirrors the live homepage hero badge */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              alignSelf: "flex-start",
+              background: "rgba(240,120,0,0.1)",
+              border: "1px solid rgba(240,120,0,0.3)",
+              borderRadius: 999,
+              padding: "7px 16px",
+              marginBottom: 24,
+            }}
+          >
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#F07800" }} />
+            <span style={{ fontSize: 14, fontWeight: 500, color: "#F5964D" }}>
+              Built-in MCP server for AI agents
+            </span>
+          </div>
+
+          {/* Headline - matches the live homepage hero */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 22 }}>
+            <span style={{ fontSize: 68, fontWeight: 800, color: "#F5F4F0", letterSpacing: "-0.045em", lineHeight: 1.05 }}>
               Feedback that
             </span>
-            <span style={{ fontSize: 68, fontWeight: 800, color: "#F07800", letterSpacing: "-0.045em", lineHeight: 1.0 }}>
-              moves you
-            </span>
-            <span style={{ fontSize: 68, fontWeight: 800, color: "#F5F4F0", letterSpacing: "-0.045em", lineHeight: 1.0 }}>
-              forward.
+            <span style={{ fontSize: 68, fontWeight: 800, color: "#F07800", letterSpacing: "-0.045em", lineHeight: 1.05 }}>
+              ships itself.
             </span>
           </div>
 
           {/* Tagline */}
-          <p style={{ fontSize: 19, color: "#5E5D58", margin: 0, marginBottom: 40, lineHeight: 1.5 }}>
-            Drop-in feedback &amp; voting widget for web and mobile apps.
+          <p style={{ fontSize: 19, color: "#8A8880", margin: 0, marginBottom: 36, lineHeight: 1.5 }}>
+            Drop-in feedback widget for web &amp; mobile. Your AI agent closes
+            the loop over MCP.
           </p>
 
           {/* Pills */}
           <div style={{ display: "flex", gap: 10 }}>
-            {["Collect feedback", "Let users vote", "Ship what matters"].map((label) => (
+            {["Feedback widget", "Voting board", "AI via MCP"].map((label) => (
               <div
                 key={label}
                 style={{ background: "rgba(255,255,255,0.055)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999, padding: "7px 16px", fontSize: 14, color: "#9A9891", fontWeight: 500 }}
@@ -95,7 +114,8 @@ export default async function Image() {
         </div>
 
         {/* Right: feedback list panel - white card matching BoardPreview */}
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, paddingLeft: 48, position: "relative", zIndex: 1, justifyContent: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, paddingLeft: 48, paddingRight: 18, position: "relative", zIndex: 1, justifyContent: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", position: "relative" }}>
           <div style={{ display: "flex", flexDirection: "column", background: "#FFFFFF", border: "1px solid #E8E6DF", borderRadius: 18, overflow: "hidden", boxShadow: "0 2px 4px rgba(26,25,21,0.05), 0 20px 48px rgba(26,25,21,0.18)" }}>
 
             {/* Panel header */}
@@ -124,13 +144,13 @@ export default async function Image() {
             </div>
 
             {/* Rows */}
-            {ROWS.map((row, i) => {
+            {visibleRows.map((row, i) => {
               const tc = TYPE_COLOR[row.type];
               const sc = STATUS_COLOR[row.status];
               return (
                 <div
                   key={i}
-                  style={{ display: "flex", alignItems: "center", gap: 13, padding: "10px 18px", borderBottom: i < ROWS.length - 1 ? "1px solid #E8E6DF" : "none" }}
+                  style={{ display: "flex", alignItems: "center", gap: 13, padding: "10px 18px", borderBottom: i < visibleRows.length - 1 ? "1px solid #E8E6DF" : "none" }}
                 >
                   {/* Upvote block - same as BoardPreview */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 40, minHeight: 42, borderRadius: 10, border: "1px solid #E8E6DF", background: "#F5F4EE", paddingTop: 4, paddingBottom: 4 }}>
@@ -154,6 +174,53 @@ export default async function Image() {
               );
             })}
           </div>
+
+          {/* Floating feedback widget - the actual embeddable widget, peeking over the board's corner */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              position: "absolute",
+              right: -18,
+              bottom: -18,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                background: "#1A1915",
+                color: "#FFFFFF",
+                fontSize: 12,
+                fontWeight: 600,
+                borderRadius: 10,
+                padding: "8px 12px",
+                boxShadow: "0 8px 20px rgba(26,25,21,0.28)",
+              }}
+            >
+              Got feedback?
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                background: "#F07800",
+                boxShadow: "0 10px 24px rgba(240,120,0,0.4)",
+                border: "3px solid #09080A",
+              }}
+            >
+              <div style={{ display: "flex", gap: 4 }}>
+                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#FFFFFF" }} />
+                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#FFFFFF" }} />
+                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#FFFFFF" }} />
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
       </div>
     ),

@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     title: "Upstep Use Cases",
     description: "How different teams use Upstep to collect and prioritize feedback.",
     url: "/use-cases",
+    images: ["/opengraph-image"],
   },
 };
 

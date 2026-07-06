@@ -27,6 +27,7 @@ export async function generateMetadata({
       description: post.description,
       url: `/blog/${slug}`,
       type: "article",
+      images: ["/opengraph-image"],
     },
   };
 }

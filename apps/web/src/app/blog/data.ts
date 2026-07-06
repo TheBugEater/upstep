@@ -136,6 +136,153 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
     ],
   },
 
+  "triage-without-a-pm": {
+    slug: "triage-without-a-pm",
+    title: "Feature requests vs. bug reports: triage without a full-time PM",
+    description:
+      "Most teams collecting feedback don't have a dedicated product manager sorting it. Here's a triage system that holds up anyway.",
+    date: "2026-06-05",
+    tag: "Guide",
+    readMinutes: 5,
+    body: [
+      {
+        type: "p",
+        text: "The moment you turn on a feedback widget, you have a new problem: a growing pile of bug reports, feature requests, and one-off complaints, and no one whose job it is to sort them. Most small teams don't have a PM running formal triage. That doesn't mean the pile has to turn into noise.",
+      },
+      { type: "h2", text: "Two buckets, not ten" },
+      {
+        type: "p",
+        text: "The instinct when you first set up a board is to build out categories: UI, performance, onboarding, billing, mobile, and so on. Resist it early on. Two types cover almost everything that comes in: Bug (something is broken) and Feature (something doesn't exist yet). A third catch-all for everything else keeps the count at three. More categories than that just means more clicks per item and more decisions about which bucket something belongs in, decisions that don't actually change what you do next.",
+      },
+      { type: "h2", text: "Votes tell you what's popular, not what's next" },
+      {
+        type: "p",
+        text: "A voting board is genuinely useful because it turns \"someone asked for this once\" into \"forty people asked for this.\" But treat the vote count as one input, not a queue you work top to bottom. A bug affecting 5% of your users' checkout flow can outrank a 200-vote feature request even at a fraction of the votes, because the cost of leaving it alone is different in kind, not just degree.",
+      },
+      {
+        type: "list",
+        items: [
+          "Review the board on a fixed cadence (weekly is enough for most teams), not continuously — continuous triage is how it eats your day",
+          "Anything reported independently by more than one or two users jumps the queue regardless of vote count, even a single-vote bug",
+          "Close stale requests with a one-line reason instead of leaving them open forever — an honest \"not planned\" is more useful than a silent pile",
+          "Let votes break ties between equally-important items, not decide importance on their own",
+        ],
+      },
+      { type: "h2", text: "What changes as the pile grows" },
+      {
+        type: "p",
+        text: "Eventually you'll want more structure: custom columns beyond Open, In Progress, and Done, or labels for the specific part of the product something touches. Add those when the two-bucket system is visibly costing you something, not before. The point of triage isn't to build a taxonomy, it's to spend your limited attention on the right five items this week.",
+      },
+      { type: "h2", text: "Try it with what you already have" },
+      {
+        type: "p",
+        text: "If you're running Upstep, this is the default: Bug, Feature, and General, sorted by votes, with Open, In Progress, and Done to move things through. You don't need to configure anything to start triaging this way, just to resist the urge to over-configure it.",
+      },
+    ],
+  },
+
+  "two-line-integration-every-stack": {
+    slug: "two-line-integration-every-stack",
+    title: "The 2-line integration, in every stack we support",
+    description:
+      "\"Two lines of code\" is a specific, checkable claim. Here's what it actually looks like in React, plain JS, a script tag, and React Native.",
+    date: "2026-06-18",
+    tag: "Guide",
+    readMinutes: 3,
+    body: [
+      {
+        type: "p",
+        text: "We say Upstep drops into an app in two lines of code. That's a claim you can check, so here it is for every stack we support, unedited.",
+      },
+      { type: "h2", text: "React" },
+      {
+        type: "code",
+        lang: "tsx",
+        code: `import { UpstepProvider, FeedbackWidget }\n  from "@upstep/js/react";\n\nexport default function App({ children }) {\n  return (\n    <UpstepProvider apiKey="upstep_xxx">\n      {children}\n      <FeedbackWidget />\n    </UpstepProvider>\n  );\n}`,
+      },
+      {
+        type: "p",
+        text: "The provider gives every component in the tree access to your project; the widget is the button and panel your users actually see. Next.js, Remix, Gatsby, and Vite all use the same two components.",
+      },
+      { type: "h2", text: "Plain JavaScript, no framework" },
+      {
+        type: "code",
+        lang: "js",
+        code: `import Upstep from "@upstep/js";\n\n// Mounts the feedback button automatically\nUpstep.init({ apiKey: "upstep_xxx" });`,
+      },
+      { type: "h2", text: "No build step at all" },
+      {
+        type: "code",
+        lang: "html",
+        code: `<script\n  type="module"\n  src="https://unpkg.com/@upstep/js/dist/index.js"\n  data-api-key="upstep_xxx"\n></script>`,
+      },
+      {
+        type: "p",
+        text: "This one's for WordPress, Webflow, Shopify, or any site where you can drop in a script tag but don't control a build pipeline. Same widget, same board on the other end.",
+      },
+      { type: "h2", text: "React Native" },
+      {
+        type: "code",
+        lang: "tsx",
+        code: `import { FeedbackProvider, FeedbackButton, FeedbackSheet }\n  from "@upstep/react-native";\n\nexport default function App() {\n  return (\n    <FeedbackProvider apiKey="upstep_xxx">\n      {/* your app */}\n      <FeedbackButton />\n      <FeedbackSheet />\n    </FeedbackProvider>\n  );\n}`,
+      },
+      {
+        type: "p",
+        text: "Same idea, native components. A button that opens a sheet instead of a panel, but it reports to the same project and the same board as your web app.",
+      },
+      { type: "h2", text: "One API key, one board" },
+      {
+        type: "p",
+        text: "That's the part that matters more than the line count: web, mobile, and no-build-step sites all report to the same project with the same API key. Feedback from your iOS app and your marketing site's contact form lands on one board, sorted by votes, not three separate ones you have to check.",
+      },
+    ],
+  },
+
+  "why-your-ai-agent-needs-its-own-board": {
+    slug: "why-your-ai-agent-needs-its-own-board",
+    title: "Why your AI agent needs its own feedback board",
+    description:
+      "Since shipping the MCP server, the teams getting the most out of it aren't the ones handing their agent the public board. They're the ones giving it a separate one.",
+    date: "2026-07-06",
+    tag: "Product",
+    readMinutes: 4,
+    body: [
+      {
+        type: "p",
+        text: "When we shipped the MCP server, the obvious first move was pointing an agent at the same board your users see and letting it triage away. A few weeks in, that's not what the teams getting the most out of it are actually doing.",
+      },
+      { type: "h2", text: "One board, two very different kinds of work" },
+      {
+        type: "p",
+        text: "A user-facing board carries requests you're accountable for: things people asked for, voted on, and are watching. An agent working through MCP generates a different kind of item entirely, a dependency bump it noticed was overdue, a flaky test it wants tracked, a refactor it's three steps into. None of that is dishonest to log, but none of it belongs next to a feature request with forty votes either. Mixing them doesn't make the agent's work more visible, it makes the user's board harder to trust.",
+      },
+      { type: "h2", text: "Give it a board of its own" },
+      {
+        type: "p",
+        text: "The create_board tool exists for exactly this: an agent can spin up a workspace that's entirely its own, separate columns, separate everything, with create_feedback defaulting to Dev-only so anything it files stays off the public widget unless you say otherwise. Your users still see their bug reports and feature requests, sorted by votes, same as always. Your agent gets a backlog that's actually its own to work through.",
+      },
+      {
+        type: "list",
+        items: [
+          "A refactor backlog the agent maintains and works down between other tasks",
+          "Test flakiness or CI failures it noticed and wants to come back to",
+          "Dependency or migration work it's tracking across multiple sessions",
+          "Notes to itself mid-task that would otherwise just be scrollback",
+        ],
+      },
+      { type: "h2", text: "Visibility, not autopilot" },
+      {
+        type: "p",
+        text: "None of this means the agent's board runs unsupervised. The value is that you can open it and see what it's been doing, the same way you'd check in on a teammate, instead of either trusting it blindly or making it justify every action in chat. Separate boards make that check-in cheap: you look at the agent's board when you want to, and the public board stays exactly what your users think it is.",
+      },
+      { type: "h2", text: "Set it up" },
+      {
+        type: "p",
+        text: "If you've already connected an agent through the MCP tab, ask it to create a board for its own work the next time it triages the inbox. If you haven't yet, the same command from the MCP server announcement gets you there in one line.",
+      },
+    ],
+  },
+
   "fluid-boards-and-dev-only-tasks": {
     slug: "fluid-boards-and-dev-only-tasks",
     title: "Fluid triage boards, and a home for your agent's work",

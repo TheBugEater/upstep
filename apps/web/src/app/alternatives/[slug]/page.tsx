@@ -26,6 +26,7 @@ export async function generateMetadata({
       title: `Best ${c.name} Alternative | Upstep`,
       description: `Looking for a ${c.name} alternative? Upstep is a developer-first feedback widget with a free plan, 2-line integration, and React Native support.`,
       url: `/alternatives/${slug}`,
+      images: ["/opengraph-image"],
     },
   };
 }

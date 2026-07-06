@@ -26,6 +26,7 @@ export async function generateMetadata({
       title: u.headline,
       description: u.intro,
       url: `/use-cases/${slug}`,
+      images: ["/opengraph-image"],
     },
   };
 }

@@ -26,6 +26,7 @@ export async function generateMetadata({
       title: i.headline,
       description: i.intro,
       url: `/integrations/${slug}`,
+      images: ["/opengraph-image"],
     },
   };
 }

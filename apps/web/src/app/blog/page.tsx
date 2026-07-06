@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     title: "The Upstep Blog",
     description: "Product updates and notes from the team building Upstep.",
     url: "/blog",
+    images: ["/opengraph-image"],
   },
 };
 

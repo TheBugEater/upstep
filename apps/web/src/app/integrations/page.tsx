@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     title: "Upstep Integrations",
     description: "Add a feedback and voting widget to any web or mobile stack.",
     url: "/integrations",
+    images: ["/opengraph-image"],
   },
 };
 

@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     description:
       "Upstep starts free. Collect feedback and votes with no credit card required. Upgrade for more projects, Slack integrations, and white-label branding.",
     url: "/pricing",
+    images: ["/opengraph-image"],
   },
 };
 

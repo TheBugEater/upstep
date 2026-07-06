@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     description:
       "Compare Upstep against the most popular feedback and roadmap tools on the market.",
     url: "/alternatives",
+    images: ["/opengraph-image"],
   },
 };
 
