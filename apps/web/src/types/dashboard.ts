@@ -28,6 +28,7 @@ export interface ProjectBoard {
   id: string;
   name: string;
   isDefault: boolean;
+  isPublic: boolean;
   filters?: BoardFilters | null;
   columns: BoardColumnDef[];
 }

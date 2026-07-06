@@ -52,6 +52,7 @@ export interface WorkspaceActions {
 
 interface Props {
   projectId: string;
+  projectSlug: string;
   apiKey: string;
   baseUrl: string;
   moderationEnabled: boolean;
@@ -67,6 +68,7 @@ interface Props {
 
 export function ProjectWorkspace({
   projectId,
+  projectSlug,
   apiKey,
   baseUrl,
   moderationEnabled,
@@ -696,6 +698,8 @@ export function ProjectWorkspace({
       {boardModal && (
         <BoardFormModal
           projectId={projectId}
+          projectSlug={projectSlug}
+          baseUrl={baseUrl}
           statuses={statuses}
           labels={labels}
           board={boardModal === "edit" ? activeBoard : null}

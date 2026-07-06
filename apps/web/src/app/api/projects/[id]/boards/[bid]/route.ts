@@ -21,6 +21,7 @@ const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   columnStatusIds: z.array(z.string()).min(1).optional(),
   filters: filtersSchema,
+  isPublic: z.boolean().optional(),
 });
 
 // ─── PATCH /api/projects/[id]/boards/[bid] ────────────────────────────────────
@@ -73,11 +74,21 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     ]);
   }
 
+  // Only one board per project can be public at a time, so the public roadmap
+  // URL is unambiguous — flipping this one on unsets it everywhere else first.
+  if (parsed.data.isPublic === true) {
+    await db.board.updateMany({
+      where: { projectId: id, id: { not: bid } },
+      data: { isPublic: false },
+    });
+  }
+
   const updated = await db.board.update({
     where: { id: bid },
     data: {
       ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
       ...(parsed.data.filters !== undefined ? { filters: parsed.data.filters ?? Prisma.JsonNull } : {}),
+      ...(parsed.data.isPublic !== undefined ? { isPublic: parsed.data.isPublic } : {}),
     },
     include: {
       columns: {

@@ -197,6 +197,8 @@ export function NewTaskModal({
 
 export function BoardFormModal({
   projectId,
+  projectSlug,
+  baseUrl,
   statuses,
   labels,
   board,
@@ -207,6 +209,8 @@ export function BoardFormModal({
   onCreateLabel,
 }: {
   projectId: string;
+  projectSlug: string;
+  baseUrl: string;
   statuses: ProjectStatus[];
   labels: Label[];
   board: ProjectBoard | null; // null = create mode
@@ -219,6 +223,8 @@ export function BoardFormModal({
   const isMain = board?.isDefault ?? false;
 
   const [name, setName] = useState(board?.name ?? "");
+  const [isPublic, setIsPublic] = useState(board?.isPublic ?? false);
+  const [copied, setCopied] = useState(false);
   const [columnIds, setColumnIds] = useState<string[]>(
     board ? board.columns.map((c) => c.statusId) : statuses.map((s) => s.id)
   );
@@ -268,6 +274,14 @@ export function BoardFormModal({
     setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
   }
 
+  const roadmapUrl = `${baseUrl}/p/${projectSlug}/roadmap`;
+
+  async function copyRoadmapUrl() {
+    await navigator.clipboard.writeText(roadmapUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   async function save() {
     if (!name.trim() || columnIds.length === 0 || saving) return;
     setSaving(true);
@@ -276,7 +290,7 @@ export function BoardFormModal({
       const url = board
         ? `/api/projects/${projectId}/boards/${board.id}`
         : `/api/projects/${projectId}/boards`;
-      const body: Record<string, unknown> = { name: name.trim(), columnStatusIds: columnIds };
+      const body: Record<string, unknown> = { name: name.trim(), columnStatusIds: columnIds, isPublic };
       if (!isMain) {
         body.filters = hasFilters
           ? {
@@ -531,6 +545,48 @@ export function BoardFormModal({
             </div>
           </div>
         )}
+
+        <div className="rounded-xl border border-line bg-surface p-3.5">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <p className="text-xs font-medium text-ink mb-1">Make this board public</p>
+              <p className="text-[11px] text-muted leading-relaxed">
+                {isPublic
+                  ? "Anyone with the link can view this board (read-only) and a shipped changelog, no login required."
+                  : "Publish a no-login roadmap page for end users. Only one board can be public per project."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPublic((v) => !v)}
+              aria-pressed={isPublic}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none mt-0.5 ${
+                isPublic ? "bg-clay" : "bg-line-strong"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${
+                  isPublic ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          {isPublic && (
+            <div className="flex items-center gap-2 mt-3">
+              <code className="flex-1 text-xs font-mono bg-card border border-line rounded-xl px-3 py-2 text-ink-soft truncate">
+                {roadmapUrl}
+              </code>
+              <button
+                type="button"
+                onClick={() => void copyRoadmapUrl()}
+                className="text-xs px-3 py-2 rounded-lg border border-line text-muted hover:text-ink hover:border-line-strong transition shrink-0"
+              >
+                {copied ? "Copied ✓" : "Copy"}
+              </button>
+            </div>
+          )}
+        </div>
 
         {error && <p className="text-xs text-danger">{error}</p>}
 

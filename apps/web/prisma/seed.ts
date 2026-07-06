@@ -47,6 +47,7 @@ async function main() {
     update: {},
     create: {
       name: "Demo App",
+      slug: "demo-app",
       apiKey: "demo-api-key-upstep",
       ownerId: user.id,
     },

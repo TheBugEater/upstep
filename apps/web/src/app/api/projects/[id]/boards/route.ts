@@ -46,6 +46,7 @@ const createSchema = z.object({
   name: z.string().min(1).max(100),
   columnStatusIds: z.array(z.string()).min(1),
   filters: filtersSchema,
+  isPublic: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
@@ -82,11 +83,16 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   // New boards are never the default/main board, so this is a regular
   // filterable board. That identity is fixed at project creation and isn't
   // exposed anywhere for change.
+  if (parsed.data.isPublic) {
+    await db.board.updateMany({ where: { projectId: id }, data: { isPublic: false } });
+  }
+
   const board = await db.board.create({
     data: {
       projectId: id,
       name: parsed.data.name,
       isDefault: false,
+      isPublic: parsed.data.isPublic ?? false,
       ...(parsed.data.filters ? { filters: parsed.data.filters } : {}),
       columns: {
         create: parsed.data.columnStatusIds.map((statusId, order) => ({ statusId, order })),

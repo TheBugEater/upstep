@@ -104,6 +104,7 @@ export default async function ProjectPage({
 
         <ProjectWorkspace
           projectId={id}
+          projectSlug={project.slug}
           apiKey={project.apiKey}
           baseUrl={baseUrl}
           moderationEnabled={project.moderationEnabled}

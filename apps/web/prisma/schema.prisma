@@ -77,6 +77,7 @@ model User {
 model Project {
   id        String   @id @default(cuid())
   name      String
+  slug      String   @unique
   apiKey    String   @unique @default(cuid())
   ownerId   String
   createdAt DateTime @default(now())
@@ -252,6 +253,9 @@ model Board {
   // date range). The default/main board always ignores this and shows
   // everything, so it stays null for that board.
   filters   Json?
+  // At most one board per project may be public at a time; the /p/[slug]/roadmap
+  // page renders whichever board has this set.
+  isPublic  Boolean  @default(false)
   createdAt DateTime @default(now())
 
   project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
