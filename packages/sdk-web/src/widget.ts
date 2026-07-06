@@ -38,8 +38,18 @@ const DARK: Palette = {
   overlay: "rgba(0,0,0,.6)",
 };
 
+/** "auto" prefers the host page's own theme (the `.dark` class / `data-theme`
+ *  attribute convention most apps toggle on <html>) over the OS-level
+ *  prefers-color-scheme, since a page can be in light mode while the OS is
+ *  set to dark (or vice versa). */
 function resolveTheme(mode: ThemeMode): "light" | "dark" {
   if (mode === "light" || mode === "dark") return mode;
+  if (typeof document !== "undefined") {
+    const root = document.documentElement;
+    const dataTheme = root.getAttribute("data-theme");
+    if (root.classList.contains("dark") || dataTheme === "dark") return "dark";
+    if (root.classList.contains("light") || dataTheme === "light") return "light";
+  }
   if (typeof window !== "undefined" && window.matchMedia) {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
@@ -125,6 +135,7 @@ export class UpstepWidget {
   private accent: string;
   private position: "left" | "right";
   private showLauncher: boolean;
+  private themeMode: ThemeMode;
   private palette: Palette;
   private dragMoved = false;
 
@@ -133,7 +144,8 @@ export class UpstepWidget {
     this.accent = options.accentColor ?? DEFAULT_ACCENT;
     this.position = options.position ?? "right";
     this.showLauncher = options.launcher !== false;
-    this.palette = resolveTheme(options.theme ?? "auto") === "dark" ? DARK : LIGHT;
+    this.themeMode = options.theme ?? "auto";
+    this.palette = resolveTheme(this.themeMode) === "dark" ? DARK : LIGHT;
   }
 
   mount() {
@@ -248,6 +260,10 @@ export class UpstepWidget {
 
   private openModal() {
     this.isOpen = true;
+    // Re-resolve "auto" on every open so a theme toggled mid-session (no
+    // reload) is picked up instead of freezing at the theme seen at mount.
+    this.palette = resolveTheme(this.themeMode) === "dark" ? DARK : LIGHT;
+    this.injectStyles();
     this.fetchFeed();
     this.renderModal();
   }

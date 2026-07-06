@@ -37,6 +37,18 @@ const DARK: Palette = {
   border: "#33312c", overlay: "rgba(0,0,0,.6)",
 };
 
+/** Reads the `.dark` class / `data-theme` attribute convention most apps
+ *  toggle on <html>. Returns null when the page gives no explicit signal, so
+ *  callers can fall back to the OS-level prefers-color-scheme. */
+function detectHostTheme(): "light" | "dark" | null {
+  if (typeof document === "undefined") return null;
+  const root = document.documentElement;
+  const dataTheme = root.getAttribute("data-theme");
+  if (root.classList.contains("dark") || dataTheme === "dark") return "dark";
+  if (root.classList.contains("light") || dataTheme === "light") return "light";
+  return null;
+}
+
 function usePalette(mode: ThemeMode): Palette {
   // Initial value must be SSR-safe (no `window` access) so it matches the
   // server-rendered markup exactly. React does not patch DOM attributes that
@@ -46,10 +58,32 @@ function usePalette(mode: ThemeMode): Palette {
   const [isDark, setIsDark] = useState(() => mode === "dark");
 
   useEffect(() => {
-    if (mode !== "auto" || typeof window === "undefined" || !window.matchMedia) {
+    if (mode !== "auto") {
       setIsDark(mode === "dark");
       return;
     }
+
+    // "auto" prefers the host page's own theme (the `.dark` class / `data-theme`
+    // attribute it toggles on <html>) over the OS-level prefers-color-scheme,
+    // since a page can be light while the OS is set to dark (or vice versa).
+    // A manual class toggle fires no event, so watch it with a MutationObserver
+    // rather than only re-checking once at mount.
+    const host = detectHostTheme();
+    if (host) {
+      setIsDark(host === "dark");
+      if (typeof MutationObserver === "undefined") return;
+      const observer = new MutationObserver(() => {
+        const next = detectHostTheme();
+        if (next) setIsDark(next === "dark");
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class", "data-theme"],
+      });
+      return () => observer.disconnect();
+    }
+
+    if (typeof window === "undefined" || !window.matchMedia) return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
     setIsDark(mq.matches);
