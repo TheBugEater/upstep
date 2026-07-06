@@ -54,15 +54,15 @@ Workspaces are `apps/*` and `packages/*`. Packages reference each other with
 
 ## Tech stack
 
-| Area        | Technology |
-|-------------|------------|
-| Framework   | Next.js 15.1.6 (App Router) |
-| UI          | React 19, Tailwind CSS 3 |
-| Auth        | NextAuth / Auth.js v5 (beta) |
-| Database    | PostgreSQL via Prisma 6 |
-| Billing     | Stripe |
-| Monorepo    | Turborepo, pnpm 10 |
-| Runtime     | Node.js ≥ 20 |
+| Area      | Technology                   |
+| --------- | ---------------------------- |
+| Framework | Next.js 15.1.6 (App Router)  |
+| UI        | React 19, Tailwind CSS 3     |
+| Auth      | NextAuth / Auth.js v5 (beta) |
+| Database  | PostgreSQL via Prisma 6      |
+| Billing   | Stripe                       |
+| Monorepo  | Turborepo, pnpm 10           |
+| Runtime   | Node.js ≥ 20                 |
 
 Fonts are loaded with `next/font`: Inter (sans), Source Serif 4 (serif),
 JetBrains Mono (mono) — see [apps/web/src/app/layout.tsx](apps/web/src/app/layout.tsx).
@@ -117,18 +117,18 @@ The app runs at `http://localhost:3000`.
 Defined in [apps/web/.env.example](apps/web/.env.example). All live in
 `apps/web/.env`.
 
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `DATABASE_URL` | Yes | Postgres connection string (pooled) |
-| `DIRECT_URL` | Yes | Direct Postgres connection (used for migrations) |
-| `AUTH_SECRET` | Yes | NextAuth session encryption secret |
-| `AUTH_URL` | Yes | App base URL, e.g. `http://localhost:3000` |
-| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional | GitHub OAuth login |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth login |
-| `STRIPE_SECRET_KEY` | Optional | Enables billing/checkout |
-| `STRIPE_WEBHOOK_SECRET` | Optional | Verifies Stripe webhook signatures |
-| `STRIPE_PRICE_PRO` | Optional | Stripe price id for the Pro plan |
-| `STRIPE_PRICE_BUSINESS` | Optional | Stripe price id for the Business plan |
+| Variable                                    | Required | Purpose                                          |
+| ------------------------------------------- | -------- | ------------------------------------------------ |
+| `DATABASE_URL`                              | Yes      | Postgres connection string (pooled)              |
+| `DIRECT_URL`                                | Yes      | Direct Postgres connection (used for migrations) |
+| `AUTH_SECRET`                               | Yes      | NextAuth session encryption secret               |
+| `AUTH_URL`                                  | Yes      | App base URL, e.g. `http://localhost:3000`       |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional | GitHub OAuth login                               |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth login                               |
+| `STRIPE_SECRET_KEY`                         | Optional | Enables billing/checkout                         |
+| `STRIPE_WEBHOOK_SECRET`                     | Optional | Verifies Stripe webhook signatures               |
+| `STRIPE_PRICE_PRO`                          | Optional | Stripe price id for the Pro plan                 |
+| `STRIPE_PRICE_BUSINESS`                     | Optional | Stripe price id for the Business plan            |
 
 If the Stripe variables are blank, the app still runs: checkout returns a
 "billing not configured" response and plan limits are still enforced (everyone
@@ -151,17 +151,17 @@ email/password login. The sign-in page is at `/login`; `/register` redirects to
 
 Defined in [apps/web/src/lib/plans.ts](apps/web/src/lib/plans.ts).
 
-| Plan | Projects | Feedback / project | Branding badge |
-|------|----------|--------------------|----------------|
-| **Free** | 1 | 100 | Shown |
-| **Pro** | 10 | 5,000 | Removed |
-| **Business** | Unlimited | Unlimited | Removed |
+| Plan         | Projects  | Feedback / project | Branding badge |
+| ------------ | --------- | ------------------ | -------------- |
+| **Free**     | 1         | 100                | Shown          |
+| **Pro**      | 10        | 5,000              | Removed        |
+| **Business** | Unlimited | Unlimited          | Removed        |
 
 **Pricing** (per month, billed in the visitor's currency):
 
-| Plan | USD | GBP | EUR |
-|------|-----|-----|-----|
-| Pro | $19 | £15 | €18 |
+| Plan     | USD | GBP | EUR |
+| -------- | --- | --- | --- |
+| Pro      | $19 | £15 | €18 |
 | Business | $99 | £79 | €95 |
 
 Limits are enforced server-side:
@@ -206,11 +206,11 @@ with an `upstep_plan` metadata key and reused on re-run.
 
 ### Routes
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/api/checkout` | POST | Creates a Stripe Checkout session for `PRO`/`BUSINESS` |
-| `/api/billing/portal` | POST | Opens the Stripe billing portal to manage/cancel |
-| `/api/webhooks/stripe` | POST | Syncs the user's plan from Stripe events |
+| Route                  | Method | Purpose                                                |
+| ---------------------- | ------ | ------------------------------------------------------ |
+| `/api/checkout`        | POST   | Creates a Stripe Checkout session for `PRO`/`BUSINESS` |
+| `/api/billing/portal`  | POST   | Opens the Stripe billing portal to manage/cancel       |
+| `/api/webhooks/stripe` | POST   | Syncs the user's plan from Stripe events               |
 
 The webhook ([apps/web/src/app/api/webhooks/stripe/route.ts](apps/web/src/app/api/webhooks/stripe/route.ts))
 handles `checkout.session.completed`, `customer.subscription.created/updated`,
@@ -300,9 +300,9 @@ export default function App() {
   return (
     <FeedbackProvider
       apiKey="upstep_xxx"
-      userId={currentUser?.id}   // optional — ties votes to this user
-      accentColor="#D97757"      // optional
-      theme="auto"               // "light" | "dark" | "auto"
+      userId={currentUser?.id} // optional — ties votes to this user
+      accentColor="#D97757" // optional
+      theme="auto" // "light" | "dark" | "auto"
     >
       {/* your app */}
       <FeedbackButton />
@@ -320,18 +320,18 @@ Exports: `FeedbackProvider`, `FeedbackButton`, `FeedbackSheet`,
 The sheet contains three built-in screens with client-side navigation — no
 React Navigation or Expo Router needed.
 
-| Screen | Description |
-|--------|-------------|
-| **Feed list** | Scrollable list sorted by upvotes. Each card shows the title (or truncated content), upvote count, type badge, and a `›` to open the detail. Tap the upvote box to vote without opening the item. A **+ New** button in the header navigates to the create screen. |
-| **Feed detail** | Full title + description, type and status badges, upvote button, and a developer-response section that renders any comments the project owner has left on the item. Pending items the user submitted themselves are visible here. |
-| **Create** | Type selector (Bug report / Feature request / General), **Title** field (required, max 200 chars), and an optional **Description** field (max 2 000 chars). Submitting returns to the feed list. |
+| Screen          | Description                                                                                                                                                                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Feed list**   | Scrollable list sorted by upvotes. Each card shows the title (or truncated content), upvote count, type badge, and a `›` to open the detail. Tap the upvote box to vote without opening the item. A **+ New** button in the header navigates to the create screen. |
+| **Feed detail** | Full title + description, type and status badges, upvote button, and a developer-response section that renders any comments the project owner has left on the item. Pending items the user submitted themselves are visible here.                                  |
+| **Create**      | Type selector (Bug report / Feature request / General), **Title** field (required, max 200 chars), and an optional **Description** field (max 2 000 chars). Submitting returns to the feed list.                                                                   |
 
 #### FeedbackButton props
 
-| Prop | Type | Default |
-|------|------|---------|
+| Prop       | Type                                | Default          |
+| ---------- | ----------------------------------- | ---------------- |
 | `position` | `"bottom-right"` \| `"bottom-left"` | `"bottom-right"` |
-| `label` | `string` | `"Feedback"` |
+| `label`    | `string`                            | `"Feedback"`     |
 
 The button uses the provider's `accentColor`.
 
@@ -350,14 +350,14 @@ The button uses the provider's `accentColor`.
 [packages/types/src/index.ts](packages/types/src/index.ts) and accepted by
 `Upstep.init`, `<UpstepProvider>`, and `<FeedbackProvider>`.
 
-| Option | Type | Default | Notes |
-|--------|------|---------|-------|
-| `apiKey` | `string` | — | **Required.** Your project's API key |
-| `userId` | `string` | — | End-user id from your app; enables per-user vote deduplication and visibility of the user's own pending items |
-| `baseUrl` | `string` | `https://upstep.io` | Point at your Upstep deployment when self-hosting |
-| `accentColor` | `string` | `#D97757` | Any CSS hex color for the button, tabs, and highlights |
-| `theme` | `"light"` \| `"dark"` \| `"auto"` | `"auto"` | Panel color theme. `"auto"` follows the OS/browser `prefers-color-scheme` |
-| `position` | `"left"` \| `"right"` | `"right"` | Launcher position (vanilla web widget only) |
+| Option        | Type                              | Default              | Notes                                                                                                         |
+| ------------- | --------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `apiKey`      | `string`                          | —                    | **Required.** Your project's API key                                                                          |
+| `userId`      | `string`                          | —                    | End-user id from your app; enables per-user vote deduplication and visibility of the user's own pending items |
+| `baseUrl`     | `string`                          | `https://upstep.dev` | Point at your Upstep deployment when self-hosting                                                             |
+| `accentColor` | `string`                          | `#D97757`            | Any CSS hex color for the button, tabs, and highlights                                                        |
+| `theme`       | `"light"` \| `"dark"` \| `"auto"` | `"auto"`             | Panel color theme. `"auto"` follows the OS/browser `prefers-color-scheme`                                     |
+| `position`    | `"left"` \| `"right"`             | `"right"`            | Launcher position (vanilla web widget only)                                                                   |
 
 Notes on the React components:
 
@@ -373,11 +373,11 @@ Notes on the React components:
 
 ### Disabling the floating launcher
 
-| SDK | How to disable |
-|-----|----------------|
-| React (`@upstep/js/react`) | `<FeedbackWidget hideLauncher />` — render the modal without the button, then call `const { open } = useUpstep()` from your own UI |
-| Vanilla JS / Script tag | `Upstep.init({ ..., launcher: false })` — call `Upstep.open()` from your own element |
-| React Native | Simply omit `<FeedbackButton />` — it is a separate optional component. Render `<FeedbackSheet />` alone and call `const { openSheet } = useUpstep()` from anywhere |
+| SDK                        | How to disable                                                                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| React (`@upstep/js/react`) | `<FeedbackWidget hideLauncher />` — render the modal without the button, then call `const { open } = useUpstep()` from your own UI                                  |
+| Vanilla JS / Script tag    | `Upstep.init({ ..., launcher: false })` — call `Upstep.open()` from your own element                                                                                |
+| React Native               | Simply omit `<FeedbackButton />` — it is a separate optional component. Render `<FeedbackSheet />` alone and call `const { openSheet } = useUpstep()` from anywhere |
 
 ---
 
@@ -441,7 +441,7 @@ function App() {
   return (
     <UpstepProvider apiKey="upstep_xxx">
       {/* … */}
-      <FeedbackWidget hideLauncher />   {/* modal only, no floating button */}
+      <FeedbackWidget hideLauncher /> {/* modal only, no floating button */}
       <SettingsRow />
     </UpstepProvider>
   );
@@ -455,7 +455,8 @@ function App() {
 ```js
 Upstep.init({ apiKey: "upstep_xxx", launcher: false });
 
-document.querySelector("#feedback-menu-item")
+document
+  .querySelector("#feedback-menu-item")
   .addEventListener("click", () => Upstep.open());
 ```
 
@@ -465,11 +466,19 @@ document.querySelector("#feedback-menu-item")
 the sheet and open it from anywhere:
 
 ```tsx
-import { FeedbackProvider, FeedbackSheet, useUpstep } from "@upstep/react-native";
+import {
+  FeedbackProvider,
+  FeedbackSheet,
+  useUpstep,
+} from "@upstep/react-native";
 
 function SettingsRow() {
   const { openSheet } = useUpstep();
-  return <Pressable onPress={openSheet}><Text>Send feedback</Text></Pressable>;
+  return (
+    <Pressable onPress={openSheet}>
+      <Text>Send feedback</Text>
+    </Pressable>
+  );
 }
 
 function App() {
@@ -538,6 +547,7 @@ new key to restore the widget.
 ### Profanity filter
 
 The filter in `apps/web/src/lib/profanity.ts` uses:
+
 - A compact blocklist of common offensive terms.
 - Leetspeak normalisation (`0→o`, `1→i`, `3→e`, `4→a`, `5→s`, `7→t`, `@→a`,
   `$→s`).
@@ -556,7 +566,7 @@ The SDK talks to the **public SDK API** under `/api/sdk`. Authentication is the
 `x-api-key` request header (your project API key). These endpoints send
 permissive CORS headers (`Access-Control-Allow-Origin: *`).
 
-Base URL = your deployment (the SDK's `baseUrl`, default `https://upstep.io`).
+Base URL = your deployment (the SDK's `baseUrl`, default `https://upstep.dev`).
 
 ### List feedback
 
@@ -566,14 +576,14 @@ GET /api/sdk/feedback
 
 Query parameters:
 
-| Param | Default | Notes |
-|-------|---------|-------|
-| `limit` | `20` | Max `50` |
-| `cursor` | — | Feedback id to paginate after |
-| `type` | — | `BUG` \| `FEATURE` \| `GENERAL` |
-| `status` | — | `OPEN` \| `IN_PROGRESS` \| `DONE` \| `CLOSED`. When omitted, `PENDING`, `CLOSED`, and `DONE` are excluded — only active (`OPEN` / `IN_PROGRESS`) items are returned by default |
-| `sort` | newest | `votes` sorts by upvotes descending |
-| `endUserId` | — | When provided, includes the user's own `PENDING` items |
+| Param       | Default | Notes                                                                                                                                                                          |
+| ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `limit`     | `20`    | Max `50`                                                                                                                                                                       |
+| `cursor`    | —       | Feedback id to paginate after                                                                                                                                                  |
+| `type`      | —       | `BUG` \| `FEATURE` \| `GENERAL`                                                                                                                                                |
+| `status`    | —       | `OPEN` \| `IN_PROGRESS` \| `DONE` \| `CLOSED`. When omitted, `PENDING`, `CLOSED`, and `DONE` are excluded — only active (`OPEN` / `IN_PROGRESS`) items are returned by default |
+| `sort`      | newest  | `votes` sorts by upvotes descending                                                                                                                                            |
+| `endUserId` | —       | When provided, includes the user's own `PENDING` items                                                                                                                         |
 
 Response: `{ "items": Feedback[], "nextCursor": string | null }`
 
@@ -644,6 +654,7 @@ POST /api/sdk/feedback/:id/vote
 Body: `{ "value": "UP" | "DOWN", "endUserId"?: string }`
 
 Behavior:
+
 - With `endUserId`: one vote per user per item. Re-sending the **same** value
   removes the vote (toggle off) → `{ "removed": true }`. Sending the **opposite**
   value flips it → `{ "flipped": true }`. A new vote returns `{ "ok": true }`
@@ -663,14 +674,14 @@ DELETE /api/sdk/feedback/:id/vote?endUserId=<id>
 
 These require a logged-in session (browser cookie), used by the dashboard UI:
 
-| Route | Methods | Notes |
-|-------|---------|-------|
-| `/api/projects` | `GET`, `POST` | List or create projects |
-| `/api/projects/:id` | `PATCH`, `DELETE` | Update `name`/`moderationEnabled`; delete project |
-| `/api/projects/:id/rotate-key` | `POST` | Generate a new API key, invalidating the old one |
-| `/api/projects/:id/feedback` | `GET` | List feedback (dashboard, with filters) |
-| `/api/projects/:id/feedback/:fid` | `PATCH`, `DELETE` | Update `status`/`type`; delete item |
-| `/api/projects/:id/feedback/:fid/comments` | `GET`, `POST` | List or add developer comments on an item |
+| Route                                      | Methods           | Notes                                             |
+| ------------------------------------------ | ----------------- | ------------------------------------------------- |
+| `/api/projects`                            | `GET`, `POST`     | List or create projects                           |
+| `/api/projects/:id`                        | `PATCH`, `DELETE` | Update `name`/`moderationEnabled`; delete project |
+| `/api/projects/:id/rotate-key`             | `POST`            | Generate a new API key, invalidating the old one  |
+| `/api/projects/:id/feedback`               | `GET`             | List feedback (dashboard, with filters)           |
+| `/api/projects/:id/feedback/:fid`          | `PATCH`, `DELETE` | Update `status`/`type`; delete item               |
+| `/api/projects/:id/feedback/:fid/comments` | `GET`, `POST`     | List or add developer comments on an item         |
 
 #### Developer comments
 
@@ -746,18 +757,18 @@ on the tab updates in real time as items are actioned.
 
 Run from `apps/web` (or via `pnpm --filter @upstep/web <script>`):
 
-| Script | Description |
-|--------|-------------|
-| `pnpm dev` | Start the Next.js dev server (Turbopack) |
-| `pnpm build` | Production build |
-| `pnpm start` | Run the production build |
-| `pnpm lint` | Lint |
-| `pnpm type-check` | `tsc --noEmit` |
-| `pnpm db:generate` | Generate the Prisma client |
-| `pnpm db:migrate` | Run Prisma migrations (dev) |
-| `pnpm db:push` | Push the schema to the database |
-| `pnpm db:studio` | Open Prisma Studio |
-| `pnpm db:seed` | Run `prisma/seed.ts` |
+| Script               | Description                                   |
+| -------------------- | --------------------------------------------- |
+| `pnpm dev`           | Start the Next.js dev server (Turbopack)      |
+| `pnpm build`         | Production build                              |
+| `pnpm start`         | Run the production build                      |
+| `pnpm lint`          | Lint                                          |
+| `pnpm type-check`    | `tsc --noEmit`                                |
+| `pnpm db:generate`   | Generate the Prisma client                    |
+| `pnpm db:migrate`    | Run Prisma migrations (dev)                   |
+| `pnpm db:push`       | Push the schema to the database               |
+| `pnpm db:studio`     | Open Prisma Studio                            |
+| `pnpm db:seed`       | Run `prisma/seed.ts`                          |
 | `pnpm stripe:prices` | Create/print Stripe prices for the paid plans |
 
 Root scripts (Turborepo, all workspaces): `pnpm dev`, `pnpm build`,
