@@ -3,8 +3,9 @@ import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Upstep",
+  title: "Privacy Policy",
   description: "How Upstep collects, uses, and protects your information.",
+  alternates: { canonical: "/legal/privacy" },
 };
 
 const EFFECTIVE = "June 23, 2026";

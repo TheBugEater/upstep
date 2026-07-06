@@ -3,8 +3,9 @@ import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Upstep",
+  title: "Terms of Service",
   description: "The terms governing your use of Upstep.",
+  alternates: { canonical: "/legal/terms" },
 };
 
 const EFFECTIVE = "June 23, 2026";
