@@ -38,17 +38,20 @@ const DARK: Palette = {
   overlay: "rgba(0,0,0,.6)",
 };
 
-/** "auto" prefers the host page's own theme (the `.dark` class / `data-theme`
- *  attribute convention most apps toggle on <html>) over the OS-level
- *  prefers-color-scheme, since a page can be in light mode while the OS is
- *  set to dark (or vice versa). */
+/** "auto" follows the host page's own theme (the `.dark` class / `data-theme`
+ *  attribute convention most apps toggle on <html>, e.g. Tailwind's
+ *  `darkMode: "class"`), not the OS-level prefers-color-scheme. Absence of
+ *  that signal means light: it's a binary convention, and a page that uses
+ *  it has already merged in the OS preference (usually at pre-paint) by the
+ *  time this runs, so re-checking prefers-color-scheme independently here
+ *  would just re-introduce the mismatch instead of resolving it. */
 function resolveTheme(mode: ThemeMode): "light" | "dark" {
   if (mode === "light" || mode === "dark") return mode;
   if (typeof document !== "undefined") {
     const root = document.documentElement;
-    const dataTheme = root.getAttribute("data-theme");
-    if (root.classList.contains("dark") || dataTheme === "dark") return "dark";
-    if (root.classList.contains("light") || dataTheme === "light") return "light";
+    return root.classList.contains("dark") || root.getAttribute("data-theme") === "dark"
+      ? "dark"
+      : "light";
   }
   if (typeof window !== "undefined" && window.matchMedia) {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";

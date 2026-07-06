@@ -37,24 +37,26 @@ const DARK: Palette = {
   border: "#33312c", overlay: "rgba(0,0,0,.6)",
 };
 
-/** Reads the `.dark` class / `data-theme` attribute convention most apps
- *  toggle on <html>. Returns null when the page gives no explicit signal, so
- *  callers can fall back to the OS-level prefers-color-scheme. */
-function detectHostTheme(): "light" | "dark" | null {
-  if (typeof document === "undefined") return null;
+/** Reads the `.dark` class / `data-theme="dark"` convention most apps toggle
+ *  on <html> (Tailwind's `darkMode: "class"` and friends). Absence of that
+ *  signal means light: these conventions are binary — a page that manages
+ *  its own theme this way has already merged in its OS preference (usually
+ *  at pre-paint, before hydration) by the time this runs, so re-checking
+ *  prefers-color-scheme independently here would just re-introduce the
+ *  mismatch instead of resolving it. */
+function isHostDark(): boolean {
+  if (typeof document === "undefined") return false;
   const root = document.documentElement;
-  const dataTheme = root.getAttribute("data-theme");
-  if (root.classList.contains("dark") || dataTheme === "dark") return "dark";
-  if (root.classList.contains("light") || dataTheme === "light") return "light";
-  return null;
+  return root.classList.contains("dark") || root.getAttribute("data-theme") === "dark";
 }
 
 function usePalette(mode: ThemeMode): Palette {
-  // Initial value must be SSR-safe (no `window` access) so it matches the
-  // server-rendered markup exactly. React does not patch DOM attributes that
-  // mismatch during hydration, so if this returned the real client value here,
-  // the follow-up setState in the effect below (already holding that same
-  // value) would be a no-op and the stale server markup would stick forever.
+  // Initial value must be SSR-safe (no `window`/`document` access) so it
+  // matches the server-rendered markup exactly. React does not patch DOM
+  // attributes that mismatch during hydration, so if this returned the real
+  // client value here, the follow-up setState in the effect below (already
+  // holding that same value) would be a no-op and the stale server markup
+  // would stick forever.
   const [isDark, setIsDark] = useState(() => mode === "dark");
 
   useEffect(() => {
@@ -63,32 +65,17 @@ function usePalette(mode: ThemeMode): Palette {
       return;
     }
 
-    // "auto" prefers the host page's own theme (the `.dark` class / `data-theme`
-    // attribute it toggles on <html>) over the OS-level prefers-color-scheme,
-    // since a page can be light while the OS is set to dark (or vice versa).
-    // A manual class toggle fires no event, so watch it with a MutationObserver
-    // rather than only re-checking once at mount.
-    const host = detectHostTheme();
-    if (host) {
-      setIsDark(host === "dark");
-      if (typeof MutationObserver === "undefined") return;
-      const observer = new MutationObserver(() => {
-        const next = detectHostTheme();
-        if (next) setIsDark(next === "dark");
-      });
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class", "data-theme"],
-      });
-      return () => observer.disconnect();
-    }
-
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
-    setIsDark(mq.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    // "auto" follows the host page's own theme, not the OS preference — see
+    // isHostDark() above. A class toggle fires no event, so watch it with a
+    // MutationObserver rather than only checking once at mount.
+    setIsDark(isHostDark());
+    if (typeof MutationObserver === "undefined") return;
+    const observer = new MutationObserver(() => setIsDark(isHostDark()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme"],
+    });
+    return () => observer.disconnect();
   }, [mode]);
 
   return isDark ? DARK : LIGHT;
