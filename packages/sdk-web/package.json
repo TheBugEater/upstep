@@ -2,6 +2,15 @@
   "name": "@upstep/js",
   "version": "0.5.9",
   "description": "Upstep feedback widget for web apps",
+  "license": "MIT",
+  "homepage": "https://upstep.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheBugEater/upstep.git",
+    "directory": "packages/sdk-web"
+  },
+  "bugs": "https://github.com/TheBugEater/upstep/issues",
+  "keywords": ["feedback", "widget", "roadmap", "upstep", "react"],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

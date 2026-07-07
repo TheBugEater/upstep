@@ -1,6 +1,15 @@
 {
   "name": "@upstep/types",
   "version": "0.5.3",
+  "description": "Shared TypeScript types for the Upstep feedback SDKs",
+  "license": "MIT",
+  "homepage": "https://upstep.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheBugEater/upstep.git",
+    "directory": "packages/types"
+  },
+  "bugs": "https://github.com/TheBugEater/upstep/issues",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
