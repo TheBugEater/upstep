@@ -1,6 +1,6 @@
 {
   "name": "@upstep/react-native",
-  "version": "0.6.11",
+  "version": "0.6.12",
   "description": "Upstep feedback SDK for React Native",
   "homepage": "https://upstep.dev",
   "repository": {
