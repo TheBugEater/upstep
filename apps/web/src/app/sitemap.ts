@@ -3,6 +3,7 @@ import { COMPETITORS } from "./alternatives/data";
 import { INTEGRATIONS } from "./integrations/data";
 import { USE_CASES } from "./use-cases/data";
 import { BLOG_POSTS } from "./blog/data";
+import { TOOLS } from "./tools/data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = (process.env.AUTH_URL ?? "https://upstep.dev").replace(/\/$/, "");
@@ -27,6 +28,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/use-cases`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     ...Object.keys(USE_CASES).map((slug) => ({
       url: `${base}/use-cases/${slug}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
+    { url: `${base}/tools`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    ...Object.keys(TOOLS).map((slug) => ({
+      url: `${base}/tools/${slug}`,
       lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.6,

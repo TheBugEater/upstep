@@ -11,6 +11,7 @@ const NAV_LINKS: [string, string][] = [
   ["MCP", "/#mcp"],
   ["Developers", "/#integrate"],
   ["Pricing", "/pricing"],
+  ["Free tools", "/tools"],
 ];
 
 export function Nav() {

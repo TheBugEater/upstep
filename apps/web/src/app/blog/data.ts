@@ -313,6 +313,106 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
       },
     ],
   },
+  "free-rice-calculator": {
+    slug: "free-rice-calculator",
+    title: "Stop eyeballing your backlog: a free RICE calculator",
+    description:
+      "Every prioritization conversation eventually needs a number, not a vibe. We got tired of rebuilding the same spreadsheet, so we built a free calculator instead.",
+    date: "2026-07-07",
+    tag: "Tools",
+    readMinutes: 3,
+    body: [
+      {
+        type: "p",
+        text: "Every roadmap meeting eventually hits the same wall: two features, both reasonable, and no way to say which one wins without someone's gut feeling doing the deciding. RICE is the least annoying fix we've found for that, and we kept rebuilding the same spreadsheet to run it. So we built a free calculator instead.",
+      },
+      { type: "h2", text: "The four inputs" },
+      {
+        type: "list",
+        items: [
+          "Reach — how many people this affects in a given period, e.g. users per month",
+          "Impact — how much it moves the needle per person, scored 3 (massive) down to 0.25 (minimal)",
+          "Confidence — how sure you actually are about the first two numbers, as a percentage",
+          "Effort — person-months to build it",
+        ],
+      },
+      {
+        type: "code",
+        lang: "text",
+        code: "score = (reach × impact × confidence) / effort",
+      },
+      { type: "h2", text: "Why a calculator instead of another spreadsheet" },
+      {
+        type: "p",
+        text: "None of this is hard math. The part that gets tedious is redoing the same four-column table every quarter, re-deriving the formula from a blog post you half-remember, and losing track of which row you already scored. A calculator that just holds the table and sorts it for you removes the only annoying part of an otherwise simple framework.",
+      },
+      { type: "h2", text: "Try it" },
+      {
+        type: "p",
+        text: "It's at /tools/rice-calculator, free, no signup. Everything runs in your browser — add a row per feature, fill in the four numbers, and it sorts by score as you type. Nothing is saved or sent anywhere, so it's also fine to use for something you'd rather not put in a shared doc yet.",
+      },
+      { type: "h2", text: "Where the numbers actually come from" },
+      {
+        type: "p",
+        text: "The honest weak point of RICE is that Reach and Confidence are usually guesses dressed up as numbers. The fix isn't a better formula, it's a real signal to plug in. If you're running a public feedback board, your top-voted items already give you a Reach number that isn't a hallway guess, and a Confidence score that's backed by actual users instead of a hunch. That's most of what a tool like Upstep is for: turning \"I think people want this\" into a number you can put directly into the calculator.",
+      },
+    ],
+  },
+
+  "feedback-button-without-an-account": {
+    slug: "feedback-button-without-an-account",
+    title: "A feedback button for the project that isn't ready for a full board",
+    description:
+      "Not every landing page or client project needs a dashboard yet. We built a free, no-account widget generator for the version before that.",
+    date: "2026-07-07",
+    tag: "Tools",
+    readMinutes: 4,
+    body: [
+      {
+        type: "p",
+        text: "Not every site needs a feedback dashboard. A landing page you shipped last night, a client project in review, a side project with eleven users — sometimes you just want a small button that lets someone tell you something's broken, without setting up an account first. We built a free generator for exactly that gap.",
+      },
+      { type: "h2", text: "What it generates" },
+      {
+        type: "p",
+        text: "You pick a button label, a position, an accent color, and an email address. It hands back a single self-contained script tag: no build step, no dependency, no backend of ours or yours in the loop.",
+      },
+      {
+        type: "code",
+        lang: "html",
+        code: `<script>
+(function () {
+  var CONFIG = {
+    buttonText: "Feedback",
+    email: "you@example.com",
+    accentColor: "#E05A33",
+    side: "right",
+  };
+  // renders a floating button + modal, submits via mailto
+})();
+</script>`,
+      },
+      {
+        type: "p",
+        text: "Paste it before </body>, and a floating button shows up with a small modal behind it. Someone types their feedback, hits send, and it opens as a pre-filled email straight to you. No project to create, no API key, no server round-trip.",
+      },
+      { type: "h2", text: "The catch with mailto" },
+      {
+        type: "p",
+        text: "We'd rather say this plainly than have you discover it later: mailto is a stopgap, not a system. There's no dedupe if five people report the same bug, no vote count to tell you what actually matters, no record once the email is buried in your inbox, and it depends on the visitor having a mail client configured at all. For a handful of messages a month, that's a fair trade for zero setup. Past that, it starts costing you more than it saves.",
+      },
+      { type: "h2", text: "When to graduate" },
+      {
+        type: "p",
+        text: "The moment you notice yourself digging through email for \"that one bug report from a few weeks ago,\" that's the signal. Swapping the generated script for the real Upstep widget is the same two lines of code, except now submissions land in a dashboard instead of an inbox: votes, statuses, comments, and a public board your users can follow instead of a one-way email you might miss.",
+      },
+      { type: "h2", text: "Try it" },
+      {
+        type: "p",
+        text: "It's at /tools/feedback-widget-generator, free, no account. Generate one, drop it on whatever you're building this week, and worry about a real board once mailto stops being enough.",
+      },
+    ],
+  },
 };
 
 export function sortedPosts(): BlogPost[] {
