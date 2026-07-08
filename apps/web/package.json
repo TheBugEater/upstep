@@ -19,7 +19,7 @@
     "@auth/prisma-adapter": "^2.7.4",
     "@onramp-sdk/react": "^0.3.2",
     "@prisma/client": "^6.2.1",
-    "@upstep/js": "^0.5.9",
+    "@upstep/js": "^0.5.11",
     "@upstep/types": "workspace:*",
     "bcryptjs": "^3.0.3",
     "nanoid": "^5.0.9",

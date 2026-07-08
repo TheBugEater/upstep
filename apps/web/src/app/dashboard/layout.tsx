@@ -1,10 +1,12 @@
+import { auth } from "@/lib/auth";
 import { UpstepWidget } from "@/components/UpstepWidget";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
   return (
     <>
       {children}
-      <UpstepWidget />
+      <UpstepWidget {...(session?.user?.id ? { userId: session.user.id } : {})} />
     </>
   );
 }

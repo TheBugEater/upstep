@@ -31,9 +31,11 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get("type") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
   const sort = searchParams.get("sort") === "votes" ? "upvotes" : "createdAt";
-  // When the SDK knows the end-user, include their own PENDING items so the
-  // submitter can see their submission is in review on mobile.
+  // When the SDK knows the end-user (or has a client-persisted anonymous id),
+  // include their own PENDING items so the submitter can see their
+  // submission is in review on mobile.
   const endUserId = searchParams.get("endUserId") ?? undefined;
+  const anonymousId = searchParams.get("anonymousId") ?? undefined;
 
   const items = await db.feedback.findMany({
     where: {
@@ -46,11 +48,14 @@ export async function GET(req: NextRequest) {
       NOT: { boardStatus: { isDone: true } },
       ...(status
         ? { status: status as never }
-        : endUserId
+        : endUserId || anonymousId
           ? {
               OR: [
                 { status: { notIn: ["PENDING", "CLOSED", "DONE"] as const } },
-                { status: "PENDING" as const, endUserId },
+                {
+                  status: "PENDING" as const,
+                  ...(endUserId ? { endUserId } : anonymousId ? { anonymousId } : {}),
+                },
               ],
             }
           : { status: { notIn: ["PENDING", "CLOSED", "DONE"] as const } }),
@@ -66,9 +71,12 @@ export async function GET(req: NextRequest) {
   const showBranding = getPlan(project.owner.plan).branding;
 
   // Attach the requesting user's vote to each item so the SDK can show voted state.
-  if (endUserId && page.length > 0) {
+  if ((endUserId || anonymousId) && page.length > 0) {
     const votes = await db.vote.findMany({
-      where: { endUserId, feedbackId: { in: page.map((i) => i.id) } },
+      where: {
+        feedbackId: { in: page.map((i) => i.id) },
+        ...(endUserId ? { endUserId } : anonymousId ? { anonymousId } : {}),
+      },
       select: { feedbackId: true, value: true },
     });
     const voteMap = new Map(votes.map((v) => [v.feedbackId, v.value]));
@@ -86,6 +94,7 @@ const submitSchema = z.object({
   content: z.string().min(1).max(2000),
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
   endUserId: z.string().optional(),
+  anonymousId: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 
@@ -125,7 +134,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const { title, content, endUserId } = parsed.data;
+  const { title, content, endUserId, anonymousId } = parsed.data;
   const status = project.moderationEnabled ? "PENDING" : "OPEN";
   const flagged = containsProfanity(content);
 
@@ -148,11 +157,14 @@ export async function POST(req: NextRequest) {
       upvotes: 1,
       ...(defaultStatus ? { statusId: defaultStatus.id } : {}),
       ...(endUserId ? { endUserId } : {}),
+      ...(anonymousId ? { anonymousId } : {}),
       ...(parsed.data.metadata ? { metadata: parsed.data.metadata as object } : {}),
       // Record the vote so the creator can't double-vote later.
       ...(endUserId
         ? { votes: { create: { value: "UP", endUserId } } }
-        : {}),
+        : anonymousId
+          ? { votes: { create: { value: "UP", anonymousId } } }
+          : {}),
     },
   });
 

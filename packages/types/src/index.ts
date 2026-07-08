@@ -29,6 +29,7 @@ export interface Feedback {
   type: FeedbackType;
   status: FeedbackStatus;
   endUserId: string | null;
+  anonymousId: string | null;
   upvotes: number;
   downvotes: number;
   /** Auto-flagged by the profanity filter on submit. */
@@ -63,6 +64,7 @@ export interface Vote {
   feedbackId: string;
   value: VoteValue;
   endUserId: string | null;
+  anonymousId: string | null;
   createdAt: string;
 }
 
@@ -107,12 +109,16 @@ export interface SubmitFeedbackPayload {
   content: string;
   type?: FeedbackType;
   endUserId?: string;
+  /** Client-persisted anonymous visitor id, sent automatically when identify() hasn't been called. */
+  anonymousId?: string;
   metadata?: Record<string, unknown>;
 }
 
 export interface VotePayload {
   value: VoteValue;
   endUserId?: string;
+  /** Client-persisted anonymous visitor id, sent automatically when identify() hasn't been called. */
+  anonymousId?: string;
 }
 
 export interface FeedbackListResponse {

@@ -26,6 +26,7 @@ export async function GET(
 
   const { id } = await params;
   const endUserId = req.nextUrl.searchParams.get("endUserId") ?? undefined;
+  const anonymousId = req.nextUrl.searchParams.get("anonymousId") ?? undefined;
 
   const item = await db.feedback.findFirst({
     where: { id, projectId: project.id },
@@ -40,9 +41,9 @@ export async function GET(
 
   // Attach the requesting user's vote so the SDK can show voted state.
   let userVote: string | null = null;
-  if (endUserId) {
+  if (endUserId || anonymousId) {
     const vote = await db.vote.findFirst({
-      where: { feedbackId: id, endUserId },
+      where: { feedbackId: id, ...(endUserId ? { endUserId } : anonymousId ? { anonymousId } : {}) },
       select: { value: true },
     });
     userVote = vote?.value ?? null;

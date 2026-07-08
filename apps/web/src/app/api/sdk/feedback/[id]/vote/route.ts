@@ -17,6 +17,7 @@ export async function OPTIONS() {
 const voteSchema = z.object({
   value: z.enum(["UP", "DOWN"]),
   endUserId: z.string().optional(),
+  anonymousId: z.string().optional(),
 });
 
 // ─── POST /api/sdk/feedback/[id]/vote ────────────────────────────────────────
@@ -44,11 +45,11 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400, headers: CORS });
   }
 
-  const { value, endUserId } = parsed.data;
+  const { value, endUserId, anonymousId } = parsed.data;
   const fingerprint = getFingerprint(req);
 
   if (endUserId) {
-    // Authenticated path - upsert with deduplication
+    // Identified path - upsert with deduplication
     const existing = await db.vote.findUnique({
       where: { feedbackId_endUserId: { feedbackId: id, endUserId } },
     });
@@ -68,8 +69,27 @@ export async function POST(
     }
 
     await db.vote.create({ data: { feedbackId: id, value, endUserId } });
+  } else if (anonymousId) {
+    // Anonymous-but-tracked path - dedupe by the SDK's client-persisted anonymousId
+    const existing = await db.vote.findUnique({
+      where: { feedbackId_anonymousId: { feedbackId: id, anonymousId } },
+    });
+
+    if (existing) {
+      if (existing.value === value) {
+        await db.vote.delete({ where: { id: existing.id } });
+        await adjustCounts(id, value, -1);
+        return NextResponse.json({ removed: true }, { headers: CORS });
+      }
+      await db.vote.update({ where: { id: existing.id }, data: { value } });
+      await adjustCounts(id, existing.value, -1);
+      await adjustCounts(id, value, +1);
+      return NextResponse.json({ flipped: true }, { headers: CORS });
+    }
+
+    await db.vote.create({ data: { feedbackId: id, value, anonymousId, fingerprint } });
   } else {
-    // Anonymous path - fingerprint only, no uniqueness enforced
+    // No identity at all (e.g. an old SDK build) - fingerprint only, no uniqueness enforced
     await db.vote.create({ data: { feedbackId: id, value, fingerprint } });
   }
 
@@ -105,13 +125,16 @@ export async function DELETE(
   const { id } = await params;
   const { searchParams } = new URL(req.url);
   const endUserId = searchParams.get("endUserId");
-  if (!endUserId) {
-    return NextResponse.json({ error: "endUserId required" }, { status: 400, headers: CORS });
+  const anonymousId = searchParams.get("anonymousId");
+  if (!endUserId && !anonymousId) {
+    return NextResponse.json({ error: "endUserId or anonymousId required" }, { status: 400, headers: CORS });
   }
 
-  const vote = await db.vote.findUnique({
-    where: { feedbackId_endUserId: { feedbackId: id, endUserId } },
-  });
+  const vote = endUserId
+    ? await db.vote.findUnique({ where: { feedbackId_endUserId: { feedbackId: id, endUserId } } })
+    : await db.vote.findUnique({
+        where: { feedbackId_anonymousId: { feedbackId: id, anonymousId: anonymousId! } },
+      });
   if (!vote) {
     return NextResponse.json({ error: "Vote not found" }, { status: 404, headers: CORS });
   }

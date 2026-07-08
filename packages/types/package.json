@@ -1,6 +1,6 @@
 {
   "name": "@upstep/types",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Shared TypeScript types for the Upstep feedback SDKs",
   "license": "MIT",
   "homepage": "https://upstep.dev",

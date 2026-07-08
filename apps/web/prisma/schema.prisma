@@ -60,7 +60,7 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
-  password      String?   // null for OAuth-only accounts
+  password      String? // null for OAuth-only accounts
   createdAt     DateTime  @default(now())
 
   // Billing
@@ -96,21 +96,22 @@ model Project {
 }
 
 model Feedback {
-  id        String         @id @default(cuid())
-  projectId String
-  title     String?        // short subject line (optional; used by the RN widget)
-  content   String         @db.Text
-  type      FeedbackType   @default(GENERAL)
-  status    FeedbackStatus @default(OPEN)
-  statusId  String?
-  endUserId String?
-  upvotes   Int            @default(0)
-  downvotes Int            @default(0)
-  flagged   Boolean        @default(false)
-  internal  Boolean        @default(false)
-  metadata  Json?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  projectId   String
+  title       String? // short subject line (optional; used by the RN widget)
+  content     String         @db.Text
+  type        FeedbackType   @default(GENERAL)
+  status      FeedbackStatus @default(OPEN)
+  statusId    String?
+  endUserId   String?
+  anonymousId String?
+  upvotes     Int            @default(0)
+  downvotes   Int            @default(0)
+  flagged     Boolean        @default(false)
+  internal    Boolean        @default(false)
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   boardStatus Status?   @relation("FeedbackBoardStatus", fields: [statusId], references: [id], onDelete: SetNull)
@@ -123,7 +124,7 @@ model Comment {
   id         String   @id @default(cuid())
   feedbackId String
   content    String   @db.Text
-  authorName String?  // display name shown in the SDK
+  authorName String? // display name shown in the SDK
   isOwner    Boolean  @default(true)
   createdAt  DateTime @default(now())
 
@@ -135,13 +136,19 @@ model Vote {
   feedbackId  String
   value       VoteValue
   endUserId   String?
+  // Client-persisted anonymous visitor id, sent by the SDK when identify()
+  // hasn't been called. Lets us dedupe votes from logged-out visitors the
+  // same way endUserId dedupes identified ones.
+  anonymousId String?
   fingerprint String?
   createdAt   DateTime  @default(now())
 
   feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
 
-  // One vote per authenticated user per feedback item
+  // One vote per identified user per feedback item
   @@unique([feedbackId, endUserId])
+  // One vote per anonymous visitor per feedback item
+  @@unique([feedbackId, anonymousId])
 }
 
 enum FeedbackType {

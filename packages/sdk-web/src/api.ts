@@ -7,15 +7,40 @@ import type {
   UpstepConfig,
 } from "@upstep/types";
 
+const ANON_ID_KEY = "upstep-anonymous-id";
+
+/** Reads (or generates and persists) a stable per-browser anonymous id, so
+ *  votes/submissions can be deduped even before identify() is called. Falls
+ *  back to a session-only id when storage is unavailable (private browsing,
+ *  disabled cookies, SSR). */
+function getOrCreateAnonymousId(): string | undefined {
+  const id =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+  if (typeof window === "undefined") return id;
+  try {
+    const existing = window.localStorage.getItem(ANON_ID_KEY);
+    if (existing) return existing;
+    window.localStorage.setItem(ANON_ID_KEY, id);
+    return id;
+  } catch {
+    return id;
+  }
+}
+
 export class UpstepApiClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
   userId: string | undefined;
+  readonly anonymousId: string | undefined;
 
   constructor(config: UpstepConfig) {
     this.baseUrl = (config.baseUrl ?? "https://upstep.dev").replace(/\/$/, "");
     this.apiKey = config.apiKey;
     if (config.userId !== undefined) this.userId = config.userId;
+    this.anonymousId = getOrCreateAnonymousId();
   }
 
   /** Update the end-user id at runtime (e.g. after the user logs in). */
@@ -45,6 +70,7 @@ export class UpstepApiClient {
     if (params?.sort) qs.set("sort", params.sort);
     // Pass userId so the server can include the user's own pending items.
     if (this.userId) qs.set("endUserId", this.userId);
+    if (this.anonymousId) qs.set("anonymousId", this.anonymousId);
 
     const res = await fetch(`${this.baseUrl}/api/sdk/feedback?${qs}`, {
       headers: this.headers(),
@@ -60,6 +86,7 @@ export class UpstepApiClient {
       body: JSON.stringify({
         ...payload,
         endUserId: payload.endUserId ?? this.userId,
+        anonymousId: payload.anonymousId ?? this.anonymousId,
       }),
     });
     if (!res.ok) throw new Error(`Upstep: ${res.status}`);
@@ -70,7 +97,7 @@ export class UpstepApiClient {
     const res = await fetch(`${this.baseUrl}/api/sdk/feedback/${feedbackId}/vote`, {
       method: "POST",
       headers: this.headers(),
-      body: JSON.stringify({ value, endUserId: this.userId }),
+      body: JSON.stringify({ value, endUserId: this.userId, anonymousId: this.anonymousId }),
     });
     if (!res.ok) throw new Error(`Upstep: ${res.status}`);
   }
@@ -78,6 +105,7 @@ export class UpstepApiClient {
   async getItem(feedbackId: string): Promise<FeedbackWithComments> {
     const qs = new URLSearchParams();
     if (this.userId) qs.set("endUserId", this.userId);
+    if (this.anonymousId) qs.set("anonymousId", this.anonymousId);
     const res = await fetch(`${this.baseUrl}/api/sdk/feedback/${feedbackId}?${qs}`, {
       headers: this.headers(),
     });
@@ -86,11 +114,14 @@ export class UpstepApiClient {
   }
 
   async removeVote(feedbackId: string): Promise<void> {
-    if (!this.userId) return;
-    const res = await fetch(
-      `${this.baseUrl}/api/sdk/feedback/${feedbackId}/vote?endUserId=${encodeURIComponent(this.userId)}`,
-      { method: "DELETE", headers: this.headers() }
-    );
+    if (!this.userId && !this.anonymousId) return;
+    const qs = new URLSearchParams();
+    if (this.userId) qs.set("endUserId", this.userId);
+    if (this.anonymousId) qs.set("anonymousId", this.anonymousId);
+    const res = await fetch(`${this.baseUrl}/api/sdk/feedback/${feedbackId}/vote?${qs}`, {
+      method: "DELETE",
+      headers: this.headers(),
+    });
     if (!res.ok) throw new Error(`Upstep: ${res.status}`);
   }
 }
