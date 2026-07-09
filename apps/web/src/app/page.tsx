@@ -195,7 +195,7 @@ function Mcp() {
               Give your AI direct access to your users
             </h2>
             <p className="mt-5 text-muted leading-relaxed">
-              Connect Claude Code, Cursor, Windsurf, Copilot, or any MCP
+              Connect Claude Code, Codex, Cursor, Windsurf, Copilot, or any MCP
               client to your feedback inbox. Your agent reads what users want,
               creates and updates tasks, posts replies, and keeps the board
               tidy. Access is scoped to a single project by its API key.
@@ -219,7 +219,7 @@ function Mcp() {
             </ul>
 
             <div className="mt-8 rounded-xl border border-line bg-card p-4 font-mono text-xs text-muted overflow-x-auto shadow-soft">
-              <p className="text-faint mb-1"># One command to connect Claude Code</p>
+              <p className="text-faint mb-1"># Claude Code</p>
               <p className="whitespace-nowrap">
                 <span className="text-clay">claude</span> mcp add --transport http upstep \
               </p>
@@ -227,6 +227,14 @@ function Mcp() {
               <p className="pl-4 whitespace-nowrap">
                 --header <span className="text-ink-soft">&quot;Authorization: Bearer YOUR_API_KEY&quot;</span>
               </p>
+              <p className="text-faint mt-3 mb-1"># Codex CLI</p>
+              <p className="whitespace-nowrap">
+                <span className="text-clay">export</span> UPSTEP_API_KEY=&quot;YOUR_API_KEY&quot;
+              </p>
+              <p className="whitespace-nowrap">
+                <span className="text-clay">codex</span> mcp add upstep --url https://upstep.dev/api/mcp \
+              </p>
+              <p className="pl-4 whitespace-nowrap">--bearer-token-env-var UPSTEP_API_KEY</p>
             </div>
           </div>
 

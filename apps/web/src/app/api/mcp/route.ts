@@ -6,9 +6,13 @@ import { triggerIntegrations } from "@/lib/integrations";
 /**
  * Upstep MCP server - Streamable HTTP transport (JSON responses).
  *
- * Any MCP client (Claude Code, Claude Desktop, Cursor, …) can connect with:
+ * Any MCP client (Claude Code, Codex, Claude Desktop, Cursor, …) can connect with:
  *   claude mcp add --transport http upstep https://upstep.dev/api/mcp \
  *     --header "Authorization: Bearer <project API key>"
+ *
+ *   export UPSTEP_API_KEY="<project API key>"
+ *   codex mcp add upstep --url https://upstep.dev/api/mcp \
+ *     --bearer-token-env-var UPSTEP_API_KEY
  *
  * The API key scopes every tool to a single project, so an agent can browse,
  * triage, create, and comment on feedback - nothing else.

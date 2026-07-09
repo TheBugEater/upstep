@@ -15,13 +15,15 @@ const TOOL_LIST = [
 
 /** Connect-your-AI card shown on the MCP tab. Available on all plans. */
 export function McpCard({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
-  const [tab, setTab] = useState<"claude" | "cursor">("claude");
+  const [tab, setTab] = useState<"claude" | "codex" | "cursor">("claude");
   const [copied, setCopied] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
   const mcpUrl = `${baseUrl.replace(/\/$/, "")}/api/mcp`;
   const key = revealed ? apiKey : "YOUR_API_KEY";
   const claudeCmd = `claude mcp add --transport http upstep ${mcpUrl} --header "Authorization: Bearer ${key}"`;
+  const codexCmd = `export UPSTEP_API_KEY="${key}"
+codex mcp add upstep --url ${mcpUrl} --bearer-token-env-var UPSTEP_API_KEY`;
   const cursorJson = `{
   "mcpServers": {
     "upstep": {
@@ -30,13 +32,15 @@ export function McpCard({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }
     }
   }
 }`;
-  const snippet = tab === "claude" ? claudeCmd : cursorJson;
+  const snippet = tab === "claude" ? claudeCmd : tab === "codex" ? codexCmd : cursorJson;
 
   async function copy() {
     // Always copy the real key, even while the display is masked
     const real = tab === "claude"
       ? claudeCmd.replace("YOUR_API_KEY", apiKey)
-      : cursorJson.replace("YOUR_API_KEY", apiKey);
+      : tab === "codex"
+        ? codexCmd.replace("YOUR_API_KEY", apiKey)
+        : cursorJson.replace("YOUR_API_KEY", apiKey);
     await navigator.clipboard.writeText(real);
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
@@ -54,9 +58,9 @@ export function McpCard({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }
               </span>
             </div>
             <p className="text-xs text-muted mt-1 max-w-md leading-relaxed">
-              Connect Claude Code, Cursor, Windsurf, Copilot, or any MCP client.
-              Your agent can triage feedback, file Dev-only tasks users never
-              see, and run its own board. Scoped by your project API key.
+              Connect Claude Code, Codex, Cursor, Windsurf, Copilot, or any MCP
+              client. Your agent can triage feedback, file Dev-only tasks users
+              never see, and run its own board. Scoped by your project API key.
             </p>
           </div>
           <span className="w-9 h-9 rounded-xl bg-clay/10 text-clay flex items-center justify-center text-base shrink-0">✦</span>
@@ -64,7 +68,7 @@ export function McpCard({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }
 
         {/* Client tabs */}
         <div className="mt-4 flex items-center gap-1.5">
-          {(["claude", "cursor"] as const).map((t) => (
+          {(["claude", "codex", "cursor"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -74,7 +78,7 @@ export function McpCard({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }
                   : "text-muted hover:text-ink border border-line"
               }`}
             >
-              {t === "claude" ? "Claude Code" : "Cursor / JSON"}
+              {t === "claude" ? "Claude Code" : t === "codex" ? "Codex CLI" : "Cursor / JSON"}
             </button>
           ))}
           <div className="ml-auto flex items-center gap-1.5">
@@ -100,6 +104,11 @@ export function McpCard({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }
         <pre className="mt-3 rounded-xl bg-[#1C1B19] text-white/85 text-[11.5px] font-mono leading-relaxed p-4 overflow-x-auto whitespace-pre-wrap break-all">
           {snippet}
         </pre>
+        {tab === "codex" && (
+          <p className="mt-2 text-[11px] text-faint leading-relaxed">
+            Codex stores the env var name, so keep <code className="font-mono">UPSTEP_API_KEY</code> set in the shell or launcher you use to run it.
+          </p>
+        )}
       </div>
 
       {/* Tool catalogue */}

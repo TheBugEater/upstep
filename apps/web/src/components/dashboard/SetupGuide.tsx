@@ -225,9 +225,9 @@ function McpSetup({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
       {open && (
         <div className="px-4 pb-4">
           <p className="text-xs text-muted mb-3 leading-relaxed">
-            Let Claude Code, Cursor, or any MCP client triage this project&apos;s
-            inbox directly, list feedback, file Dev-only tasks, move cards, and
-            reply to voters, without leaving your editor.
+            Let Claude Code, Codex, Cursor, or any MCP client triage this
+            project&apos;s inbox directly, list feedback, file Dev-only tasks,
+            move cards, and reply to voters, without leaving your editor.
           </p>
           <McpCard apiKey={apiKey} baseUrl={baseUrl} />
         </div>

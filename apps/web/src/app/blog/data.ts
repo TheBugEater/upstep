@@ -116,12 +116,12 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
       },
       {
         type: "p",
-        text: "Connecting it is one command, scoped to a single project by its API key:",
+        text: "Connecting it takes either one Claude Code command or a short Codex setup, both scoped to a single project by its API key:",
       },
       {
         type: "code",
         lang: "bash",
-        code: 'claude mcp add --transport http upstep https://upstep.dev/api/mcp \\\n  --header "Authorization: Bearer YOUR_API_KEY"',
+        code: 'claude mcp add --transport http upstep https://upstep.dev/api/mcp \\\n  --header "Authorization: Bearer YOUR_API_KEY"\n\nexport UPSTEP_API_KEY="YOUR_API_KEY"\ncodex mcp add upstep --url https://upstep.dev/api/mcp \\\n  --bearer-token-env-var UPSTEP_API_KEY',
       },
       { type: "h2", text: "Dev-only, by default" },
       {
@@ -131,7 +131,7 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
       { type: "h2", text: "Get connected" },
       {
         type: "p",
-        text: "Open any project, head to the new MCP tab, and copy the command for Claude Code or the JSON config for Cursor and other clients. The setup guide walks through the same thing if you're wiring up the widget for the first time.",
+        text: "Open any project, head to the new MCP tab, and copy the Claude Code command, the Codex setup, or the JSON config for Cursor and other clients. The setup guide walks through the same thing if you're wiring up the widget for the first time.",
       },
     ],
   },
