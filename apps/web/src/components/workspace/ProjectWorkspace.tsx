@@ -440,12 +440,13 @@ export function ProjectWorkspace({
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div>
-      {/* Tab bar */}
-      <div className="relative mb-4">
+    <div className="lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-6">
+      {/* Workspace navigation: a rail on desktop, compact tabs on mobile. */}
+      <aside className="lg:sticky lg:top-20 lg:self-start mb-4 lg:mb-0">
+      <div className="relative lg:rounded-2xl lg:border lg:border-line lg:bg-card lg:p-2 lg:shadow-soft">
         <div className="absolute inset-x-0 bottom-0 border-b border-line" />
-        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex items-center gap-1 min-w-max">
+        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 lg:overflow-visible">
+          <div className="flex items-center gap-1 min-w-max lg:min-w-0 lg:flex-col lg:items-stretch">
             <TabBtn active={tab === "feedback"} onClick={() => setTab("feedback")}>
               Feedback
               <Badge count={activeCount} cls="bg-clay/15 text-clay" />
@@ -471,6 +472,20 @@ export function ProjectWorkspace({
           </div>
         </div>
       </div>
+      {isOwner && (
+        <div className="hidden lg:block mt-3 rounded-2xl border border-line bg-card p-3 shadow-soft">
+          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-faint">Manage board</p>
+          <SideAction onClick={() => setShowStatuses(true)}>Statuses</SideAction>
+          <SideAction onClick={() => setShowLabels(true)}>Labels</SideAction>
+          <SideAction onClick={() => setBoardModal("new")}>New board</SideAction>
+          {activeBoard && view === "board" && (
+            <SideAction onClick={() => setBoardModal("edit")}>Edit current board</SideAction>
+          )}
+        </div>
+      )}
+      </aside>
+
+      <main className="min-w-0">
 
       {tab === "feedback" && (
         <div>
@@ -493,7 +508,7 @@ export function ProjectWorkspace({
               ))}
             </div>
             {isOwner && (
-              <div className="flex items-center gap-2 ml-auto shrink-0">
+              <div className="flex lg:hidden items-center gap-2 ml-auto shrink-0">
                 {activeBoard && view === "board" && (
                   <button
                     onClick={() => setBoardModal("edit")}
@@ -751,6 +766,7 @@ export function ProjectWorkspace({
           onClose={() => setShowLabels(false)}
         />
       )}
+      </main>
     </div>
   );
 }
@@ -820,12 +836,20 @@ function TabBtn({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 px-4 py-2.5 text-sm font-medium border-b-2 transition ${
+      className={`inline-flex items-center gap-1 px-4 py-2.5 text-sm font-medium border-b-2 lg:border-b-0 lg:border-l-2 lg:rounded-lg transition ${
         active
-          ? "border-clay text-clay"
-          : "border-transparent text-muted hover:text-ink hover:border-line-strong"
+          ? "border-clay text-clay lg:bg-clay/10"
+          : "border-transparent text-muted hover:text-ink hover:border-line-strong lg:hover:bg-surface"
       }`}
     >
+      {children}
+    </button>
+  );
+}
+
+function SideAction({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} className="w-full text-left px-2 py-2 rounded-lg text-xs font-medium text-muted hover:text-ink hover:bg-surface transition">
       {children}
     </button>
   );
