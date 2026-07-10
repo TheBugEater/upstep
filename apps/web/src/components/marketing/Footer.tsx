@@ -33,6 +33,7 @@ export function Footer() {
               ["Integrations", "/integrations"],
               ["@upstep/js on npm", "https://www.npmjs.com/package/@upstep/js"],
               ["@upstep/react-native on npm", "https://www.npmjs.com/package/@upstep/react-native"],
+              ["upstep_flutter on pub.dev", "https://pub.dev/packages/upstep_flutter"],
             ]}
           />
           <FooterCol

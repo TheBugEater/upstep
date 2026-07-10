@@ -43,7 +43,7 @@ const SOFTWARE_LD = {
     "Feature request management",
     "Kanban triage boards",
     "Built-in MCP server for AI agents",
-    "React and React Native SDK",
+    "React, React Native, and Flutter SDKs",
     "Webhook and Slack integrations",
   ],
 };
@@ -267,7 +267,7 @@ function Integrate() {
             {[
               ["Fully typed", "First-class TypeScript across every SDK."],
               ["Tiny bundle", "The web widget is under 10 kB gzipped."],
-              ["Framework native", "React, vanilla JS, script tag, or React Native."],
+              ["Framework native", "React, vanilla JS, script tag, React Native, or Flutter."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
                 <span className="mt-0.5 w-5 h-5 rounded-full bg-clay/15 text-clay flex items-center justify-center text-xs shrink-0">✓</span>

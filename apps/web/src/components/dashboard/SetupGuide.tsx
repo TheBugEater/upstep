@@ -4,14 +4,18 @@ import { useEffect, useState } from "react";
 import { useOnRamp } from "@onramp-sdk/react";
 import { McpCard } from "./McpCard";
 
-type FrameworkId = "react" | "next" | "js" | "script" | "native";
+type FrameworkId = "react" | "next" | "vue" | "nuxt" | "svelte" | "js" | "script" | "native" | "flutter";
 
 const FRAMEWORKS: { id: FrameworkId; label: string }[] = [
   { id: "react", label: "React" },
   { id: "next", label: "Next.js" },
+  { id: "vue", label: "Vue" },
+  { id: "nuxt", label: "Nuxt" },
+  { id: "svelte", label: "SvelteKit" },
   { id: "js", label: "Vanilla JS" },
   { id: "script", label: "Script tag" },
   { id: "native", label: "React Native" },
+  { id: "flutter", label: "Flutter" },
 ];
 
 /* ───────────────────── Button + slide-over drawer ───────────────────── */
@@ -129,6 +133,26 @@ function SetupGuideContent({ apiKey, baseUrl }: { apiKey: string; baseUrl: strin
           <p className="text-xs text-muted mt-2">
             The <Code>"use client"</Code> directive is required because the widget uses browser APIs.
             Wrap it in its own file so your layout and page files can stay Server Components.
+          </p>
+        )}
+        {fw === "nuxt" && (
+          <p className="text-xs text-muted mt-2">
+            Keep this in a <Code>.client.ts</Code> plugin so Nuxt only mounts Upstep in the browser.
+          </p>
+        )}
+        {fw === "vue" && (
+          <p className="text-xs text-muted mt-2">
+            Mount once from your app shell with <Code>onMounted()</Code> so SSR builds never touch browser APIs on the server.
+          </p>
+        )}
+        {fw === "svelte" && (
+          <p className="text-xs text-muted mt-2">
+            Mount from <Code>onMount()</Code> in your root layout so it stays client-only and survives route changes.
+          </p>
+        )}
+        {fw === "flutter" && (
+          <p className="text-xs text-muted mt-2">
+            Mount <Code>Upstep</Code> once near your app root, then render <Code>FeedbackSheet</Code> and <Code>FeedbackButton</Code> inside the same tree.
           </p>
         )}
         {fw !== "script" && fw !== "next" && (
@@ -353,10 +377,14 @@ function Code({ children }: { children: React.ReactNode }) {
 const INSTALL: Record<FrameworkId, string | null> = {
   react: "npm install @upstep/js",
   next: "npm install @upstep/js",
+  vue: "npm install @upstep/js",
+  nuxt: "npm install @upstep/js",
+  svelte: "npm install @upstep/js",
   js: "npm install @upstep/js",
   script: null,
   native:
     "npm install @upstep/react-native\n# peer deps:\nnpm install @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler",
+  flutter: "flutter pub add upstep_flutter",
 };
 
 const SNIPPETS: Record<FrameworkId, (apiKey: string, baseUrl: string) => string> = {
@@ -406,6 +434,43 @@ export default function App({ children }) {
     </UpstepProvider>
   );
 }`,
+  vue: (apiKey, baseUrl) => `<script setup lang="ts">
+import { onMounted } from "vue";
+import Upstep from "@upstep/js";
+
+onMounted(() => {
+  Upstep.init({
+    apiKey: "${apiKey}",
+    baseUrl: "${baseUrl}",
+  });
+});
+</script>
+
+<template>
+  <RouterView />
+</template>`,
+  nuxt: (apiKey, baseUrl) => `// plugins/upstep.client.ts
+import Upstep from "@upstep/js";
+
+export default defineNuxtPlugin(() => {
+  Upstep.init({
+    apiKey: "${apiKey}",
+    baseUrl: "${baseUrl}",
+  });
+});`,
+  svelte: (apiKey, baseUrl) => `<script lang="ts">
+  import { onMount } from "svelte";
+  import Upstep from "@upstep/js";
+
+  onMount(() => {
+    Upstep.init({
+      apiKey: "${apiKey}",
+      baseUrl: "${baseUrl}",
+    });
+  });
+</script>
+
+<slot />`,
   js: (apiKey, baseUrl) => `import Upstep from "@upstep/js";
 
 Upstep.init({
@@ -445,6 +510,32 @@ export default function App() {
     </FeedbackProvider>
   );
 }`,
+  flutter: (apiKey, baseUrl) => `import 'package:flutter/material.dart';
+import 'package:upstep_flutter/upstep_flutter.dart';
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Upstep(
+        apiKey: "${apiKey}",
+        baseUrl: "${baseUrl}",
+        child: Scaffold(
+          appBar: AppBar(title: const Text("Your app")),
+          body: Stack(
+            children: const [
+              Center(child: Text("Your app UI")),
+              FeedbackSheet(),
+              FeedbackButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}`,
 };
 
 const IDENTIFY_SNIPPET: Record<FrameworkId, string> = {
@@ -461,6 +552,41 @@ const { identify } = useUpstep();
 useEffect(() => {
   if (user) identify(user.id);
 }, [user]);`,
+  vue: `onMounted(() => {
+  Upstep.init({ apiKey: "...", userId: user.value?.id });
+});
+
+watch(
+  () => user.value?.id,
+  (id) => {
+    if (id) Upstep.identify(id);
+  },
+);`,
+  nuxt: `// plugins/upstep.client.ts
+export default defineNuxtPlugin(() => {
+  const user = useState<{ id?: string } | null>("auth-user");
+
+  Upstep.init({ apiKey: "...", userId: user.value?.id });
+
+  watch(
+    () => user.value?.id,
+    (id) => {
+      if (id) Upstep.identify(id);
+    },
+  );
+});`,
+  svelte: `import { onMount } from "svelte";
+import Upstep from "@upstep/js";
+
+export let user: { id?: string } | null = null;
+
+onMount(() => {
+  Upstep.init({ apiKey: "...", userId: user?.id });
+});
+
+$: if (user?.id) {
+  Upstep.identify(user.id);
+}`,
   js: `Upstep.init({ apiKey: "..." });
 
 // later, once the user logs in:
@@ -477,6 +603,13 @@ useEffect(() => {
   // Also makes their own PENDING items visible while awaiting review.
   if (user) identify(user.id);
 }, [user]);`,
+  flutter: `final upstep = Upstep.of(context, listen: false);
+
+@override
+void didUpdateWidget(covariant MyApp oldWidget) {
+  super.didUpdateWidget(oldWidget);
+  upstep.identify(user?.id);
+}`,
 };
 
 const TRIGGER_SNIPPET: Record<FrameworkId, string> = {
@@ -497,6 +630,27 @@ const { open } = useUpstep();
 // 2. Open it from your own UI:
 const { open } = useUpstep();
 <button onClick={open}>Send feedback</button>`,
+  vue: `onMounted(() => {
+  Upstep.init({ apiKey: "...", launcher: false });
+});
+
+function openFeedback() {
+  Upstep.open();
+}`,
+  nuxt: `// plugins/upstep.client.ts
+export default defineNuxtPlugin(() => {
+  Upstep.init({ apiKey: "...", launcher: false });
+});
+
+// any client component
+const openFeedback = () => Upstep.open();`,
+  svelte: `onMount(() => {
+  Upstep.init({ apiKey: "...", launcher: false });
+});
+
+function openFeedback() {
+  Upstep.open();
+}`,
   js: `// Turn the launcher off:
 Upstep.init({ apiKey: "...", launcher: false });
 
@@ -514,20 +668,62 @@ myButton.addEventListener("click", () => Upstep.open());`,
 // Open it from anywhere:
 const { openSheet } = useUpstep();
 <Pressable onPress={openSheet}><Text>Send feedback</Text></Pressable>`,
+  flutter: `final upstep = Upstep.of(context, listen: false);
+
+// Keep the sheet mounted once:
+const FeedbackSheet()
+
+// Hide the floating launcher by omitting FeedbackButton,
+// then open it from your own UI:
+FilledButton(
+  onPressed: upstep.openSheet,
+  child: const Text("Send feedback"),
+)`,
 };
 
 function buildAiPrompt(framework: FrameworkId, apiKey: string, baseUrl: string): string {
-  const pkg = framework === "native" ? "@upstep/react-native" : "@upstep/js";
+  const pkg =
+    framework === "native"
+      ? "@upstep/react-native"
+      : framework === "flutter"
+        ? "upstep_flutter"
+        : "@upstep/js";
   const install =
     framework === "native"
       ? "npm install @upstep/react-native @gorhom/bottom-sheet react-native-reanimated react-native-gesture-handler"
+      : framework === "flutter"
+        ? "flutter pub add upstep_flutter"
       : framework === "script"
         ? "(no install, loaded via <script>)"
         : "npm install @upstep/js";
+  const appLabel =
+    framework === "native"
+      ? "React Native"
+      : framework === "next"
+        ? "Next.js"
+        : framework === "vue"
+          ? "Vue"
+          : framework === "nuxt"
+            ? "Nuxt"
+            : framework === "svelte"
+              ? "SvelteKit"
+              : framework === "flutter"
+                ? "Flutter"
+              : "web";
+  const mountRule =
+    framework === "next"
+      ? 'Wrap the provider and widget in a "use client" component, they use browser APIs and cannot run in a Server Component.'
+      : framework === "nuxt"
+        ? "Mount Upstep from a .client.ts plugin so it only runs in the browser."
+        : framework === "vue"
+        ? "Call Upstep.init() inside onMounted() near the app root so SSR never touches browser APIs."
+        : framework === "svelte"
+            ? "Call Upstep.init() inside onMount() near the root layout so it only runs client-side."
+            : framework === "flutter"
+              ? "Wrap your app near the root with Upstep and keep FeedbackSheet mounted in the widget tree so openSheet() can present it from anywhere."
+            : "Mount the provider once at the app root so the widget is available on every screen.";
 
-  return `I want to integrate Upstep (a drop-in feedback & voting widget) into my ${
-    framework === "native" ? "React Native" : framework === "next" ? "Next.js" : "web"
-  } app. Before writing any code, ask me these questions one at a time and wait for my answers:
+  return `I want to integrate Upstep (a drop-in feedback & voting widget) into my ${appLabel} app. Before writing any code, ask me these questions one at a time and wait for my answers:
 
 1. Do users log in to this app? If yes, what does the signed-in user object look like and how do I access it (e.g. \`session.user.id\`, \`useUser().id\`, \`auth.currentUser.uid\`)?
 2. Where should the Feedback button appear, on every screen, or only specific pages?
@@ -546,7 +742,7 @@ ${SNIPPETS[framework](apiKey, baseUrl)}
 
 Rules to follow when writing the code:
 - If the user has a signed-in user id available, ALWAYS pass it as \`userId\` to the provider and call \`identify(userId)\` whenever auth state changes. This deduplicates votes per user and is strongly recommended.
-- ${framework === "next" ? 'Wrap the provider and widget in a "use client" component, they use browser APIs and cannot run in a Server Component.' : "Mount the provider once at the app root so the widget is available on every screen."}
+- ${mountRule}
 - The widget talks to ${baseUrl}/api/sdk/* using an x-api-key header. No extra backend setup is needed.
 - Change nothing else in the codebase, only add what is necessary to mount Upstep.
 

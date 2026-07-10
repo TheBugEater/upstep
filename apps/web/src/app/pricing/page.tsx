@@ -48,10 +48,10 @@ const PRICING_LD = {
     },
     {
       "@type": "Question",
-      name: "Does Upstep work with React Native?",
+      name: "Does Upstep work with React Native or Flutter?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Upstep ships a dedicated React Native SDK with shake-to-feedback support, available on all plans.",
+        text: "Yes. Upstep ships dedicated React Native and Flutter SDKs for mobile apps, available on all plans.",
       },
     },
   ],

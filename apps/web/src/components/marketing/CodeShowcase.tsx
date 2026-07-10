@@ -31,6 +31,32 @@ export default function App({ children }) {
 Upstep.init({ apiKey: "upstep_xxx" });`,
   },
   {
+    id: "vue",
+    label: "Vue",
+    lang: "vue",
+    code: `<script setup>
+import { onMounted } from "vue";
+import Upstep from "@upstep/js";
+
+onMounted(() => {
+  Upstep.init({ apiKey: "upstep_xxx" });
+});
+</script>`,
+  },
+  {
+    id: "svelte",
+    label: "SvelteKit",
+    lang: "svelte",
+    code: `<script>
+  import { onMount } from "svelte";
+  import Upstep from "@upstep/js";
+
+  onMount(() => {
+    Upstep.init({ apiKey: "upstep_xxx" });
+  });
+</script>`,
+  },
+  {
     id: "script",
     label: "Script tag",
     lang: "html",
@@ -56,6 +82,22 @@ export default function App() {
     </FeedbackProvider>
   );
 }`,
+  },
+  {
+    id: "flutter",
+    label: "Flutter",
+    lang: "dart",
+    code: `import 'package:flutter/material.dart';
+import 'package:upstep_flutter/upstep_flutter.dart';
+
+MaterialApp(
+  home: Upstep(
+    apiKey: "upstep_xxx",
+    child: Stack(
+      children: const [FeedbackSheet(), FeedbackButton()],
+    ),
+  ),
+);`,
   },
 ];
 

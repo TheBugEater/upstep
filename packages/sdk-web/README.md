@@ -1,6 +1,6 @@
 # @upstep/js
 
-A feedback widget for web apps: a floating button, a voting board, and a submit form, backed by your [Upstep](https://upstep.dev) project. Drops into a React app, a vanilla JS app, or a plain HTML page with no build step, in two lines of code.
+A feedback widget for web apps: a floating button, a voting board, and a submit form, backed by your [Upstep](https://upstep.dev) project. Drops into React, Next.js, Vue, Nuxt, SvelteKit, vanilla JS, or a plain HTML page with no build step, in two lines of code.
 
 ## Install
 
@@ -36,6 +36,19 @@ import Upstep from "@upstep/js";
 Upstep.init({ apiKey: "upstep_xxx" });
 ```
 
+### Vue / Nuxt / SvelteKit
+
+```ts
+import Upstep from "@upstep/js";
+
+Upstep.init({ apiKey: "upstep_xxx" });
+```
+
+Mount that once from the client-side root for your framework:
+- Vue: `onMounted()` in `App.vue`
+- Nuxt: `plugins/upstep.client.ts`
+- SvelteKit: `onMount()` in `src/routes/+layout.svelte`
+
 ### No build step (WordPress, Webflow, Shopify, static HTML)
 
 ```html
@@ -46,7 +59,7 @@ Upstep.init({ apiKey: "upstep_xxx" });
 ></script>
 ```
 
-All three report to the same project, so feedback from your React app, a script tag on your marketing site, and (if you add [`@upstep/react-native`](https://www.npmjs.com/package/@upstep/react-native)) your mobile app all land on one board, sorted by votes.
+All of these report to the same project, so feedback from your React app, your Nuxt marketing site, a script tag on a static page, and (if you add [`@upstep/react-native`](https://www.npmjs.com/package/@upstep/react-native) or [`upstep_flutter`](https://pub.dev/packages/upstep_flutter)) your mobile app all land on one board, sorted by votes.
 
 ## Configuration
 
@@ -80,5 +93,7 @@ Every entry point (`Upstep.init`, `<UpstepProvider>`, and the script tag's `data
 ## Links
 
 - [Full documentation](https://upstep.dev/#integrate)
+- [Platform integration guides](https://upstep.dev/integrations)
 - [Dashboard / sign up](https://upstep.dev/login)
 - [@upstep/react-native](https://www.npmjs.com/package/@upstep/react-native) for React Native apps
+- [upstep_flutter](https://pub.dev/packages/upstep_flutter) for Flutter apps

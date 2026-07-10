@@ -375,4 +375,47 @@ export default function App() {
   );
 }`,
   },
+
+  flutter: {
+    slug: "flutter",
+    name: "Flutter",
+    category: "Mobile",
+    headline: "Feedback SDK for Flutter apps",
+    intro:
+      "A dedicated Flutter package with an inherited controller, a floating launcher, and a bottom-sheet feedback flow that talks to the same Upstep project as your web app.",
+    steps: [
+      "Install: flutter pub add upstep_flutter",
+      "Wrap your app near the root with Upstep(apiKey: ...)",
+      "Keep FeedbackSheet() and FeedbackButton() mounted in the same subtree, or open the sheet from your own button via Upstep.of(context).openSheet()",
+    ],
+    codeLang: "dart",
+    code: `import 'package:flutter/material.dart';
+import 'package:upstep_flutter/upstep_flutter.dart';
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Upstep(
+        apiKey: "upstep_xxx",
+        child: Scaffold(
+          appBar: AppBar(title: const Text("Upstep demo")),
+          body: Stack(
+            children: const [
+              Center(child: Text("Your app")),
+              FeedbackSheet(),
+              FeedbackButton(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}`,
+    notes: [
+      "The Flutter SDK persists an anonymous visitor id locally for vote dedupe, then switches cleanly to userId when you call identify() after login.",
+    ],
+  },
 };

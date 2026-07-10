@@ -71,7 +71,7 @@ export const PLANS: Record<PlanId, Plan> = {
       "1 project",
       "Up to 100 feedback items",
       "Up & down voting",
-      "Web & React Native SDKs",
+      "Web, React Native & Flutter SDKs",
       "Widget customization (color, theme, position)",
       "Community support",
     ],
