@@ -258,10 +258,10 @@ function BoardCard({
           {item.labels.map((l) => (
             <span
               key={l.id}
-              className="text-[10px] px-1.5 py-0.5 rounded-full text-white font-medium"
-              style={{ backgroundColor: l.color }}
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold border"
+              style={{ backgroundColor: `${l.color}18`, borderColor: `${l.color}55`, color: l.color }}
             >
-              {l.name}
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: l.color }} />{l.name}
             </span>
           ))}
         </div>

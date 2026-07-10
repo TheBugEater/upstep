@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { SetupGuideButton } from "@/components/dashboard/SetupGuide";
 import { ProjectWorkspace } from "@/components/workspace/ProjectWorkspace";
 
 export default async function ProjectPage({
@@ -87,22 +86,16 @@ export default async function ProjectPage({
     <div className="min-h-screen bg-canvas">
       <DashboardHeader email={session.user.email} />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <Link
           href="/dashboard"
-          className="text-xs text-muted hover:text-ink transition inline-flex items-center gap-1 mb-3"
+          className="text-xs text-muted hover:text-ink transition inline-flex items-center gap-1 mb-2"
         >
           ← All projects
         </Link>
 
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <h1 className="font-serif text-2xl sm:text-3xl tracking-tight text-ink min-w-0 truncate">
-            {project.name}
-          </h1>
-          {isOwner && <SetupGuideButton apiKey={project.apiKey} baseUrl={baseUrl} />}
-        </div>
-
         <ProjectWorkspace
+          projectName={project.name}
           projectId={id}
           projectSlug={project.slug}
           apiKey={project.apiKey}

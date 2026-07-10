@@ -6,6 +6,7 @@ import type { BoardFilters, ProjectBoard, ProjectStatus, WorkspaceItem } from "@
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import { IntegrationsTab } from "@/components/dashboard/IntegrationsTab";
 import { McpCard } from "@/components/dashboard/McpCard";
+import { SetupGuideButton } from "@/components/dashboard/SetupGuide";
 import { BoardView } from "./BoardView";
 import { ListView } from "./ListView";
 import { DetailDrawer } from "./DetailDrawer";
@@ -51,6 +52,7 @@ export interface WorkspaceActions {
 }
 
 interface Props {
+  projectName: string;
   projectId: string;
   projectSlug: string;
   apiKey: string;
@@ -67,6 +69,7 @@ interface Props {
 }
 
 export function ProjectWorkspace({
+  projectName,
   projectId,
   projectSlug,
   apiKey,
@@ -474,6 +477,8 @@ export function ProjectWorkspace({
       </div>
       {isOwner && (
         <div className="hidden lg:block mt-3 rounded-2xl border border-line bg-card p-3 shadow-soft">
+          <SetupGuideButton apiKey={apiKey} baseUrl={baseUrl} sidebar />
+          <div className="border-t border-line my-2" />
           <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-faint">Manage board</p>
           <SideAction onClick={() => setShowStatuses(true)}>Statuses</SideAction>
           <SideAction onClick={() => setShowLabels(true)}>Labels</SideAction>
@@ -489,8 +494,12 @@ export function ProjectWorkspace({
 
       {tab === "feedback" && (
         <div>
-          {/* Board switcher row */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {/* Project name and board switcher share one compact header. */}
+          <div className="flex items-center gap-3 mb-3 min-w-0">
+            <h1 className="font-serif text-xl sm:text-2xl tracking-tight text-ink truncate shrink-0 max-w-[38%]">
+              {projectName}
+            </h1>
+            <span className="h-5 w-px bg-line shrink-0" />
             <div className="flex items-center gap-1 min-w-0 overflow-x-auto scrollbar-none">
               {boards.map((b) => (
                 <button
@@ -588,20 +597,14 @@ export function ProjectWorkspace({
             </div>
 
             {labels.length > 0 && (
-              <select
-                value={labelFilter ?? ""}
-                onChange={(e) => setLabelFilter(e.target.value || null)}
-                className={`text-xs rounded-xl border py-2 pl-2.5 pr-7 bg-card focus:outline-none transition cursor-pointer ${
-                  labelFilter ? "border-clay/50 text-clay font-medium" : "border-line text-muted"
-                }`}
-              >
-                <option value="">All labels</option>
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none max-w-full" aria-label="Filter by label">
+                <button onClick={() => setLabelFilter(null)} className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition ${!labelFilter ? "bg-primary text-primary-fg border-primary" : "bg-card text-muted border-line hover:text-ink"}`}>All labels</button>
                 {labels.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
+                  <button key={l.id} onClick={() => setLabelFilter(labelFilter === l.id ? null : l.id)} className={`shrink-0 inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full border font-medium transition ${labelFilter === l.id ? "text-ink border-line-strong shadow-soft" : "bg-card text-muted border-line hover:text-ink"}`} style={labelFilter === l.id ? { backgroundColor: `${l.color}20`, borderColor: `${l.color}80` } : undefined}>
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: l.color }} />{l.name}
+                  </button>
                 ))}
-              </select>
+              </div>
             )}
 
             <button

@@ -24,10 +24,12 @@ export function SetupGuideButton({
   apiKey,
   baseUrl,
   defaultOpen = false,
+  sidebar = false,
 }: {
   apiKey: string;
   baseUrl: string;
   defaultOpen?: boolean;
+  sidebar?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const { step } = useOnRamp();
@@ -54,10 +56,10 @@ export function SetupGuideButton({
     <>
       <button
         onClick={() => { step("setup_guide_opened"); setOpen(true); }}
-        className="inline-flex items-center gap-1.5 bg-card border border-line rounded-full px-3 sm:px-4 py-2 text-sm font-medium text-ink hover:bg-surface hover:border-line-strong transition shadow-soft shrink-0"
+        className={sidebar ? "w-full inline-flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold text-clay hover:bg-clay/10 transition" : "inline-flex items-center gap-1.5 bg-card border border-line rounded-full px-3 sm:px-4 py-2 text-sm font-medium text-ink hover:bg-surface hover:border-line-strong transition shadow-soft shrink-0"}
       >
         <span className="text-clay">⚙</span>
-        <span className="hidden sm:inline">Setup guide</span>
+        <span className={sidebar ? "inline" : "hidden sm:inline"}>Setup guide</span>
       </button>
 
       {open && (
