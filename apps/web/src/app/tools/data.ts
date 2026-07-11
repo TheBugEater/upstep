@@ -20,4 +20,11 @@ export const TOOLS: Record<string, Tool> = {
     description:
       "Generate a lightweight floating feedback button in seconds. No account, no backend, just a script tag you paste into your site.",
   },
+  "public-roadmap-template": {
+    slug: "public-roadmap-template",
+    name: "Public Roadmap Template",
+    tagline: "Plan a roadmap people can understand",
+    description:
+      "Build and copy a clear Now, Next, Later roadmap with status guidance and stakeholder-ready Markdown. Free and private in your browser.",
+  },
 };

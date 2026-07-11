@@ -12,6 +12,7 @@ const NAV_LINKS: [string, string][] = [
   ["Developers", "/#integrate"],
   ["Pricing", "/pricing"],
   ["Free tools", "/tools"],
+  ["Guides", "/guides"],
 ];
 
 export function Nav() {

@@ -1,0 +1,9 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Nav } from "@/components/marketing/Nav";
+import { Footer } from "@/components/marketing/Footer";
+import { GUIDES } from "./data";
+
+export const metadata: Metadata = { title: "Developer Guides for Product Feedback", description: "Tested guides for adding feedback collection, feature voting, public roadmaps, and MCP workflows to web and mobile apps.", alternates: { canonical: "/guides" } };
+
+export default function Page() { return <div className="min-h-screen bg-canvas"><Nav /><main className="max-w-4xl mx-auto px-6 py-20"><span className="text-xs font-semibold uppercase tracking-wide text-clay">Developer resources</span><h1 className="font-serif text-4xl sm:text-5xl text-ink mt-3 mb-5">Build feedback into your product</h1><p className="text-lg text-muted max-w-2xl mb-12">Practical implementation guides for collecting feedback where users already work—and connecting it to the tools your team uses.</p><div className="grid sm:grid-cols-2 gap-4">{Object.values(GUIDES).map((g) => <Link key={g.slug} href={`/guides/${g.slug}`} className="group rounded-2xl border border-line bg-card p-6 shadow-soft hover:shadow-lift transition"><span className="text-xs font-semibold text-clay">{g.category} · {g.minutes} min</span><h2 className="text-lg font-semibold text-ink mt-2 group-hover:text-clay transition">{g.title}</h2><p className="text-sm text-muted mt-2 leading-relaxed">{g.description}</p><span className="inline-block text-sm font-medium text-clay mt-4">Read guide →</span></Link>)}</div><div className="mt-14 border-t border-line pt-8"><p className="text-sm text-muted">Planning what to build first? Try the free <Link href="/tools/rice-calculator" className="text-clay">RICE calculator</Link> or create a <Link href="/tools/public-roadmap-template" className="text-clay">Now, Next, Later roadmap</Link>.</p></div></main><Footer /></div> }

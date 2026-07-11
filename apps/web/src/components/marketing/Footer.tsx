@@ -29,6 +29,7 @@ export function Footer() {
             title="Resources"
             links={[
               ["Documentation", "/#integrate"],
+              ["Developer guides", "/guides"],
               ["MCP server", "/#mcp"],
               ["Integrations", "/integrations"],
               ["@upstep/js on npm", "https://www.npmjs.com/package/@upstep/js"],
