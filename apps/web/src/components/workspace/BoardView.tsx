@@ -63,6 +63,12 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props
               }
               setDragId(null);
               setOverColId(null);
+              // Some browsers do not reliably fire dragend after a successful
+              // drop. Clear the click guard here as well so the card can be
+              // opened normally after it has been moved.
+              setTimeout(() => {
+                draggingRef.current = false;
+              }, 0);
             }}
             className={`flex-shrink-0 w-72 rounded-2xl border self-start transition-all duration-300 ease-fluid ${
               isOver
@@ -120,6 +126,9 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props
                     item={f}
                     isDragging={dragId === f.id}
                     justDropped={justDroppedId === f.id}
+                    onPointerDown={() => {
+                      draggingRef.current = false;
+                    }}
                     onDragStart={() => {
                       setDragId(f.id);
                       draggingRef.current = true;
@@ -225,6 +234,7 @@ function BoardCard({
   item,
   isDragging,
   justDropped,
+  onPointerDown,
   onDragStart,
   onDragEnd,
   onClick,
@@ -232,6 +242,7 @@ function BoardCard({
   item: WorkspaceItem;
   isDragging: boolean;
   justDropped: boolean;
+  onPointerDown: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
   onClick: () => void;
@@ -239,6 +250,7 @@ function BoardCard({
   return (
     <article
       draggable
+      onPointerDown={onPointerDown}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
