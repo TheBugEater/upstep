@@ -29,6 +29,14 @@ const BASE_URL = (process.env.AUTH_URL ?? "https://upstep.dev").replace(/\/$/, "
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "256x256" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: "/favicon.ico",
+  },
   title: {
     default: "Upstep | Feedback Widget & Voting for Web and Mobile Apps",
     template: "%s | Upstep",
