@@ -276,4 +276,115 @@ codex mcp add upstep --url https://upstep.dev/api/mcp \\
       { issue: "The agent made a customer-visible change too early.", answer: "Use prompt constraints: start read-only, create internal tasks by default, and require a human review before comments or public-status changes." },
     ],
   },
+  "feedback-widget-react-native": {
+    slug: "feedback-widget-react-native",
+    title: "Add feedback and feature voting to a React Native app",
+    description: "Build a native feedback flow in React Native with a provider, bottom sheet, user identity, custom triggers, and production-ready testing.",
+    category: "React Native",
+    minutes: 12,
+    intro: "This integration keeps feedback in the app your customer is already using. The default launcher opens a bottom sheet with a request form and voting board, backed by the same Upstep project as web and mobile clients.",
+    prerequisites: ["A React Native or Expo application", "A project API key from Upstep", "react-native-safe-area-context installed in the app"],
+    sections: [
+      { title: "Install the SDK and safe-area dependency", body: "The sheet needs safe-area information to avoid notches, home indicators, and navigation bars. Install both packages before wiring the provider.", code: "npm install @upstep/react-native react-native-safe-area-context", checklist: ["Rebuild the native app after adding a native dependency.", "Use the same package manager your app already uses."] },
+      { title: "Wrap the application once", body: "FeedbackProvider owns the API client and sheet state. Place it high enough that any signed-in screen can open feedback, but do not mount multiple providers for the same project.", code: `import { FeedbackProvider, FeedbackButton, FeedbackSheet } from "@upstep/react-native";
+
+export default function App() {
+  return (
+    <FeedbackProvider apiKey={process.env.EXPO_PUBLIC_UPSTEP_KEY!}>
+      <AppNavigator />
+      <FeedbackButton />
+      <FeedbackSheet />
+    </FeedbackProvider>
+  );
+}` },
+      { title: "Use a build-time environment variable", body: "Expose only the Upstep project key to the client. Keep your database, payment, and authentication secrets server-side. For Expo, use an EXPO_PUBLIC variable; for bare React Native, inject configuration with your existing build configuration.", code: `# .env
+EXPO_PUBLIC_UPSTEP_KEY=upstep_your_project_key`, details: ["Create a separate Upstep project for staging.", "Confirm the production key is set in the CI release environment."] },
+      { title: "Identify a customer after authentication", body: "A stable internal ID lets the SDK associate feedback and deduplicate votes. The provider can receive userId initially, or you can identify a user later through the hook once your session has loaded.", code: `import { useEffect } from "react";
+import { useUpstep } from "@upstep/react-native";
+
+function SyncFeedbackIdentity({ userId }: { userId?: string }) {
+  const { identify } = useUpstep();
+  useEffect(() => identify(userId), [identify, userId]);
+  return null;
+}` },
+      { title: "Open feedback from your own interface", body: "The floating launcher is optional. Use the same sheet from a Settings row, help center, or error screen so feedback appears at the moment a customer has context to share.", code: `import { useUpstep } from "@upstep/react-native";
+
+function HelpRow() {
+  const { openSheet } = useUpstep();
+  return <Pressable onPress={openSheet}><Text>Send feedback</Text></Pressable>;
+}` },
+      { title: "Tune the default launcher", body: "If you retain the default button, it can be positioned and labeled to match the app. Keep it clear of your tab bar and avoid using a label that competes with support or account actions.", code: `<FeedbackButton
+  position="bottom-right"
+  label="Share feedback"
+/>` },
+      { title: "Test on physical devices", body: "Use a real Android device and iPhone before release. Check keyboard behaviour, safe areas, anonymous submission, identified voting, and a slow network connection.", checklist: ["The sheet does not sit behind a tab bar or home indicator.", "Feedback creates an item in the intended project.", "A vote updates and stays after reopening the sheet.", "The app remains usable if the feedback API is temporarily unavailable."] },
+    ],
+    troubleshooting: [
+      { issue: "The provider cannot find safe-area context.", answer: "Ensure react-native-safe-area-context is installed and your app has its usual SafeAreaProvider where required." },
+      { issue: "The button opens but no feedback is shown.", answer: "Confirm FeedbackSheet is mounted inside the same FeedbackProvider as the button." },
+      { issue: "The production build uses the wrong project.", answer: "Check the release environment variable and use a dedicated staging project rather than sharing a production key during QA." },
+    ],
+  },
+  "how-to-build-a-public-roadmap": {
+    slug: "how-to-build-a-public-roadmap",
+    title: "Build a public roadmap customers can trust",
+    description: "Set up a customer-friendly public roadmap without false promises: decide what to publish, use clear statuses, collect votes, and maintain it over time.",
+    category: "Product management",
+    minutes: 10,
+    intro: "A good public roadmap explains direction and progress. It is not a delivery contract or a dump of every internal task. This guide uses Upstep’s feedback board and roadmap workflow to create a useful, maintainable customer view.",
+    prerequisites: ["An Upstep project with at least two workflow statuses", "A clear owner for roadmap decisions", "A shortlist of customer-visible initiatives"],
+    sections: [
+      { title: "Choose the promise your roadmap makes", body: "Decide whether the roadmap communicates broad direction, confirmed work, or release timing. Most early products should communicate direction with broad horizons rather than calendar dates. Customers need to understand what is being considered and what is actively underway—not a promise you cannot keep.", details: ["Now: active, committed work.", "Next: validated work that may change order.", "Later: promising problems that need more evidence."] },
+      { title: "Keep internal tasks separate", body: "Do not publish every engineering task, security fix, dependency upgrade, or half-formed idea. Create internal tasks for implementation work and publish only customer-meaningful outcomes. Upstep internal items stay on the team board and out of the public feedback experience.", checklist: ["Every public item describes a customer outcome.", "Internal subtasks are marked Dev-only.", "Sensitive fixes are never exposed before the relevant release." ] },
+      { title: "Define statuses customers understand", body: "Use short, plain-language status names. Your public status should answer a customer’s question: is this idea being considered, actively built, or complete? Avoid internal acronyms and engineering-specific workflow names.", code: `Suggested public statuses
+
+Under consideration
+Planned
+In progress
+Shipped` },
+      { title: "Collect votes as evidence, not a referendum", body: "Votes reveal concentration of demand, but they do not replace product strategy. Combine vote count with customer segment, revenue impact, support frequency, effort, and confidence. The highest-voted request may not be the next thing to ship.", details: ["Use votes to find duplicate demand.", "Ask follow-up questions before committing to broad requests.", "Score comparable initiatives with the free RICE calculator."] },
+      { title: "Explain movement on the roadmap", body: "When an item changes status, add a concise team comment when useful. Customers tolerate a changed order much better when they can see the reasoning: a dependency, a stronger customer need, or newly discovered scope.", code: `Example update
+
+We moved this into Planned after hearing the same request from teams managing multiple workspaces. We are validating the first version now and will share timing once the scope is confirmed.` },
+      { title: "Share the right entry point", body: "Link to the public roadmap from your Help, changelog, in-product feedback launcher, or customer email. Do not force customers to hunt for it. The same feedback flow should let them submit an idea, vote for an existing request, and follow progress.", checklist: ["The roadmap link is reachable from the product.", "New feedback lands in a reviewable inbox or first board column.", "Customers can vote for existing requests instead of submitting duplicates."] },
+      { title: "Run a lightweight maintenance ritual", body: "Review public items on a regular cadence. Archive stale requests, consolidate duplicates, promote validated work, and mark shipped outcomes promptly. A small honest roadmap maintained monthly is more credible than a detailed one that has not changed in a year." },
+    ],
+    troubleshooting: [
+      { issue: "Customers think a planned item has a guaranteed date.", answer: "Use horizon language, avoid dates until confidence is high, and explain the meaning of each status near the roadmap." },
+      { issue: "The roadmap is overwhelmed by duplicate requests.", answer: "Merge or link duplicates during triage and direct customers to vote for the canonical item." },
+      { issue: "The team stops updating it.", answer: "Assign a single owner and make roadmap review part of the existing weekly or monthly product review." },
+    ],
+  },
+  "product-feedback-triage": {
+    slug: "product-feedback-triage",
+    title: "Create a product-feedback triage workflow that scales",
+    description: "Turn raw requests, bug reports, and votes into a consistent weekly product-feedback workflow without losing customer context.",
+    category: "Product management",
+    minutes: 11,
+    intro: "Feedback becomes valuable only after it is consistently reviewed. This workflow gives small teams a simple system for classifying requests, deduplicating demand, making decisions, and closing the loop with customers.",
+    prerequisites: ["An Upstep project receiving customer feedback", "One owner for the weekly review", "Basic statuses and labels in the feedback board"],
+    sections: [
+      { title: "Start with a small workflow", body: "Use only the states your team can keep current. A simple workflow reduces ambiguity and makes your board readable during a quick weekly review.", code: `Suggested internal workflow
+
+New → Reviewing → Planned → In progress → Done
+
+Optional: Needs more context` },
+      { title: "Classify the incoming item", body: "During triage, first decide whether the item is a bug, feature request, or general feedback. Then add labels for the affected area, customer segment, platform, or urgency. Classification makes later analysis possible without turning every submission into a lengthy form.", details: ["Use a small stable label set such as Billing, Mobile, Onboarding, and Integrations.", "Reserve urgent for genuine time-sensitive customer impact.", "Keep customer wording in the original item rather than rewriting away useful context."] },
+      { title: "Find duplicate demand", body: "Search before creating a new canonical request. When several people ask for the same outcome, consolidate their demand around one item, retain the useful details, and use the vote total as a clear signal. Do not delete a report that contains distinct reproduction steps or customer context." },
+      { title: "Ask for the missing decision context", body: "A request such as make exports better is not enough to plan. Ask what the customer is trying to accomplish, what happens today, who is affected, and how often. Add the answer as a comment or internal note before moving the item to Planned.", code: `Useful follow-up questions
+
+• What outcome are you trying to achieve?
+• What is the current workaround?
+• How often does this block you?
+• Which part of the product are you using when it happens?` },
+      { title: "Prioritize with a repeatable decision", body: "Use votes as one input, then compare reach, impact, confidence, effort, strategic fit, and urgency. For comparable feature requests, put the assumptions into a RICE score so the team can discuss the inputs rather than argue about a mysterious ranking.", details: ["Use the RICE calculator for a quick shared score.", "Treat bugs with severe customer impact separately from feature scoring.", "Document why an item was deferred when that context will matter later."] },
+      { title: "Create implementation work without leaking it", body: "When a request is selected, create an internal development task and link its purpose to the customer-facing request. Keep the public item readable; implementation subtasks, estimates, and investigation notes belong on the internal board.", checklist: ["The customer-facing request has the right status.", "Implementation work is internal.", "The owner and next review date are clear."] },
+      { title: "Close the loop after shipping", body: "Mark the request Done, add a brief release note or comment, and thank the people who raised it when appropriate. This makes voting feel worthwhile and trains customers to keep sharing higher-quality feedback." },
+    ],
+    troubleshooting: [
+      { issue: "Everything becomes high priority.", answer: "Define an explicit urgent threshold such as a security issue, data loss, or a widespread blocked workflow. Keep all other work in the normal comparison process." },
+      { issue: "The board has hundreds of untouched requests.", answer: "Create a weekly triage block, archive truly stale items, and consolidate duplicates before adding new process states." },
+      { issue: "Customers stop submitting useful detail.", answer: "Show that good feedback leads to follow-up, decisions, and shipped updates. A visible response loop improves future submissions." },
+    ],
+  },
 };
