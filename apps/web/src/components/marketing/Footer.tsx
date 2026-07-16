@@ -64,7 +64,16 @@ export function Footer() {
 
         <div className="mt-12 pt-6 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-faint">
           <p>© {new Date().getFullYear()} Upstep. All rights reserved.</p>
-          <p>Built for builders.</p>
+          <p>
+            Built for builders. Analytics by{" "}
+            <a
+              href="https://getonramp.dev"
+              className="hover:text-ink transition"
+            >
+              Onramp
+            </a>
+            .
+          </p>
         </div>
       </div>
     </footer>
