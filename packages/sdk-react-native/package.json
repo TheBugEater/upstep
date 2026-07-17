@@ -1,0 +1,46 @@
+{
+  "name": "@upstep/react-native",
+  "version": "0.6.13",
+  "description": "Upstep feedback SDK for React Native",
+  "homepage": "https://upstep.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheBugEater/upstep.git",
+    "directory": "packages/sdk-react-native"
+  },
+  "bugs": "https://github.com/TheBugEater/upstep/issues",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "require": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@upstep/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@react-native-async-storage/async-storage": ">=1.18",
+    "react": ">=18",
+    "react-native": ">=0.73",
+    "react-native-safe-area-context": ">=4"
+  },
+  "devDependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@types/react": "^19.0.7",
+    "@types/react-native": "^0.73.0",
+    "react-native-safe-area-context": "^5.8.0",
+    "typescript": "^5.7.3"
+  },
+  "keywords": [
+    "react-native",
+    "feedback",
+    "upstep"
+  ],
+  "license": "MIT"
+}

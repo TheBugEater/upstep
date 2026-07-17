@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: upstep
+      POSTGRES_USER: upstep
+      POSTGRES_PASSWORD: upstep-local
+    volumes:
+      - upstep-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U upstep -d upstep"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build: .
+    env_file: apps/web/.env
+    environment:
+      DATABASE_URL: postgresql://upstep:upstep-local@postgres:5432/upstep
+      DIRECT_URL: postgresql://upstep:upstep-local@postgres:5432/upstep
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  notifications:
+    build: .
+    env_file: apps/web/.env
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        while true; do
+          sleep 60;
+          wget -qO- --header="Authorization: Bearer $$CRON_SECRET"
+          --post-data="" http://web:3000/api/internal/notifications || true;
+        done
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  upstep-postgres:

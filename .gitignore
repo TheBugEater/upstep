@@ -1,0 +1,45 @@
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+dist
+.turbo
+build
+out
+
+# Environment — keep .env.example committed as a template
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea
+.vscode
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Local browser captures
+.playwright-cli
+
+# Prisma generated client (regenerated via postinstall)
+apps/web/src/generated
+
+# pnpm
+.pnpm-store
+
+# Private go-to-market research is intentionally kept outside the public repo
+marketing/backlinks/
+
+# Dart / Flutter
+.dart_tool
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock

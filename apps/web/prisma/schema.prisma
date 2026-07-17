@@ -1,0 +1,340 @@
+// After changing this file, always create a migration:
+//   pnpm --filter @upstep/web exec prisma migrate dev --name <description>
+// Never use `prisma db push` for a change meant to ship — it syncs the dev
+// database directly and creates no migration file, so Railway's deploy step
+// (`prisma migrate deploy`, see railway.toml) has nothing to apply and
+// production silently falls behind the schema until it errors at runtime.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth (NextAuth / Auth.js) ────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Core models ─────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+
+  // Billing
+  plan                 Plan    @default(FREE)
+  stripeCustomerId     String? @unique
+  stripeSubscriptionId String?
+
+  accounts    Account[]
+  sessions    Session[]
+  projects    Project[]
+  memberships ProjectMember[]
+}
+
+model Project {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  // Public publishable key embedded in browser/mobile SDKs. Never grants
+  // dashboard or MCP write access.
+  apiKey     String   @unique @default(cuid())
+  // SHA-256 digest of the separately generated MCP secret. The plaintext is
+  // returned once and never stored.
+  mcpKeyHash String?  @unique
+  ownerId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // When true, new feedback is held as PENDING until the owner approves it.
+  moderationEnabled Boolean @default(true)
+
+  owner        User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  feedback     Feedback[]
+  members      ProjectMember[]
+  integrations Integration[]
+  labels       Label[]
+  statuses     Status[]
+  boards       Board[]
+
+  @@index([ownerId, updatedAt])
+}
+
+model Feedback {
+  id          String         @id @default(cuid())
+  projectId   String
+  title       String? // short subject line (optional; used by the RN widget)
+  content     String         @db.Text
+  type        FeedbackType   @default(GENERAL)
+  status      FeedbackStatus @default(OPEN)
+  statusId    String?
+  endUserId   String?
+  anonymousId String?
+  upvotes     Int            @default(0)
+  downvotes   Int            @default(0)
+  flagged     Boolean        @default(false)
+  internal    Boolean        @default(false)
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  boardStatus Status?   @relation("FeedbackBoardStatus", fields: [statusId], references: [id], onDelete: SetNull)
+  votes       Vote[]
+  comments    Comment[]
+  labels      Label[]
+
+  @@index([projectId, createdAt])
+  @@index([projectId, status, createdAt])
+  @@index([projectId, statusId])
+  @@index([projectId, upvotes])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  feedbackId String
+  content    String   @db.Text
+  authorName String? // display name shown in the SDK
+  isOwner    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId, createdAt])
+}
+
+model Vote {
+  id          String    @id @default(cuid())
+  feedbackId  String
+  value       VoteValue
+  endUserId   String?
+  // Client-persisted anonymous visitor id, sent by the SDK when identify()
+  // hasn't been called. Lets us dedupe votes from logged-out visitors the
+  // same way endUserId dedupes identified ones.
+  anonymousId String?
+  fingerprint String?
+  createdAt   DateTime  @default(now())
+
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  // One vote per identified user per feedback item
+  @@unique([feedbackId, endUserId])
+  // One vote per anonymous visitor per feedback item
+  @@unique([feedbackId, anonymousId])
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE
+  GENERAL
+}
+
+enum FeedbackStatus {
+  PENDING
+  OPEN
+  IN_PROGRESS
+  DONE
+  CLOSED
+}
+
+enum VoteValue {
+  UP
+  DOWN
+}
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum MemberRole {
+  OWNER
+  MEMBER
+}
+
+model ProjectMember {
+  id        String     @id @default(cuid())
+  projectId String
+  userId    String
+  role      MemberRole @default(MEMBER)
+  createdAt DateTime   @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model Integration {
+  id         String             @id @default(cuid())
+  projectId  String
+  project    Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type       IntegrationType
+  name       String?
+  webhookUrl String
+  events     IntegrationEvent[]
+  enabled    Boolean            @default(true)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@index([projectId])
+}
+
+enum IntegrationType {
+  SLACK
+  DISCORD
+  WEBHOOK
+}
+
+model Label {
+  id        String     @id @default(cuid())
+  projectId String
+  name      String
+  color     String     @default("#6366f1")
+  createdAt DateTime   @default(now())
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  feedbacks Feedback[]
+
+  @@unique([projectId, name])
+}
+
+enum IntegrationEvent {
+  NEW_FEEDBACK
+  STATUS_CHANGED
+  NEW_VOTE
+  NEW_COMMENT
+}
+
+// ─── Custom statuses & boards ─────────────────────────────────────────────────
+
+model Status {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  color     String   @default("#94a3b8")
+  order     Int      @default(0)
+  isDone    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  feedbacks    Feedback[]    @relation("FeedbackBoardStatus")
+  boardColumns BoardColumn[]
+
+  @@unique([projectId, name])
+  @@index([projectId, order])
+}
+
+model Board {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  isDefault Boolean  @default(false)
+  // Non-default boards can narrow what shows up on them (labels, types, a
+  // date range). The default/main board always ignores this and shows
+  // everything, so it stays null for that board.
+  filters   Json?
+  // At most one board per project may be public at a time; the /p/[slug]/roadmap
+  // page renders whichever board has this set.
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  columns BoardColumn[]
+
+  @@index([projectId, createdAt])
+}
+
+model BoardColumn {
+  id       String @id @default(cuid())
+  boardId  String
+  statusId String
+  order    Int    @default(0)
+
+  board  Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  status Status @relation(fields: [statusId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, order])
+}
+
+// ─── Infrastructure ──────────────────────────────────────────────────────────
+
+enum NotificationJobType {
+  INTEGRATION
+  EMAIL
+}
+
+enum NotificationJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model NotificationJob {
+  id          String                @id @default(cuid())
+  type        NotificationJobType
+  payload     Json
+  status      NotificationJobStatus @default(PENDING)
+  attempts    Int                   @default(0)
+  availableAt DateTime              @default(now())
+  lockedAt    DateTime?
+  lastError   String?               @db.Text
+  createdAt   DateTime              @default(now())
+  completedAt DateTime?
+
+  @@index([status, availableAt])
+  @@index([createdAt])
+}
+
+model RateLimitBucket {
+  key       String   @id
+  count     Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+}

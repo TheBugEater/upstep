@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design tokens ──────────────────────────────────────────────────────────
+   Warm cream light theme / warm charcoal dark theme, orange brand accent.
+   RGB triplets so Tailwind opacity modifiers (e.g. bg-clay/10) keep working. */
+:root {
+  --c-canvas: 250 248 242;        /* #FAF8F2 */
+  --c-surface: 243 240 236;       /* #F3F0EC */
+  --c-card: 253 252 247;          /* #FDFCF7 */
+  --c-line: 232 228 223;          /* #E8E4DF */
+  --c-line-strong: 216 212 206;   /* #D8D4CE */
+  --c-ink: 44 46 48;              /* #2C2E30 */
+  --c-ink-soft: 71 73 75;         /* #47494B */
+  --c-muted: 99 91 84;            /* #635B54 */
+  --c-faint: 155 144 132;         /* #9B9084 */
+  --c-clay: 224 90 51;            /* #E05A33 */
+  --c-clay-hover: 201 78 43;      /* #C94E2B */
+  --c-clay-dark: 182 69 38;       /* #B64526 */
+  --c-clay-tint: 253 241 236;     /* #FDF1EC */
+  --c-clay-tint2: 250 224 213;    /* #FAE0D5 */
+  --c-primary: 44 46 48;          /* near-black action */
+  --c-primary-fg: 253 252 244;    /* cream text on primary */
+  --c-success: 26 127 55;         /* #1A7F37 */
+  --c-warning: 217 119 8;         /* #D97708 */
+  --c-danger: 220 53 69;          /* #DC3545 */
+  --c-info: 58 143 200;           /* #3A8FC8 */
+
+  --shadow-soft: 0 1px 2px rgba(30, 25, 20, 0.04), 0 4px 16px rgba(30, 25, 20, 0.05);
+  --shadow-lift: 0 2px 4px rgba(30, 25, 20, 0.05), 0 16px 40px rgba(30, 25, 20, 0.1);
+  --grid-dot: #e2ddd4;
+  --scrollbar-track: #f3f0ec;
+  --scrollbar-thumb: #d8d4ce;
+  --scrollbar-thumb-hover: #c6c1b8;
+
+  color-scheme: light;
+}
+
+.dark {
+  --c-canvas: 22 21 19;           /* #161513 */
+  --c-surface: 33 31 28;          /* #211F1C */
+  --c-card: 28 27 25;             /* #1C1B19 */
+  --c-line: 42 40 37;             /* #2A2825 */
+  --c-line-strong: 58 54 48;      /* #3A3630 */
+  --c-ink: 231 226 218;           /* #E7E2DA */
+  --c-ink-soft: 216 212 206;      /* #D8D4CE */
+  --c-muted: 155 144 132;         /* #9B9084 */
+  --c-faint: 115 107 100;         /* #736B64 */
+  --c-clay: 224 90 51;            /* brand stays */
+  --c-clay-hover: 240 110 72;     /* #F06E48 — lighten on hover in dark */
+  --c-clay-dark: 201 78 43;
+  --c-clay-tint: 58 33 25;        /* brand-washed dark surface */
+  --c-clay-tint2: 76 41 29;
+  --c-primary: 231 226 218;       /* cream action */
+  --c-primary-fg: 26 25 23;       /* near-black text on primary */
+  --c-success: 79 177 133;        /* #4FB185 */
+  --c-warning: 224 182 89;        /* #E0B659 */
+  --c-danger: 242 109 114;        /* #F26D72 */
+  --c-info: 96 176 224;
+
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.28);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.4), 0 16px 48px rgba(0, 0, 0, 0.5);
+  --grid-dot: #2b2925;
+  --scrollbar-track: #1c1b19;
+  --scrollbar-thumb: #36322d;
+  --scrollbar-thumb-hover: #47423b;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  ::selection {
+    @apply bg-clay/25 text-ink;
+  }
+}
+
+@layer components {
+  /* Subtle dotted grid backdrop used behind hero sections */
+  .bg-grid {
+    background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  /* Soft warm radial glow */
+  .bg-glow {
+    background: radial-gradient(
+      60% 50% at 50% 0%,
+      rgb(var(--c-clay) / 0.12) 0%,
+      rgb(var(--c-clay) / 0) 70%
+    );
+  }
+  /* Hide scrollbars on horizontal chip rows without killing scroll */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Side drawer entrance (used via arbitrary animation class) */
+@keyframes drawer-in {
+  from {
+    transform: translateX(48px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Custom scrollbar to match the palette */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Respect users who opt out of motion: freeze the decorative loops */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,9 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @upstep/web exec prisma generate && pnpm --filter @upstep/web run build"
+
+[deploy]
+startCommand = "sh scripts/start-production.sh"
+healthcheckPath = "/api/health"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

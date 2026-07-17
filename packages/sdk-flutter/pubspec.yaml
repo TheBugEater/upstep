@@ -1,0 +1,23 @@
+name: upstep_flutter
+description: Upstep feedback SDK for Flutter apps.
+version: 0.1.0
+homepage: https://upstep.dev
+repository: https://github.com/TheBugEater/upstep/tree/main/packages/sdk-flutter
+issue_tracker: https://github.com/TheBugEater/upstep/issues
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.5.0
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
