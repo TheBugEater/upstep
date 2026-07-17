@@ -469,10 +469,19 @@ export function ProjectWorkspace({
             <button onClick={() => setQuickAdd({ open: true, statusId: null })} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-clay px-3.5 text-xs font-semibold text-white transition hover:bg-clay-hover" title="New task (n)"><span className="text-base leading-none">+</span> New task</button>
           </div>
 
+          <BoardNavigation
+            boards={boards}
+            activeBoardId={activeBoard?.id ?? ""}
+            isOwner={isOwner}
+            onSelect={(boardId) => {
+              setActiveBoardId(boardId);
+              if (view !== "board") switchView("board");
+            }}
+            onCreate={() => setBoardModal("new")}
+            onEdit={() => setBoardModal("edit")}
+          />
+
           <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-line pb-3">
-            <select value={activeBoardId} onChange={(event) => setActiveBoardId(event.target.value)} className="h-8 max-w-[180px] rounded-lg border border-line bg-card px-2.5 text-xs font-semibold text-ink focus:border-clay focus:outline-none" aria-label="Current board">{boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}</select>
-            {isOwner && <><button onClick={() => setBoardModal("new")} className="h-8 rounded-lg px-2 text-xs font-medium text-muted hover:bg-surface hover:text-ink">+ Board</button>{activeBoard && view === "board" && <button onClick={() => setBoardModal("edit")} className="h-8 rounded-lg px-2 text-xs font-medium text-muted hover:bg-surface hover:text-ink">Edit board</button>}</>}
-            <span className="mx-1 h-5 w-px bg-line" />
             <div className="flex gap-0.5 rounded-lg bg-surface p-0.5 shrink-0">
               <ViewBtn active={view === "board"} onClick={() => switchView("board")} label="Board">
                 <BoardIcon />
@@ -681,6 +690,76 @@ export function ProjectWorkspace({
   );
 }
 
+// ─── Board navigation ───────────────────────────────────────────────────────
+
+function BoardNavigation({
+  boards,
+  activeBoardId,
+  isOwner,
+  onSelect,
+  onCreate,
+  onEdit,
+}: {
+  boards: ProjectBoard[];
+  activeBoardId: string;
+  isOwner: boolean;
+  onSelect: (id: string) => void;
+  onCreate: () => void;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="mb-3 flex min-w-0 items-end border-b border-line" aria-label="Boards">
+      <nav className="scrollbar-none flex min-w-0 flex-1 gap-0.5 overflow-x-auto" aria-label="Choose a board">
+        {boards.map((board) => {
+          const active = board.id === activeBoardId;
+          return (
+            <button
+              key={board.id}
+              type="button"
+              onClick={() => onSelect(board.id)}
+              aria-current={active ? "page" : undefined}
+              className={`group relative inline-flex h-10 shrink-0 items-center gap-2 px-3 text-xs font-medium transition-colors ${
+                active ? "text-ink" : "text-muted hover:text-ink"
+              }`}
+            >
+              <span className={active ? "text-clay" : "text-faint group-hover:text-muted"}>
+                {board.isDefault ? <BoardIcon /> : <BoardTabIcon />}
+              </span>
+              <span>{board.name}</span>
+              {board.isPublic && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" title="Public board" />}
+              {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-clay" />}
+            </button>
+          );
+        })}
+      </nav>
+
+      {isOwner && (
+        <div className="flex h-10 shrink-0 items-center gap-1 border-l border-line bg-canvas pl-2">
+          <button
+            type="button"
+            onClick={onCreate}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted transition hover:bg-surface hover:text-ink"
+          >
+            <span className="text-base leading-none">+</span>
+            <span className="hidden sm:inline">New board</span>
+          </button>
+          {!!activeBoardId && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="grid h-7 w-7 place-items-center rounded-md text-faint transition hover:bg-surface hover:text-ink"
+              aria-label="Edit current board"
+              title="Edit current board"
+            >
+              <SlidersIcon />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Board filter chips ─────────────────────────────────────────────────────
 // Shown above a non-default board so it's obvious *why* fewer cards appear
 // than on the main board, with a one-click way back into the editor.
@@ -789,6 +868,25 @@ function BoardIcon() {
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
       <rect x="0.5" y="0.5" width="4" height="11" rx="1" stroke="currentColor" />
       <rect x="7.5" y="0.5" width="4" height="7" rx="1" stroke="currentColor" />
+    </svg>
+  );
+}
+
+function BoardTabIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+      <rect x="1" y="1" width="10" height="10" rx="2" stroke="currentColor" />
+      <path d="M4.3 1v10M7.7 1v10" stroke="currentColor" />
+    </svg>
+  );
+}
+
+function SlidersIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden>
+      <path d="M2 3.25h9M2 9.75h9" stroke="currentColor" strokeLinecap="round" />
+      <circle cx="4.5" cy="3.25" r="1.25" fill="rgb(var(--c-card))" stroke="currentColor" />
+      <circle cx="8.5" cy="9.75" r="1.25" fill="rgb(var(--c-card))" stroke="currentColor" />
     </svg>
   );
 }
