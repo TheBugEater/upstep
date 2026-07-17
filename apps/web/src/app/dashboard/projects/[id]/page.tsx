@@ -1,8 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ProjectWorkspace } from "@/components/workspace/ProjectWorkspace";
 
 export default async function ProjectPage({
@@ -83,18 +81,7 @@ export default async function ProjectPage({
   ];
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <DashboardHeader email={session.user.email} />
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-        <Link
-          href="/dashboard"
-          className="text-xs text-muted hover:text-ink transition inline-flex items-center gap-1 mb-2"
-        >
-          ← All projects
-        </Link>
-
-        <ProjectWorkspace
+    <ProjectWorkspace
           projectName={project.name}
           projectId={id}
           projectSlug={project.slug}
@@ -109,8 +96,6 @@ export default async function ProjectPage({
           initialBoards={boards as never}
           initialStatuses={statuses as never}
           initialLabels={projectLabels as never}
-        />
-      </div>
-    </div>
+    />
   );
 }

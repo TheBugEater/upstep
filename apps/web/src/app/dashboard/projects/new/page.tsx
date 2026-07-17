@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
 import { useOnRamp } from "@onramp-sdk/react";
 
 export default function NewProjectPage() {
@@ -56,24 +55,19 @@ export default function NewProjectPage() {
 
   if (created) {
     return (
-      <div className="min-h-screen bg-canvas">
-        <header className="border-b border-line bg-canvas/80 backdrop-blur-md">
-          <div className="max-w-5xl mx-auto px-6 h-14 flex items-center">
-            <Logo href="/dashboard" />
-          </div>
-        </header>
-
-        <div className="max-w-lg mx-auto px-6 py-12">
-          <div className="w-11 h-11 rounded-xl bg-success/15 text-success flex items-center justify-center text-lg mb-5">
+      <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="mx-auto max-w-xl">
+          <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-success/15 text-lg text-success">
             ✓
           </div>
-          <h1 className="font-serif text-3xl tracking-tight text-ink">Save your API key</h1>
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Project created</div>
+          <h1 className="font-serif text-3xl tracking-tight text-ink sm:text-4xl">Save your API key</h1>
           <p className="text-sm text-muted mt-2">
             This is the only time your key will be shown in full. Copy it now and store it
             somewhere safe: your password manager, <code className="font-mono text-xs bg-surface border border-line rounded px-1 py-0.5">.env</code> file, or secrets manager.
           </p>
 
-          <div className="mt-8 rounded-2xl border border-warning/30 bg-warning/10 p-5">
+          <div className="mt-8 rounded-2xl border border-warning/30 bg-warning/10 p-5 shadow-soft">
             <p className="text-xs font-semibold text-warning uppercase tracking-wide mb-3">
               Your API key, copy it now
             </p>
@@ -94,7 +88,10 @@ export default function NewProjectPage() {
           </div>
 
           <button
-            onClick={() => router.push(`/dashboard/projects/${created.id}`)}
+            onClick={() => {
+              router.push(`/dashboard/projects/${created.id}`);
+              router.refresh();
+            }}
             className="mt-6 w-full py-3 bg-clay text-white rounded-xl font-medium text-sm hover:bg-clay-hover transition shadow-soft"
           >
             Go to project →
@@ -105,14 +102,8 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <header className="border-b border-line bg-canvas/80 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center">
-          <Logo href="/dashboard" />
-        </div>
-      </header>
-
-      <div className="max-w-lg mx-auto px-6 py-12">
+    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+      <div className="mx-auto max-w-xl">
         <Link
           href="/dashboard"
           className="text-sm text-muted hover:text-ink transition inline-flex items-center gap-1.5 mb-8"
@@ -120,15 +111,16 @@ export default function NewProjectPage() {
           ← All projects
         </Link>
 
-        <div className="w-11 h-11 rounded-xl bg-clay/10 text-clay flex items-center justify-center text-lg mb-5">
+        <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-clay/10 text-lg text-clay">
           ✦
         </div>
-        <h1 className="font-serif text-3xl tracking-tight text-ink">New project</h1>
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Workspace setup</div>
+        <h1 className="font-serif text-3xl tracking-tight text-ink sm:text-4xl">Create a project</h1>
         <p className="text-sm text-muted mt-2">
           Name your app and you&apos;ll get a unique API key to drop into your SDK.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5 rounded-2xl border border-line bg-card p-5 shadow-soft sm:p-6">
           <div>
             <label className="block text-sm font-medium text-ink-soft mb-2">
               Project name

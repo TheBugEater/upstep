@@ -1,20 +1,10 @@
-import { Logo } from "@/components/Logo";
-
 function Sk({ className }: { className?: string }) {
   return <div className={`animate-pulse bg-line rounded-lg ${className ?? ""}`} />;
 }
 
 export default function DashboardLoading() {
   return (
-    <div className="min-h-screen bg-canvas">
-      <header className="sticky top-0 z-40 border-b border-line bg-canvas/80 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Logo href="/dashboard" />
-          <Sk className="w-28 h-7 rounded-full" />
-        </div>
-      </header>
-
-      <div className="max-w-5xl mx-auto px-6 py-10">
+    <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
           <div className="space-y-2">
             <div className="flex items-center gap-2.5">
@@ -40,7 +30,6 @@ export default function DashboardLoading() {
             </div>
           ))}
         </div>
-      </div>
     </div>
   );
 }

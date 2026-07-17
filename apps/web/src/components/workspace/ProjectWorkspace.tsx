@@ -443,13 +443,25 @@ export function ProjectWorkspace({
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-6">
-      {/* Workspace navigation: a rail on desktop, compact tabs on mobile. */}
-      <aside className="lg:sticky lg:top-20 lg:self-start mb-4 lg:mb-0">
-      <div className="relative lg:rounded-2xl lg:border lg:border-line lg:bg-card lg:p-2 lg:shadow-soft">
-        <div className="absolute inset-x-0 bottom-0 border-b border-line" />
-        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 lg:overflow-visible">
-          <div className="flex items-center gap-1 min-w-max lg:min-w-0 lg:flex-col lg:items-stretch">
+    <div className="min-w-0">
+      <header className="border-b border-line bg-card px-4 pt-5 sm:px-6 lg:px-8 lg:pt-7 2xl:px-10">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-clay/15 bg-clay/10 font-serif text-xl text-clay">{projectName[0]?.toUpperCase() ?? "P"}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2"><h1 className="truncate font-serif text-2xl tracking-tight text-ink sm:text-3xl">{projectName}</h1>{!isOwner && <span className="rounded-full border border-line bg-surface px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-faint">Member</span>}</div>
+              <p className="mt-0.5 text-xs text-muted">{items.length + pending.length} feedback · {activeCount} active · {teamMembers.length} team member{teamMembers.length === 1 ? "" : "s"}</p>
+            </div>
+          </div>
+          {isOwner && <div className="flex flex-wrap items-center gap-2">
+            <SetupGuideButton apiKey={apiKey} baseUrl={baseUrl} />
+            <button onClick={() => setShowStatuses(true)} className="h-9 rounded-xl border border-line bg-card px-3 text-xs font-semibold text-muted hover:border-line-strong hover:text-ink">Statuses</button>
+            <button onClick={() => setShowLabels(true)} className="h-9 rounded-xl border border-line bg-card px-3 text-xs font-semibold text-muted hover:border-line-strong hover:text-ink">Labels</button>
+          </div>}
+        </div>
+
+        <div className="mt-6 overflow-x-auto scrollbar-none">
+          <div className="flex min-w-max items-center gap-1">
             <TabBtn active={tab === "feedback"} onClick={() => setTab("feedback")}>
               Feedback
               <Badge count={activeCount} cls="bg-clay/15 text-clay" />
@@ -474,38 +486,20 @@ export function ProjectWorkspace({
             </TabBtn>
           </div>
         </div>
-      </div>
-      {isOwner && (
-        <div className="hidden lg:block mt-3 rounded-2xl border border-line bg-card p-3 shadow-soft">
-          <SetupGuideButton apiKey={apiKey} baseUrl={baseUrl} sidebar />
-          <div className="border-t border-line my-2" />
-          <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-faint">Manage board</p>
-          <SideAction onClick={() => setShowStatuses(true)}>Statuses</SideAction>
-          <SideAction onClick={() => setShowLabels(true)}>Labels</SideAction>
-          <SideAction onClick={() => setBoardModal("new")}>New board</SideAction>
-          {activeBoard && view === "board" && (
-            <SideAction onClick={() => setBoardModal("edit")}>Edit current board</SideAction>
-          )}
-        </div>
-      )}
-      </aside>
+      </header>
 
-      <main className="min-w-0">
+      <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8 lg:py-6 2xl:px-10">
 
       {tab === "feedback" && (
         <div>
-          {/* Project name and board switcher share one compact header. */}
-          <div className="flex items-center gap-3 mb-3 min-w-0">
-            <h1 className="font-serif text-xl sm:text-2xl tracking-tight text-ink truncate shrink-0 max-w-[38%]">
-              {projectName}
-            </h1>
-            <span className="h-5 w-px bg-line shrink-0" />
+          <div className="mb-4 flex min-w-0 items-center gap-3">
+            <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Boards</span>
             <div className="flex items-center gap-1 min-w-0 overflow-x-auto scrollbar-none">
               {boards.map((b) => (
                 <button
                   key={b.id}
                   onClick={() => setActiveBoardId(b.id)}
-                  className={`shrink-0 text-xs px-3 py-1.5 rounded-full font-medium border transition ${
+                  className={`shrink-0 text-xs px-3 py-1.5 rounded-lg font-semibold border transition ${
                     b.id === (activeBoard?.id ?? "")
                       ? "bg-primary text-primary-fg border-ink"
                       : "bg-card text-muted border-line hover:border-line-strong hover:text-ink"
@@ -517,30 +511,18 @@ export function ProjectWorkspace({
               ))}
             </div>
             {isOwner && (
-              <div className="flex lg:hidden items-center gap-2 ml-auto shrink-0">
+              <div className="ml-auto flex shrink-0 items-center gap-2">
                 {activeBoard && view === "board" && (
                   <button
                     onClick={() => setBoardModal("edit")}
-                    className="text-xs text-muted hover:text-ink transition"
+                    className="hidden text-xs font-semibold text-muted transition hover:text-ink sm:block"
                   >
                     Edit board
                   </button>
                 )}
                 <button
-                  onClick={() => setShowStatuses(true)}
-                  className="text-xs text-muted hover:text-ink transition"
-                >
-                  Statuses
-                </button>
-                <button
-                  onClick={() => setShowLabels(true)}
-                  className="text-xs text-muted hover:text-ink transition"
-                >
-                  Labels
-                </button>
-                <button
                   onClick={() => setBoardModal("new")}
-                  className="text-xs px-3 py-1.5 rounded-full font-medium border border-line bg-card text-muted hover:border-clay hover:text-clay transition"
+                  className="rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold text-muted transition hover:border-clay hover:text-clay"
                 >
                   + New board
                 </button>
@@ -549,7 +531,7 @@ export function ProjectWorkspace({
           </div>
 
           {/* Toolbar: view toggle · search · filters · sort · new task */}
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-card p-2 shadow-soft">
             <div className="flex gap-0.5 bg-card border border-line rounded-xl p-0.5 shrink-0">
               <ViewBtn active={view === "board"} onClick={() => switchView("board")} label="Board">
                 <BoardIcon />
@@ -617,7 +599,7 @@ export function ProjectWorkspace({
 
             <button
               onClick={() => setQuickAdd({ open: true, statusId: null })}
-              className="ml-auto shrink-0 px-3.5 py-2 rounded-xl bg-clay text-white text-xs font-semibold hover:bg-clay-hover transition shadow-soft"
+              className="ml-auto shrink-0 rounded-xl bg-clay px-3.5 py-2 text-xs font-semibold text-white shadow-soft transition hover:bg-clay-hover"
               title="New task (n)"
             >
               + New task
@@ -839,20 +821,12 @@ function TabBtn({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 px-4 py-2.5 text-sm font-medium border-b-2 lg:border-b-0 lg:border-l-2 lg:rounded-lg transition ${
+      className={`inline-flex items-center gap-1 border-b-2 px-3 py-3 text-xs font-semibold transition sm:px-4 ${
         active
-          ? "border-clay text-clay lg:bg-clay/10"
-          : "border-transparent text-muted hover:text-ink hover:border-line-strong lg:hover:bg-surface"
+          ? "border-clay text-clay"
+          : "border-transparent text-muted hover:border-line-strong hover:text-ink"
       }`}
     >
-      {children}
-    </button>
-  );
-}
-
-function SideAction({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button onClick={onClick} className="w-full text-left px-2 py-2 rounded-lg text-xs font-medium text-muted hover:text-ink hover:bg-surface transition">
       {children}
     </button>
   );
