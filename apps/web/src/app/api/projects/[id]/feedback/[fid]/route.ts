@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
-import { triggerIntegrations } from "@/lib/integrations";
+import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
 
 const updateSchema = z.object({
   status: z.enum(["PENDING", "OPEN", "IN_PROGRESS", "DONE", "CLOSED"]).optional(),
@@ -84,13 +84,14 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
   const effectiveNewStatus = resolvedStatusEnum ?? parsed.data.status;
   if (effectiveNewStatus && effectiveNewStatus !== feedback.status) {
-    void triggerIntegrations({
+    await queueIntegration({
       event: "STATUS_CHANGED",
       project: { id, name: updated.project.name },
       feedback: { id: fid, title: feedback.title, content: feedback.content, type: feedback.type },
       oldStatus: feedback.status,
       newStatus: effectiveNewStatus,
-    }).catch(() => {});
+    });
+    kickNotificationProcessor();
   }
 
   return NextResponse.json(updated);

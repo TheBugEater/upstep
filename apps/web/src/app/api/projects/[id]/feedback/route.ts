@@ -3,7 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
-import { triggerIntegrations } from "@/lib/integrations";
+import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
 
 export async function GET(
   req: NextRequest,
@@ -134,11 +134,12 @@ export async function POST(
     },
   });
 
-  void triggerIntegrations({
+  await queueIntegration({
     event: "NEW_FEEDBACK",
     project: { id, name: project?.name ?? "" },
     feedback: { id: feedback.id, title: feedback.title, content: feedback.content, type: feedback.type, status: feedback.status, flagged: false },
-  }).catch(() => {});
+  });
+  kickNotificationProcessor();
 
   return NextResponse.json(feedback, { status: 201 });
 }

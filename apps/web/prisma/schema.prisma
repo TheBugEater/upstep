@@ -93,6 +93,8 @@ model Project {
   labels       Label[]
   statuses     Status[]
   boards       Board[]
+
+  @@index([ownerId, updatedAt])
 }
 
 model Feedback {
@@ -118,6 +120,11 @@ model Feedback {
   votes       Vote[]
   comments    Comment[]
   labels      Label[]
+
+  @@index([projectId, createdAt])
+  @@index([projectId, status, createdAt])
+  @@index([projectId, statusId])
+  @@index([projectId, upvotes])
 }
 
 model Comment {
@@ -129,6 +136,8 @@ model Comment {
   createdAt  DateTime @default(now())
 
   feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId, createdAt])
 }
 
 model Vote {
@@ -192,6 +201,7 @@ model ProjectMember {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model Integration {
@@ -205,6 +215,8 @@ model Integration {
   enabled    Boolean            @default(true)
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
+
+  @@index([projectId])
 }
 
 enum IntegrationType {
@@ -267,6 +279,8 @@ model Board {
 
   project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   columns BoardColumn[]
+
+  @@index([projectId, createdAt])
 }
 
 model BoardColumn {
@@ -277,4 +291,46 @@ model BoardColumn {
 
   board  Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
   status Status @relation(fields: [statusId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, order])
+}
+
+// ─── Infrastructure ──────────────────────────────────────────────────────────
+
+enum NotificationJobType {
+  INTEGRATION
+  EMAIL
+}
+
+enum NotificationJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model NotificationJob {
+  id          String                @id @default(cuid())
+  type        NotificationJobType
+  payload     Json
+  status      NotificationJobStatus @default(PENDING)
+  attempts    Int                   @default(0)
+  availableAt DateTime              @default(now())
+  lockedAt    DateTime?
+  lastError   String?               @db.Text
+  createdAt   DateTime              @default(now())
+  completedAt DateTime?
+
+  @@index([status, availableAt])
+  @@index([createdAt])
+}
+
+model RateLimitBucket {
+  key       String   @id
+  count     Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
 }

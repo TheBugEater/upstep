@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { triggerIntegrations } from "@/lib/integrations";
+import { enforceProjectAndClientLimits, rateLimitResponse } from "@/lib/rate-limit";
+import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
 
 /**
  * Upstep MCP server - Streamable HTTP transport (JSON responses).
@@ -480,11 +481,12 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         select: feedbackSelect,
       });
 
-      void triggerIntegrations({
+      await queueIntegration({
         event: "NEW_FEEDBACK",
         project: { id: project.id, name: project.name },
         feedback: { id: created.id, title, content: content || title, type },
-      }).catch(() => {});
+      });
+      kickNotificationProcessor();
 
       return toolText({ created: serialize(created) });
     }
@@ -534,13 +536,14 @@ async function callTool(project: Project, name: string, args: Record<string, unk
       });
 
       if (statusPatch && statusPatch.status !== existing.status) {
-        void triggerIntegrations({
+        await queueIntegration({
           event: "STATUS_CHANGED",
           project: { id: project.id, name: project.name },
           feedback: { id, title: existing.title, content: existing.content, type: existing.type },
           oldStatus: existing.status,
           newStatus: statusPatch.status,
-        }).catch(() => {});
+        });
+        kickNotificationProcessor();
       }
 
       return toolText({ updated: serialize(updated) });
@@ -565,12 +568,13 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         },
       });
 
-      void triggerIntegrations({
+      await queueIntegration({
         event: "NEW_COMMENT",
         project: { id: project.id, name: project.name },
         feedback: { id: feedback.id, title: feedback.title, content: feedback.content, type: feedback.type },
         comment: { content, authorName: comment.authorName },
-      }).catch(() => {});
+      });
+      kickNotificationProcessor();
 
       return toolText({ posted: true, comment_id: comment.id });
     }
@@ -728,6 +732,12 @@ export async function POST(req: NextRequest) {
       { status: 401, headers: { "WWW-Authenticate": "Bearer" } }
     );
   }
+
+  const limited = await enforceProjectAndClientLimits(req, project.id, "mcp", {
+    project: 2_000,
+    client: 120,
+  });
+  if (limited) return rateLimitResponse(limited);
 
   let msg: RpcRequest;
   try {

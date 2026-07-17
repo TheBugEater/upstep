@@ -30,7 +30,7 @@ export async function triggerIntegrations(payload: IntegrationPayload): Promise<
   const baseUrl = (process.env.AUTH_URL ?? "https://upstep.dev").replace(/\/$/, "");
   const dashboardUrl = `${baseUrl}/dashboard/projects/${payload.project.id}`;
 
-  await Promise.allSettled(
+  await Promise.all(
     project.integrations.map((integration) => {
       switch (integration.type) {
         case "SLACK":
@@ -127,11 +127,7 @@ async function sendSlack(url: string, payload: IntegrationPayload, dashboardUrl:
     ];
   }
 
-  await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, blocks }),
-  });
+  await postJson(url, { text, blocks });
 }
 
 // ─── Discord ───────────────────────────────────────────────────────────────────
@@ -185,22 +181,24 @@ async function sendDiscord(url: string, payload: IntegrationPayload, dashboardUr
     if (comment.authorName) fields.push({ name: "Author", value: comment.authorName, inline: true });
   }
 
-  await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      username: "Upstep",
-      embeds: [{ title, description, color, fields, url: dashboardUrl }],
-    }),
+  await postJson(url, {
+    username: "Upstep",
+    embeds: [{ title, description, color, fields, url: dashboardUrl }],
   });
 }
 
 // ─── Generic webhook ───────────────────────────────────────────────────────────
 
 async function sendWebhook(url: string, payload: IntegrationPayload, dashboardUrl: string) {
-  await fetch(url, {
+  await postJson(url, { ...payload, dashboardUrl, timestamp: new Date().toISOString() });
+}
+
+async function postJson(url: string, body: unknown) {
+  const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...payload, dashboardUrl, timestamp: new Date().toISOString() }),
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(8_000),
   });
+  if (!response.ok) throw new Error(`Integration returned HTTP ${response.status}`);
 }

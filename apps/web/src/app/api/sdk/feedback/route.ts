@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
 import { getProjectFromRequest } from "@/lib/sdk-auth";
 import { getPlan } from "@/lib/plans";
 import { containsProfanity } from "@/lib/profanity";
-import { sendFeedbackNotification } from "@/lib/email";
-import { triggerIntegrations } from "@/lib/integrations";
+import { enforceProjectAndClientLimits, rateLimitResponse } from "@/lib/rate-limit";
+import { kickNotificationProcessor, queueEmail, queueIntegration } from "@/lib/notification-queue";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +24,11 @@ export async function GET(req: NextRequest) {
   if (!project) {
     return NextResponse.json({ error: "Invalid API key" }, { status: 401, headers: CORS });
   }
+  const limited = await enforceProjectAndClientLimits(req, project.id, "sdk-feedback-read", {
+    project: 2_000,
+    client: 120,
+  });
+  if (limited) return rateLimitResponse(limited, CORS);
 
   const { searchParams } = new URL(req.url);
   const limit = Math.min(Number(searchParams.get("limit") ?? 20), 50);
@@ -93,8 +98,8 @@ const submitSchema = z.object({
   title: z.string().max(200).optional(),
   content: z.string().min(1).max(2000),
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
-  endUserId: z.string().optional(),
-  anonymousId: z.string().optional(),
+  endUserId: z.string().max(200).optional(),
+  anonymousId: z.string().max(200).optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 
@@ -110,17 +115,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400, headers: CORS });
   }
 
-  // Burst guard: no more than 10 submissions per project in any 60-second window.
-  const since = new Date(Date.now() - 60_000);
-  const recentCount = await db.feedback.count({
-    where: { projectId: project.id, createdAt: { gte: since } },
+  const limited = await enforceProjectAndClientLimits(req, project.id, "sdk-feedback-submit", {
+    project: 60,
+    client: 5,
   });
-  if (recentCount >= 10) {
-    return NextResponse.json(
-      { error: "Too many submissions. Please slow down." },
-      { status: 429, headers: { ...CORS, "Retry-After": "60" } }
-    );
-  }
+  if (limited) return rateLimitResponse(limited, CORS);
 
   // Enforce the per-project feedback cap for the owner's plan.
   const plan = getPlan(project.owner.plan);
@@ -135,6 +134,9 @@ export async function POST(req: NextRequest) {
   }
 
   const { title, content, endUserId, anonymousId } = parsed.data;
+  if (parsed.data.metadata && JSON.stringify(parsed.data.metadata).length > 8_192) {
+    return NextResponse.json({ error: "metadata must be 8 KB or smaller" }, { status: 400, headers: CORS });
+  }
   const status = project.moderationEnabled ? "PENDING" : "OPEN";
   const flagged = containsProfanity(content);
 
@@ -146,47 +148,43 @@ export async function POST(req: NextRequest) {
   });
 
   // Creator gets an automatic upvote.
-  const feedback = await db.feedback.create({
-    data: {
-      projectId: project.id,
-      ...(title ? { title } : {}),
-      content,
-      type: parsed.data.type ?? "GENERAL",
-      status,
-      flagged,
-      upvotes: 1,
-      ...(defaultStatus ? { statusId: defaultStatus.id } : {}),
-      ...(endUserId ? { endUserId } : {}),
-      ...(anonymousId ? { anonymousId } : {}),
-      ...(parsed.data.metadata ? { metadata: parsed.data.metadata as object } : {}),
-      // Record the vote so the creator can't double-vote later.
-      ...(endUserId
-        ? { votes: { create: { value: "UP", endUserId } } }
-        : anonymousId
-          ? { votes: { create: { value: "UP", anonymousId } } }
-          : {}),
-    },
+  const feedback = await db.$transaction(async (tx) => {
+    const created = await tx.feedback.create({
+      data: {
+        projectId: project.id,
+        ...(title ? { title } : {}),
+        content,
+        type: parsed.data.type ?? "GENERAL",
+        status,
+        flagged,
+        upvotes: 1,
+        ...(defaultStatus ? { statusId: defaultStatus.id } : {}),
+        ...(endUserId ? { endUserId } : {}),
+        ...(anonymousId ? { anonymousId } : {}),
+        ...(parsed.data.metadata ? { metadata: parsed.data.metadata as object } : {}),
+        ...(endUserId
+          ? { votes: { create: { value: "UP", endUserId } } }
+          : anonymousId
+            ? { votes: { create: { value: "UP", anonymousId } } }
+            : {}),
+      },
+    });
+    await Promise.all([
+      queueIntegration({
+        event: "NEW_FEEDBACK",
+        project: { id: project.id, name: project.name },
+        feedback: { id: created.id, title: created.title, content: created.content, type: created.type, status: created.status, flagged: created.flagged },
+      }, tx),
+      queueEmail({
+        toEmail: project.owner.email,
+        projectName: project.name,
+        projectId: project.id,
+        feedback: { title: created.title, content: created.content, type: created.type, flagged: created.flagged, status: created.status },
+      }, tx),
+    ]);
+    return created;
   });
-
-  // Fire notifications - non-blocking, never fails the request
-  void triggerIntegrations({
-    event: "NEW_FEEDBACK",
-    project: { id: project.id, name: project.name },
-    feedback: { id: feedback.id, title: feedback.title, content: feedback.content, type: feedback.type, status: feedback.status, flagged: feedback.flagged },
-  }).catch(() => {});
-
-  void sendFeedbackNotification({
-    toEmail: project.owner.email,
-    projectName: project.name,
-    projectId: project.id,
-    feedback: {
-      title: feedback.title ?? null,
-      content: feedback.content,
-      type: feedback.type,
-      flagged: feedback.flagged,
-      status: feedback.status,
-    },
-  }).catch(() => {});
+  kickNotificationProcessor();
 
   return NextResponse.json(feedback, { status: 201, headers: CORS });
 }

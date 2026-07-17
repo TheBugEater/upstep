@@ -12,12 +12,7 @@ const TYPE_COLOR: Record<string, string> = {
   GENERAL: "#6b7280",
 };
 
-export async function sendFeedbackNotification({
-  toEmail,
-  projectName,
-  projectId,
-  feedback,
-}: {
+export type FeedbackNotificationPayload = {
   toEmail: string;
   projectName: string;
   projectId: string;
@@ -28,7 +23,14 @@ export async function sendFeedbackNotification({
     flagged: boolean;
     status: string;
   };
-}) {
+};
+
+export async function sendFeedbackNotification({
+  toEmail,
+  projectName,
+  projectId,
+  feedback,
+}: FeedbackNotificationPayload) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
 
@@ -109,7 +111,8 @@ export async function sendFeedbackNotification({
 </body>
 </html>`;
 
-  await resend.emails.send({ from, to: toEmail, subject, html });
+  const result = await resend.emails.send({ from, to: toEmail, subject, html });
+  if (result.error) throw new Error(`Resend delivery failed: ${result.error.message}`);
 }
 
 function escapeHtml(str: string): string {

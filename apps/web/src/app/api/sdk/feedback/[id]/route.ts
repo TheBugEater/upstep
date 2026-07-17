@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getProjectFromRequest } from "@/lib/sdk-auth";
+import { enforceProjectAndClientLimits, rateLimitResponse } from "@/lib/rate-limit";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,11 @@ export async function GET(
   if (!project) {
     return NextResponse.json({ error: "Invalid API key" }, { status: 401, headers: CORS });
   }
+  const limited = await enforceProjectAndClientLimits(req, project.id, "sdk-feedback-read", {
+    project: 2_000,
+    client: 120,
+  });
+  if (limited) return rateLimitResponse(limited, CORS);
 
   const { id } = await params;
   const endUserId = req.nextUrl.searchParams.get("endUserId") ?? undefined;
