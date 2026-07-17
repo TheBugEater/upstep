@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { FeedbackType, Label } from "@upstep/types";
 import type { BoardFilters, ProjectBoard, ProjectStatus, WorkspaceItem } from "@/types/dashboard";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
@@ -52,7 +53,6 @@ export interface WorkspaceActions {
 }
 
 interface Props {
-  projectName: string;
   projectId: string;
   projectSlug: string;
   apiKey: string;
@@ -69,7 +69,6 @@ interface Props {
 }
 
 export function ProjectWorkspace({
-  projectName,
   projectId,
   projectSlug,
   apiKey,
@@ -84,6 +83,8 @@ export function ProjectWorkspace({
   initialStatuses,
   initialLabels,
 }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   // ── Shared data state (single source of truth for the whole page) ─────────
   const [items, setItems] = useState<WorkspaceItem[]>(initialItems);
   const [pending, setPending] = useState<WorkspaceItem[]>(initialPending);
@@ -109,6 +110,7 @@ export function ProjectWorkspace({
   const [boardModal, setBoardModal] = useState<"new" | "edit" | null>(null);
   const [showStatuses, setShowStatuses] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
+  const [showLabelFilter, setShowLabelFilter] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
   // Suppress background refresh right after an optimistic mutation so a
@@ -121,14 +123,25 @@ export function ProjectWorkspace({
     if (saved === "list" || saved === "board") setView(saved);
   }, [projectId]);
 
-  // Deep links like /dashboard/projects/[id]?tab=mcp (used by the
-  // "Connect AI" quick action on the apps page)
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("tab");
-    if (t === "mcp" || t === "integrations" || t === "settings" || t === "pending" || t === "completed") {
-      setTab(t);
-    }
-  }, []);
+    const nextTab = searchParams.get("tab");
+    if (nextTab === "feedback" || nextTab === "mcp" || nextTab === "integrations" || nextTab === "settings" || nextTab === "pending" || nextTab === "completed") setTab(nextTab);
+    else setTab("feedback");
+
+    const panel = searchParams.get("panel");
+    setShowStatuses(panel === "statuses");
+    setShowLabels(panel === "labels");
+  }, [searchParams]);
+
+  function switchTab(nextTab: Tab) {
+    router.push(`/dashboard/projects/${projectId}?tab=${nextTab}`);
+  }
+
+  function closeSettingsPanel() {
+    setShowStatuses(false);
+    setShowLabels(false);
+    router.replace(`/dashboard/projects/${projectId}?tab=settings`);
+  }
 
   function switchView(v: View) {
     setView(v);
@@ -180,6 +193,10 @@ export function ProjectWorkspace({
   const completedItems = useMemo(() => filtered.filter(isDone), [filtered, isDone]);
   const activeCount = useMemo(() => items.filter((f) => !isDone(f)).length, [items, isDone]);
   const completedCount = items.length - activeCount;
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("upstep:project-counts", { detail: { id: projectId, feedbackCount: items.length + pending.length, activeCount, completedCount, pendingCount: pending.length } }));
+  }, [projectId, items.length, pending.length, activeCount, completedCount]);
 
   const selectedItem = items.find((f) => f.id === selectedId) ?? null;
 
@@ -443,96 +460,20 @@ export function ProjectWorkspace({
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-w-0">
-      <header className="border-b border-line bg-card px-4 pt-5 sm:px-6 lg:px-8 lg:pt-7 2xl:px-10">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-clay/15 bg-clay/10 font-serif text-xl text-clay">{projectName[0]?.toUpperCase() ?? "P"}</span>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2"><h1 className="truncate font-serif text-2xl tracking-tight text-ink sm:text-3xl">{projectName}</h1>{!isOwner && <span className="rounded-full border border-line bg-surface px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-faint">Member</span>}</div>
-              <p className="mt-0.5 text-xs text-muted">{items.length + pending.length} feedback · {activeCount} active · {teamMembers.length} team member{teamMembers.length === 1 ? "" : "s"}</p>
-            </div>
-          </div>
-          {isOwner && <div className="flex flex-wrap items-center gap-2">
-            <SetupGuideButton apiKey={apiKey} baseUrl={baseUrl} />
-            <button onClick={() => setShowStatuses(true)} className="h-9 rounded-xl border border-line bg-card px-3 text-xs font-semibold text-muted hover:border-line-strong hover:text-ink">Statuses</button>
-            <button onClick={() => setShowLabels(true)} className="h-9 rounded-xl border border-line bg-card px-3 text-xs font-semibold text-muted hover:border-line-strong hover:text-ink">Labels</button>
-          </div>}
-        </div>
-
-        <div className="mt-6 overflow-x-auto scrollbar-none">
-          <div className="flex min-w-max items-center gap-1">
-            <TabBtn active={tab === "feedback"} onClick={() => setTab("feedback")}>
-              Feedback
-              <Badge count={activeCount} cls="bg-clay/15 text-clay" />
-            </TabBtn>
-            <TabBtn active={tab === "completed"} onClick={() => setTab("completed")}>
-              Completed
-              <Badge count={completedCount} cls="bg-success/15 text-success" />
-            </TabBtn>
-            <TabBtn active={tab === "pending"} onClick={() => setTab("pending")}>
-              <span className="hidden sm:inline">Pending review</span>
-              <span className="sm:hidden">Pending</span>
-              <Badge count={pending.length} cls="bg-clay text-white" />
-            </TabBtn>
-            <TabBtn active={tab === "mcp"} onClick={() => setTab("mcp")}>
-              <span className="text-clay">✦</span> MCP
-            </TabBtn>
-            <TabBtn active={tab === "integrations"} onClick={() => setTab("integrations")}>
-              Integrations
-            </TabBtn>
-            <TabBtn active={tab === "settings"} onClick={() => setTab("settings")}>
-              Settings
-            </TabBtn>
-          </div>
-        </div>
-      </header>
-
-      <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8 lg:py-6 2xl:px-10">
+    <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-7 lg:py-6 2xl:px-9">
 
       {tab === "feedback" && (
         <div>
-          <div className="mb-4 flex min-w-0 items-center gap-3">
-            <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Boards</span>
-            <div className="flex items-center gap-1 min-w-0 overflow-x-auto scrollbar-none">
-              {boards.map((b) => (
-                <button
-                  key={b.id}
-                  onClick={() => setActiveBoardId(b.id)}
-                  className={`shrink-0 text-xs px-3 py-1.5 rounded-lg font-semibold border transition ${
-                    b.id === (activeBoard?.id ?? "")
-                      ? "bg-primary text-primary-fg border-ink"
-                      : "bg-card text-muted border-line hover:border-line-strong hover:text-ink"
-                  }`}
-                >
-                  {b.isDefault && <span className="mr-1 text-clay">★</span>}
-                  {b.name}
-                </button>
-              ))}
-            </div>
-            {isOwner && (
-              <div className="ml-auto flex shrink-0 items-center gap-2">
-                {activeBoard && view === "board" && (
-                  <button
-                    onClick={() => setBoardModal("edit")}
-                    className="hidden text-xs font-semibold text-muted transition hover:text-ink sm:block"
-                  >
-                    Edit board
-                  </button>
-                )}
-                <button
-                  onClick={() => setBoardModal("new")}
-                  className="rounded-lg border border-line bg-card px-3 py-1.5 text-xs font-semibold text-muted transition hover:border-clay hover:text-clay"
-                >
-                  + New board
-                </button>
-              </div>
-            )}
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div><h1 className="text-xl font-semibold tracking-[-0.02em] text-ink">Feedback</h1><p className="mt-0.5 text-xs text-faint">{activeCount} active · {completedCount} completed</p></div>
+            <button onClick={() => setQuickAdd({ open: true, statusId: null })} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-clay px-3.5 text-xs font-semibold text-white transition hover:bg-clay-hover" title="New task (n)"><span className="text-base leading-none">+</span> New task</button>
           </div>
 
-          {/* Toolbar: view toggle · search · filters · sort · new task */}
-          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-card p-2 shadow-soft">
-            <div className="flex gap-0.5 bg-card border border-line rounded-xl p-0.5 shrink-0">
+          <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-line pb-3">
+            <select value={activeBoardId} onChange={(event) => setActiveBoardId(event.target.value)} className="h-8 max-w-[180px] rounded-lg border border-line bg-card px-2.5 text-xs font-semibold text-ink focus:border-clay focus:outline-none" aria-label="Current board">{boards.map((board) => <option key={board.id} value={board.id}>{board.name}</option>)}</select>
+            {isOwner && <><button onClick={() => setBoardModal("new")} className="h-8 rounded-lg px-2 text-xs font-medium text-muted hover:bg-surface hover:text-ink">+ Board</button>{activeBoard && view === "board" && <button onClick={() => setBoardModal("edit")} className="h-8 rounded-lg px-2 text-xs font-medium text-muted hover:bg-surface hover:text-ink">Edit board</button>}</>}
+            <span className="mx-1 h-5 w-px bg-line" />
+            <div className="flex gap-0.5 rounded-lg bg-surface p-0.5 shrink-0">
               <ViewBtn active={view === "board"} onClick={() => switchView("board")} label="Board">
                 <BoardIcon />
               </ViewBtn>
@@ -541,13 +482,13 @@ export function ProjectWorkspace({
               </ViewBtn>
             </div>
 
-            <div className="relative flex-1 min-w-[140px] max-w-xs">
+            <div className="relative min-w-[180px] flex-1 max-w-sm">
               <input
                 ref={searchRef}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search…  ( / )"
-                className="w-full text-xs rounded-xl border border-line bg-card pl-8 pr-7 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/40 transition"
+                className="h-8 w-full rounded-lg border border-line bg-card pl-8 pr-7 text-xs text-ink placeholder:text-faint focus:border-clay/50 focus:outline-none"
               />
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint pointer-events-none">
                 <SearchIcon />
@@ -563,7 +504,7 @@ export function ProjectWorkspace({
               )}
             </div>
 
-            <div className="flex gap-0.5 bg-card border border-line rounded-xl p-0.5 shrink-0">
+            <div className="flex gap-0.5 rounded-lg bg-surface p-0.5 shrink-0">
               <FilterBtn active={typeFilter === "ALL"} onClick={() => setTypeFilter("ALL")}>
                 All
               </FilterBtn>
@@ -578,32 +519,16 @@ export function ProjectWorkspace({
               ))}
             </div>
 
-            {labels.length > 0 && (
-              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none max-w-full" aria-label="Filter by label">
-                <button onClick={() => setLabelFilter(null)} className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition ${!labelFilter ? "bg-primary text-primary-fg border-primary" : "bg-card text-muted border-line hover:text-ink"}`}>All labels</button>
-                {labels.map((l) => (
-                  <button key={l.id} onClick={() => setLabelFilter(labelFilter === l.id ? null : l.id)} className={`shrink-0 inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full border font-medium transition ${labelFilter === l.id ? "text-ink border-line-strong shadow-soft" : "bg-card text-muted border-line hover:text-ink"}`} style={labelFilter === l.id ? { backgroundColor: `${l.color}20`, borderColor: `${l.color}80` } : undefined}>
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: l.color }} />{l.name}
-                  </button>
-                ))}
-              </div>
-            )}
+            {labels.length > 0 && <div className="relative"><button onClick={() => setShowLabelFilter((value) => !value)} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium ${labelFilter ? "border-clay/30 bg-clay/5 text-clay" : "border-line bg-card text-muted hover:text-ink"}`}><span className="text-[11px]">◇</span>{labelFilter ? labels.find((label) => label.id === labelFilter)?.name ?? "Label" : "Labels"}<span className="text-[9px] text-faint">▾</span></button>{showLabelFilter && <><button className="fixed inset-0 z-20 cursor-default" onClick={() => setShowLabelFilter(false)} aria-label="Close label filter" /><div className="absolute right-0 top-9 z-30 w-52 rounded-xl border border-line bg-card p-1.5 shadow-lift"><button onClick={() => { setLabelFilter(null); setShowLabelFilter(false); }} className={`flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs ${!labelFilter ? "bg-surface font-semibold text-ink" : "text-muted hover:bg-surface"}`}>All labels</button>{labels.map((label) => <button key={label.id} onClick={() => { setLabelFilter(label.id); setShowLabelFilter(false); }} className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs ${labelFilter === label.id ? "bg-surface font-semibold text-ink" : "text-muted hover:bg-surface"}`}><span className="h-2 w-2 rounded-full" style={{ backgroundColor: label.color }} />{label.name}</button>)}</div></>}</div>}
 
             <button
               onClick={() => setSortBy(sortBy === "votes" ? "newest" : "votes")}
-              className="text-xs px-3 py-2 rounded-xl border border-line bg-card text-muted hover:text-ink transition shrink-0"
+              className="h-8 shrink-0 rounded-lg border border-line bg-card px-2.5 text-xs text-muted hover:text-ink"
               title="Toggle sort order"
             >
               {sortBy === "votes" ? "↑ Top voted" : "↑ Newest"}
             </button>
 
-            <button
-              onClick={() => setQuickAdd({ open: true, statusId: null })}
-              className="ml-auto shrink-0 rounded-xl bg-clay px-3.5 py-2 text-xs font-semibold text-white shadow-soft transition hover:bg-clay-hover"
-              title="New task (n)"
-            >
-              + New task
-            </button>
           </div>
 
           {view === "board" && activeBoard && !activeBoard.isDefault && activeBoard.filters && (
@@ -631,6 +556,7 @@ export function ProjectWorkspace({
 
       {tab === "completed" && (
         <div>
+          <SectionHeader title="Completed" description={`${completedCount} shipped or closed items`} />
           {completedItems.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line-strong bg-card/50 text-center py-20">
               <div className="text-2xl mb-2">✓</div>
@@ -643,31 +569,31 @@ export function ProjectWorkspace({
         </div>
       )}
 
-      {tab === "pending" && <PendingList items={pending} onDecide={decidePending} />}
+      {tab === "pending" && <div><SectionHeader title="Pending review" description="Approve feedback before it reaches your board" /><PendingList items={pending} onDecide={decidePending} /></div>}
 
       {tab === "mcp" && (
-        <div className="max-w-2xl">
+        <div className="max-w-3xl"><SectionHeader title="MCP & agents" description="Give your coding agents controlled access to this feedback workspace" />
           <McpCard apiKey={apiKey} baseUrl={baseUrl} />
         </div>
       )}
 
       {tab === "integrations" && (
-        <IntegrationsTab
+        <div><SectionHeader title="Integrations" description="Send feedback events into the tools your team already uses" /><IntegrationsTab
           projectId={projectId}
           isOwner={isOwner}
           isPro={ownerPlan === "PRO" || ownerPlan === "BUSINESS"}
-          onOpenMcpTab={() => setTab("mcp")}
-        />
+          onOpenMcpTab={() => switchTab("mcp")}
+        /></div>
       )}
 
       {tab === "settings" && (
-        <SettingsTab
+        <div><div className="mb-5 flex items-start justify-between gap-4"><SectionHeader title="Project settings" description="API access, moderation, members, and project controls" /><SetupGuideButton apiKey={apiKey} baseUrl={baseUrl} /></div><SettingsTab
           projectId={projectId}
           apiKey={apiKey}
           moderationEnabled={moderationEnabled}
           isOwner={isOwner}
           teamMembers={teamMembers}
-        />
+        /></div>
       )}
 
       {/* Detail drawer */}
@@ -736,7 +662,7 @@ export function ProjectWorkspace({
           }}
           onUpdated={applyStatusUpdate}
           onDeleted={removeStatus}
-          onClose={() => setShowStatuses(false)}
+          onClose={closeSettingsPanel}
         />
       )}
 
@@ -748,11 +674,10 @@ export function ProjectWorkspace({
           onCreated={(label) => setLabels((prev) => (prev.some((l) => l.id === label.id) ? prev : [...prev, label]))}
           onUpdated={applyLabelUpdate}
           onDeleted={removeLabel}
-          onClose={() => setShowLabels(false)}
+          onClose={closeSettingsPanel}
         />
       )}
-      </main>
-    </div>
+    </main>
   );
 }
 
@@ -809,38 +734,8 @@ function BoardFilterChips({
 
 // ─── Small presentational bits ────────────────────────────────────────────────
 
-function TabBtn({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1 border-b-2 px-3 py-3 text-xs font-semibold transition sm:px-4 ${
-        active
-          ? "border-clay text-clay"
-          : "border-transparent text-muted hover:border-line-strong hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Badge({ count, cls }: { count: number; cls: string }) {
-  if (count === 0) return null;
-  return (
-    <span
-      className={`ml-1.5 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[9px] font-bold ${cls}`}
-    >
-      {count > 99 ? "99+" : count}
-    </span>
-  );
+function SectionHeader({ title, description }: { title: string; description: string }) {
+  return <div className="mb-5"><h1 className="text-xl font-semibold tracking-[-0.02em] text-ink">{title}</h1><p className="mt-1 text-xs text-faint">{description}</p></div>;
 }
 
 function ViewBtn({

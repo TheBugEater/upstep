@@ -82,7 +82,6 @@ export default async function ProjectPage({
 
   return (
     <ProjectWorkspace
-          projectName={project.name}
           projectId={id}
           projectSlug={project.slug}
           apiKey={project.apiKey}

@@ -73,13 +73,10 @@ export default async function DashboardPage({
 
   return (
     <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 lg:py-8 2xl:px-10">
-      <div className="flex flex-wrap items-start justify-between gap-5 animate-fade-up">
+      <div className="flex flex-wrap items-start justify-between gap-5">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-faint">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" /> Workspace overview
-          </div>
-          <h1 className="font-serif text-3xl tracking-tight text-ink sm:text-4xl">Good to see you.</h1>
-          <p className="mt-2 max-w-xl text-sm text-muted">A live view of what your users are asking for and what your team is shipping.</p>
+          <h1 className="text-2xl font-semibold tracking-[-0.03em] text-ink">Overview</h1>
+          <p className="mt-1 text-sm text-muted">Feedback activity across your workspace.</p>
         </div>
         {atProjectLimit ? (
           <Link href="/dashboard/billing" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-fg shadow-soft transition hover:opacity-90">Upgrade to add a project <span aria-hidden>→</span></Link>
@@ -88,19 +85,19 @@ export default async function DashboardPage({
         )}
       </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <Metric label="Total feedback" value={totalFeedback} detail={`Across ${projects.length} project${projects.length === 1 ? "" : "s"}`} tone="clay" icon="↗" />
-        <Metric label="Open requests" value={openTotal} detail="Waiting for triage" tone="warning" icon="◌" />
-        <Metric label="In progress" value={activeTotal} detail="Being worked on" tone="info" icon="→" />
-        <Metric label="Community votes" value={totalVotes} detail={pendingTotal ? `${pendingTotal} pending review` : "All caught up"} tone="success" icon="▲" />
+      <div className="mt-7 grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-card sm:grid-cols-4 sm:divide-x sm:divide-line">
+        <Metric label="Feedback" value={totalFeedback} detail={`${projects.length} project${projects.length === 1 ? "" : "s"}`} />
+        <Metric label="Open" value={openTotal} detail="Needs triage" />
+        <Metric label="In progress" value={activeTotal} detail="Being worked on" />
+        <Metric label="Votes" value={totalVotes} detail="Total upvotes" />
       </div>
 
-      <div className="mt-8 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mt-7 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_280px]">
         <section className="min-w-0">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-ink">Your projects</h2>
-              <p className="mt-0.5 text-xs text-faint">Switch projects or jump straight into a workflow.</p>
+              <h2 className="text-sm font-semibold text-ink">Projects</h2>
+              <p className="mt-0.5 text-xs text-faint">Open a project to manage its feedback.</p>
             </div>
             <Link href="/dashboard/billing" className="rounded-full border border-line bg-card px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted hover:border-clay/30 hover:text-clay">{plan.name} · {projects.length}{isUnlimited(plan.projectLimit) ? "" : `/${formatLimit(plan.projectLimit)}`}</Link>
           </div>
@@ -139,17 +136,14 @@ export default async function DashboardPage({
         </section>
 
         <aside className="space-y-4">
-          <div className="rounded-2xl border border-line bg-card p-5 shadow-soft">
-            <div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Workspace health</span><span className="flex items-center gap-1.5 text-[10px] font-semibold text-success"><span className="h-1.5 w-1.5 rounded-full bg-success" /> Live</span></div>
-            <p className="mt-4 font-serif text-2xl text-ink">{pendingTotal ? `${pendingTotal} item${pendingTotal === 1 ? "" : "s"} need review` : "Inbox zero"}</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted">{pendingTotal ? "Review incoming feedback before it reaches your public boards." : "Every incoming item has been reviewed. Nice work."}</p>
+          <div className="rounded-xl border border-line bg-card p-4">
+            <h2 className="text-sm font-semibold text-ink">Needs attention</h2>
+            <div className="mt-3 divide-y divide-line border-y border-line"><div className="flex items-center justify-between py-2.5 text-xs"><span className="text-muted">Pending review</span><span className={pendingTotal ? "font-semibold text-clay" : "font-medium text-faint"}>{pendingTotal}</span></div><div className="flex items-center justify-between py-2.5 text-xs"><span className="text-muted">Open requests</span><span className="font-medium text-ink">{openTotal}</span></div><div className="flex items-center justify-between py-2.5 text-xs"><span className="text-muted">In progress</span><span className="font-medium text-ink">{activeTotal}</span></div></div>
             {pendingTotal > 0 && projects.find((p) => (countMap[p.id]?.PENDING ?? 0) > 0) && <Link href={`/dashboard/projects/${projects.find((p) => (countMap[p.id]?.PENDING ?? 0) > 0)!.id}?tab=pending`} className="mt-4 inline-flex text-xs font-bold text-clay hover:text-clay-hover">Review feedback →</Link>}
           </div>
-          <div className="rounded-2xl bg-primary p-5 text-primary-fg shadow-soft">
-            <span className="text-[10px] font-bold uppercase tracking-[0.16em] opacity-50">Agent workflow</span>
-            <p className="mt-3 text-base font-bold">Connect your coding agent</p>
-            <p className="mt-1 text-xs leading-relaxed opacity-65">Let Claude, Codex, or Cursor triage feedback and close the loop as you ship.</p>
-            {projects[0] ? <Link href={`/dashboard/projects/${projects[0].id}?tab=mcp`} className="mt-4 inline-flex rounded-lg bg-clay px-3 py-2 text-xs font-bold text-white">Set up MCP →</Link> : <Link href="/dashboard/projects/new" className="mt-4 inline-flex rounded-lg bg-clay px-3 py-2 text-xs font-bold text-white">Create a project →</Link>}
+          <div className="rounded-xl border border-line bg-card p-4">
+            <h2 className="text-sm font-semibold text-ink">Shortcuts</h2>
+            <div className="mt-2 space-y-1">{projects[0] && <Link href={`/dashboard/projects/${projects[0].id}?tab=mcp`} className="flex items-center justify-between rounded-lg px-2 py-2 text-xs text-muted hover:bg-surface hover:text-ink"><span>Connect an agent</span><span>→</span></Link>}<Link href="/dashboard/projects/new" className="flex items-center justify-between rounded-lg px-2 py-2 text-xs text-muted hover:bg-surface hover:text-ink"><span>Create project</span><span>→</span></Link><Link href="/dashboard/billing" className="flex items-center justify-between rounded-lg px-2 py-2 text-xs text-muted hover:bg-surface hover:text-ink"><span>Manage billing</span><span>→</span></Link></div>
           </div>
         </aside>
       </div>
@@ -157,9 +151,8 @@ export default async function DashboardPage({
   );
 }
 
-function Metric({ label, value, detail, tone, icon }: { label: string; value: number; detail: string; tone: "clay" | "warning" | "info" | "success"; icon: string }) {
-  const tones = { clay: "bg-clay/10 text-clay", warning: "bg-warning/10 text-warning", info: "bg-info/10 text-info", success: "bg-success/10 text-success" };
-  return <div className="rounded-2xl border border-line bg-card p-4 shadow-soft sm:p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-semibold text-muted">{label}</p><p className="mt-2 font-serif text-3xl tracking-tight text-ink sm:text-4xl">{value.toLocaleString()}</p></div><span className={`grid h-9 w-9 place-items-center rounded-xl text-sm font-bold ${tones[tone]}`}>{icon}</span></div><p className="mt-3 truncate text-[10px] font-medium text-faint">{detail}</p></div>;
+function Metric({ label, value, detail }: { label: string; value: number; detail: string }) {
+  return <div className="border-b border-line p-4 last:border-0 sm:border-b-0 sm:p-5"><p className="text-[11px] font-medium text-muted">{label}</p><p className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-ink">{value.toLocaleString()}</p><p className="mt-1 text-[10px] text-faint">{detail}</p></div>;
 }
 
 function Stat({ dot, n, label }: { dot: string; n: number; label: string }) {

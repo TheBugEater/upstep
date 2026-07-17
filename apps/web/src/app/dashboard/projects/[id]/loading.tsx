@@ -4,25 +4,8 @@ function Sk({ className }: { className?: string }) {
 
 export default function ProjectLoading() {
   return (
-    <div className="min-h-screen">
-      <div className="border-b border-line bg-card px-4 py-6 sm:px-6 lg:px-8">
-
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <Sk className="w-48 h-8 rounded-lg" />
-          <Sk className="w-9 h-9 rounded-full" />
-        </div>
-
-        <div className="relative mb-4">
-          <div className="absolute inset-x-0 bottom-0 border-b border-line" />
-          <div className="flex items-center gap-1">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Sk key={i} className={`h-9 rounded-t-lg ${i === 0 ? "w-24" : "w-20"}`} />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 py-5 sm:px-6 lg:px-8">
+    <div className="min-h-screen px-4 py-5 sm:px-6 lg:px-7 lg:py-6">
+        <div className="mb-5 flex items-center justify-between"><div className="space-y-2"><Sk className="h-6 w-28" /><Sk className="h-3 w-40" /></div><Sk className="h-9 w-24" /></div>
         <div className="flex gap-2 mb-4">
           <Sk className="w-36 h-8 rounded-xl" />
           <Sk className="w-44 h-8 rounded-xl" />
@@ -46,7 +29,6 @@ export default function ProjectLoading() {
             </div>
           ))}
         </div>
-      </div>
     </div>
   );
 }

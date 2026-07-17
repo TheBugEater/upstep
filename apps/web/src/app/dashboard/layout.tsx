@@ -17,22 +17,41 @@ export default async function DashboardLayout({ children }: { children: React.Re
         id: true,
         name: true,
         _count: { select: { feedback: true } },
-        feedback: { where: { status: "PENDING" }, select: { id: true }, take: 100 },
       },
     }),
   ]);
+
+  const feedbackCounts = projects.length
+    ? await db.feedback.groupBy({
+        by: ["projectId", "status"],
+        where: { projectId: { in: projects.map((project) => project.id) } },
+        _count: { id: true },
+      })
+    : [];
+
+  const counts = new Map<string, Record<string, number>>();
+  for (const row of feedbackCounts) {
+    const projectCounts = counts.get(row.projectId) ?? {};
+    projectCounts[row.status] = row._count.id;
+    counts.set(row.projectId, projectCounts);
+  }
 
   return (
     <DashboardShell
       email={session.user.email}
       name={user?.name}
       plan={user?.plan ?? "FREE"}
-      projects={projects.map((project) => ({
-        id: project.id,
-        name: project.name,
-        feedbackCount: project._count.feedback,
-        pendingCount: project.feedback.length,
-      }))}
+      projects={projects.map((project) => {
+        const projectCounts = counts.get(project.id) ?? {};
+        return {
+          id: project.id,
+          name: project.name,
+          feedbackCount: project._count.feedback,
+          activeCount: (projectCounts.OPEN ?? 0) + (projectCounts.IN_PROGRESS ?? 0),
+          completedCount: projectCounts.DONE ?? 0,
+          pendingCount: projectCounts.PENDING ?? 0,
+        };
+      })}
     >
       {children}
       <UpstepWidget {...(session?.user?.id ? { userId: session.user.id } : {})} />

@@ -70,7 +70,7 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props
                 draggingRef.current = false;
               }, 0);
             }}
-            className={`flex-shrink-0 w-72 rounded-2xl border self-start transition-all duration-300 ease-fluid ${
+            className={`min-w-[280px] flex-1 rounded-xl border self-start transition-all duration-300 ease-fluid ${
               isOver
                 ? "border-clay/50 bg-clay-tint/50 shadow-glow scale-[1.01]"
                 : "border-line bg-surface/40"
