@@ -1,0 +1,33 @@
+name: Bug report
+description: Report reproducible incorrect behavior
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Include the expected behavior and the actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest set of steps, repository or code sample that reproduces the issue.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options: [Upstep Cloud, Self-hosted, SDK only]
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, Node.js, database and operating-system versions where relevant.

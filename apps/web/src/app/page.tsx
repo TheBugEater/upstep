@@ -225,16 +225,16 @@ function Mcp() {
               </p>
               <p className="pl-4 whitespace-nowrap">https://upstep.dev/api/mcp \</p>
               <p className="pl-4 whitespace-nowrap">
-                --header <span className="text-ink-soft">&quot;Authorization: Bearer YOUR_API_KEY&quot;</span>
+                --header <span className="text-ink-soft">&quot;Authorization: Bearer YOUR_MCP_KEY&quot;</span>
               </p>
               <p className="text-faint mt-3 mb-1"># Codex CLI</p>
               <p className="whitespace-nowrap">
-                <span className="text-clay">export</span> UPSTEP_API_KEY=&quot;YOUR_API_KEY&quot;
+                <span className="text-clay">export</span> UPSTEP_MCP_KEY=&quot;YOUR_MCP_KEY&quot;
               </p>
               <p className="whitespace-nowrap">
                 <span className="text-clay">codex</span> mcp add upstep --url https://upstep.dev/api/mcp \
               </p>
-              <p className="pl-4 whitespace-nowrap">--bearer-token-env-var UPSTEP_API_KEY</p>
+              <p className="pl-4 whitespace-nowrap">--bearer-token-env-var UPSTEP_MCP_KEY</p>
             </div>
           </div>
 

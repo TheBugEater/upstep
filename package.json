@@ -2,11 +2,13 @@
   "name": "upstep",
   "version": "0.0.1",
   "private": true,
+  "license": "AGPL-3.0-only",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
+    "test": "turbo run test",
     "clean": "turbo run clean",
     "publish:packages": "bash scripts/publish-packages.sh"
   },
@@ -20,5 +22,10 @@
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss@<8.5.10": "8.5.10"
+    }
   }
 }

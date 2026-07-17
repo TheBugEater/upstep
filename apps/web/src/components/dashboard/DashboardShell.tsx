@@ -171,6 +171,7 @@ export function DashboardShell({ children, email, name, plan, projects }: Props)
           <div className="space-y-0.5 border-t border-line pt-3">
             <NavItem href="/dashboard/billing" label="Billing & plan" icon="card" active={pathname.startsWith("/dashboard/billing")} expanded={panelExpanded} />
             <NavItem href="/guides" label="Help & guides" icon="help" active={false} expanded={panelExpanded} />
+            <NavItem href="https://github.com/TheBugEater/upstep" label="Source code" icon="sparkle" active={false} expanded={panelExpanded} />
           </div>
         </div>
 

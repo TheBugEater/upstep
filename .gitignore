@@ -31,6 +31,9 @@ apps/web/src/generated
 # pnpm
 .pnpm-store
 
+# Private go-to-market research is intentionally kept outside the public repo
+marketing/backlinks/
+
 # Dart / Flutter
 .dart_tool
 .flutter-plugins

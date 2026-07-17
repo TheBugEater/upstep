@@ -61,15 +61,14 @@ export default function NewProjectPage() {
             ✓
           </div>
           <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Project created</div>
-          <h1 className="font-serif text-3xl tracking-tight text-ink sm:text-4xl">Save your API key</h1>
+          <h1 className="font-serif text-3xl tracking-tight text-ink sm:text-4xl">Add your publishable key</h1>
           <p className="text-sm text-muted mt-2">
-            This is the only time your key will be shown in full. Copy it now and store it
-            somewhere safe: your password manager, <code className="font-mono text-xs bg-surface border border-line rounded px-1 py-0.5">.env</code> file, or secrets manager.
+            Put this key in your browser or mobile SDK configuration. It identifies the project and is safe to ship in a client application; it does not grant dashboard or MCP access.
           </p>
 
           <div className="mt-8 rounded-2xl border border-warning/30 bg-warning/10 p-5 shadow-soft">
             <p className="text-xs font-semibold text-warning uppercase tracking-wide mb-3">
-              Your API key, copy it now
+              Publishable SDK key
             </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-sm font-mono bg-white border border-warning/30 rounded-xl px-4 py-3 text-ink break-all">
@@ -83,7 +82,7 @@ export default function NewProjectPage() {
               </button>
             </div>
             <p className="text-xs text-warning mt-3">
-              After you leave this page, the key will always be masked in Settings. You can rotate it there if needed.
+              You can copy or rotate this key later from Project settings.
             </p>
           </div>
 

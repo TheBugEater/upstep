@@ -60,7 +60,6 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
-  password      String? // null for OAuth-only accounts
   createdAt     DateTime  @default(now())
 
   // Billing
@@ -75,13 +74,18 @@ model User {
 }
 
 model Project {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  apiKey    String   @unique @default(cuid())
-  ownerId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  // Public publishable key embedded in browser/mobile SDKs. Never grants
+  // dashboard or MCP write access.
+  apiKey     String   @unique @default(cuid())
+  // SHA-256 digest of the separately generated MCP secret. The plaintext is
+  // returned once and never stored.
+  mcpKeyHash String?  @unique
+  ownerId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // When true, new feedback is held as PENDING until the owner approves it.
   moderationEnabled Boolean @default(true)

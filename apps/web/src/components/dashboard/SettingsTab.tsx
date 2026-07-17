@@ -180,10 +180,9 @@ export function SettingsTab({
       {/* ── API Key (owner only) ─────────────────────────────────────────────── */}
       {isOwner && (
         <div className="rounded-2xl border border-line bg-card shadow-soft p-6">
-          <h3 className="text-sm font-semibold text-ink mb-1">API Key</h3>
+          <h3 className="text-sm font-semibold text-ink mb-1">Publishable SDK key</h3>
           <p className="text-xs text-muted mb-4">
-            Used in your SDK to authorise writes to this project. The key is masked for security - 
-            copy it when you need to use it.
+            Used by browser and mobile SDKs to submit public feedback. This key identifies the project and is safe to embed in client applications; it never grants dashboard or MCP access.
           </p>
 
           <div className="flex items-center gap-2 mb-4">
@@ -201,7 +200,7 @@ export function SettingsTab({
           {newKey && (
             <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 mb-4">
               <p className="text-xs font-semibold text-warning mb-2">
-                Save your new key. This is the only time it will be shown in full.
+                Update every installed SDK with this new publishable key.
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-xs font-mono bg-white border border-warning/30 rounded-lg px-3 py-2 text-ink break-all">

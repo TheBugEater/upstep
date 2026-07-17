@@ -20,7 +20,7 @@ export async function createProjectWithDefaults(name: string, ownerId: string) {
     data: {
       name,
       slug,
-      apiKey: `upstep_${nanoid(32)}`,
+      apiKey: `upstep_pk_${nanoid(32)}`,
       ownerId,
       statuses: {
         create: [

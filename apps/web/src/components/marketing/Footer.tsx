@@ -31,6 +31,7 @@ export function Footer() {
               ["Documentation", "/#integrate"],
               ["Developer guides", "/guides"],
               ["MCP server", "/#mcp"],
+              ["Source code", "https://github.com/TheBugEater/upstep"],
               ["Integrations", "/integrations"],
               ["@upstep/js on npm", "https://www.npmjs.com/package/@upstep/js"],
               ["@upstep/react-native on npm", "https://www.npmjs.com/package/@upstep/react-native"],
@@ -58,12 +59,13 @@ export function Footer() {
             links={[
               ["Terms of Service", "/legal/terms"],
               ["Privacy Policy", "/legal/privacy"],
+              ["AGPL license", "https://github.com/TheBugEater/upstep/blob/main/LICENSE"],
             ]}
           />
         </div>
 
         <div className="mt-12 pt-6 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-faint">
-          <p>© {new Date().getFullYear()} Upstep. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Upstep contributors. Server source licensed AGPL-3.0.</p>
           <p>
             Built for builders. Analytics by{" "}
             <a

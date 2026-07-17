@@ -57,6 +57,7 @@ interface Props {
   projectSlug: string;
   apiKey: string;
   baseUrl: string;
+  mcpConfigured: boolean;
   moderationEnabled: boolean;
   isOwner: boolean;
   ownerPlan: string;
@@ -73,6 +74,7 @@ export function ProjectWorkspace({
   projectSlug,
   apiKey,
   baseUrl,
+  mcpConfigured,
   moderationEnabled,
   isOwner,
   ownerPlan,
@@ -582,7 +584,7 @@ export function ProjectWorkspace({
 
       {tab === "mcp" && (
         <div className="max-w-3xl"><SectionHeader title="MCP & agents" description="Give your coding agents controlled access to this feedback workspace" />
-          <McpCard apiKey={apiKey} baseUrl={baseUrl} />
+          <McpCard projectId={projectId} baseUrl={baseUrl} configured={mcpConfigured} isOwner={isOwner} />
         </div>
       )}
 
@@ -596,7 +598,7 @@ export function ProjectWorkspace({
       )}
 
       {tab === "settings" && (
-        <div><div className="mb-5 flex items-start justify-between gap-4"><SectionHeader title="Project settings" description="API access, moderation, members, and project controls" /><SetupGuideButton apiKey={apiKey} baseUrl={baseUrl} /></div><SettingsTab
+        <div><div className="mb-5 flex items-start justify-between gap-4"><SectionHeader title="Project settings" description="API access, moderation, members, and project controls" /><SetupGuideButton projectId={projectId} apiKey={apiKey} baseUrl={baseUrl} mcpConfigured={mcpConfigured} isOwner={isOwner} /></div><SettingsTab
           projectId={projectId}
           apiKey={apiKey}
           moderationEnabled={moderationEnabled}

@@ -60,6 +60,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
+  const analyticsKey = process.env.NEXT_PUBLIC_ONRAMP_API_KEY;
 
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable} ${mono.variable}`} suppressHydrationWarning>
@@ -72,17 +73,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
-        <OnRampProvider
-          apiKey={process.env.NEXT_PUBLIC_ONRAMP_API_KEY ?? ""}
-          host="https://ingest.getonramp.dev"
-          appVersion="1.0.0"
-        >
-          <OnRampRouteTracker />
-          {session?.user?.email && (
-            <OnRampIdentify email={session.user.email} />
-          )}
-          {children}
-        </OnRampProvider>
+        {analyticsKey ? (
+          <OnRampProvider apiKey={analyticsKey} host="https://ingest.getonramp.dev" appVersion="1.0.0">
+            <OnRampRouteTracker />
+            {session?.user?.email && <OnRampIdentify email={session.user.email} />}
+            {children}
+          </OnRampProvider>
+        ) : children}
       </body>
     </html>
   );

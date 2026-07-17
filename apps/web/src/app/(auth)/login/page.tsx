@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
-import { signIn } from "next-auth/react";
+import { Suspense, useEffect, useState } from "react";
+import { getProviders, signIn } from "next-auth/react";
 import { Logo, LogoMark } from "@/components/Logo";
 import { BoardPreview } from "@/components/marketing/BoardPreview";
 import Link from "next/link";
@@ -18,8 +18,13 @@ export default function LoginPage() {
 
 function LoginForm() {
   const { step } = useOnRamp();
+  const [providers, setProviders] = useState<Awaited<ReturnType<typeof getProviders>>>(null);
   const appName = useSearchParams().get("appName")?.trim();
   const callbackUrl = appName ? `/dashboard?newProject=${encodeURIComponent(appName)}` : "/dashboard";
+
+  useEffect(() => {
+    void getProviders().then(setProviders);
+  }, []);
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -44,21 +49,27 @@ function LoginForm() {
             </p>
 
             <div className="mt-8 space-y-3">
-              <button
+              {providers?.github && <button
                 onClick={() => { step("oauth_clicked", { properties: { provider: "github" } }); signIn("github", { callbackUrl }); }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-primary text-primary-fg rounded-xl text-sm font-medium hover:bg-primary/85 transition shadow-sm"
               >
                 <GitHubIcon />
                 Continue with GitHub
-              </button>
+              </button>}
 
-              <button
+              {providers?.google && <button
                 onClick={() => { step("oauth_clicked", { properties: { provider: "google" } }); signIn("google", { callbackUrl }); }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-card border border-line text-ink rounded-xl text-sm font-medium hover:bg-surface transition"
               >
                 <GoogleIcon />
                 Continue with Google
-              </button>
+              </button>}
+
+              {providers && !providers.github && !providers.google && (
+                <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm leading-relaxed text-warning">
+                  No OAuth provider is configured. Add GitHub or Google credentials to the server environment and restart Upstep.
+                </div>
+              )}
             </div>
 
             <div className="mt-8 flex items-center gap-3">

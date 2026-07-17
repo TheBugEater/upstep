@@ -41,7 +41,8 @@ upstep/
 ├── packages/
 │   ├── types/                # @upstep/types — shared TypeScript types
 │   ├── sdk-web/              # @upstep/js — web widget (vanilla + React)
-│   └── sdk-react-native/     # @upstep/react-native — RN widget
+│   ├── sdk-react-native/     # @upstep/react-native — RN widget
+│   └── sdk-flutter/          # upstep_flutter — Flutter widget
 ├── pnpm-workspace.yaml
 ├── turbo.json
 └── tsconfig.base.json
@@ -56,7 +57,7 @@ Workspaces are `apps/*` and `packages/*`. Packages reference each other with
 
 | Area      | Technology                   |
 | --------- | ---------------------------- |
-| Framework | Next.js 15.1.6 (App Router)  |
+| Framework | Next.js 15.5.19 (App Router) |
 | UI        | React 19, Tailwind CSS 3     |
 | Auth      | NextAuth / Auth.js v5 (beta) |
 | Database  | PostgreSQL via Prisma 6      |
@@ -95,11 +96,11 @@ cp apps/web/.env.example apps/web/.env
 Generate an auth secret with `openssl rand -base64 32`. See
 [Environment variables](#environment-variables).
 
-**4. Push the schema** to the database:
+**4. Apply committed migrations** to the database:
 
 ```bash
 cd apps/web
-pnpm db:push
+pnpm exec prisma migrate deploy
 ```
 
 **5. Run the dev server** (from the repo root):
@@ -123,12 +124,15 @@ Defined in [apps/web/.env.example](apps/web/.env.example). All live in
 | `DIRECT_URL`                                | Yes      | Direct Postgres connection (used for migrations) |
 | `AUTH_SECRET`                               | Yes      | NextAuth session encryption secret               |
 | `AUTH_URL`                                  | Yes      | App base URL, e.g. `http://localhost:3000`       |
+| `CRON_SECRET`                               | Yes      | Protects notification retry processing           |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | Optional | GitHub OAuth login                               |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth login                               |
 | `STRIPE_SECRET_KEY`                         | Optional | Enables billing/checkout                         |
 | `STRIPE_WEBHOOK_SECRET`                     | Optional | Verifies Stripe webhook signatures               |
 | `STRIPE_PRICE_PRO`                          | Optional | Stripe price id for the Pro plan                 |
 | `STRIPE_PRICE_BUSINESS`                     | Optional | Stripe price id for the Business plan            |
+| `RESEND_API_KEY` / `RESEND_FROM_EMAIL`      | Optional | Enables feedback notification email               |
+| `NEXT_PUBLIC_ONRAMP_API_KEY`                | Optional | Enables hosted-service analytics                  |
 
 If the Stripe variables are blank, the app still runs: checkout returns a
 "billing not configured" response and plan limits are still enforced (everyone
@@ -141,9 +145,9 @@ is on Free).
 Auth is configured in [apps/web/src/lib/auth.ts](apps/web/src/lib/auth.ts)
 using NextAuth v5 with the Prisma adapter and JWT sessions.
 
-Sign-in providers: **GitHub** and **Google** (OAuth only). There is no
-email/password login. The sign-in page is at `/login`; `/register` redirects to
-`/login`.
+Sign-in providers: **GitHub** and **Google** (OAuth only). Configure at least
+one provider. There is no email/password account endpoint. The sign-in page is
+at `/login`; `/register` redirects to `/login`.
 
 ---
 
@@ -743,8 +747,10 @@ on the tab updates in real time as items are actioned.
 
 ### Settings tab
 
-- **API key** — masked by default (first 8 chars + bullets). A **Reveal / Hide**
-  toggle and a **Copy** button are available.
+- **Publishable SDK key** — visible to browser/mobile clients and limited to
+  the public feedback API. It never authorizes MCP or dashboard access.
+- **Private MCP key** — generated from the MCP tab, returned once and stored
+  only as a one-way hash. It can be rotated or revoked by the project owner.
 - **Rotate key** — shows a confirmation warning before calling
   `POST /api/projects/:id/rotate-key`. The new key is revealed immediately after
   rotation. The old key is invalidated instantly.
@@ -766,13 +772,13 @@ Run from `apps/web` (or via `pnpm --filter @upstep/web <script>`):
 | `pnpm type-check`    | `tsc --noEmit`                                |
 | `pnpm db:generate`   | Generate the Prisma client                    |
 | `pnpm db:migrate`    | Run Prisma migrations (dev)                   |
-| `pnpm db:push`       | Push the schema to the database               |
+| `pnpm db:push`       | Local prototyping only; never use for a shipped change |
 | `pnpm db:studio`     | Open Prisma Studio                            |
 | `pnpm db:seed`       | Run `prisma/seed.ts`                          |
 | `pnpm stripe:prices` | Create/print Stripe prices for the paid plans |
 
 Root scripts (Turborepo, all workspaces): `pnpm dev`, `pnpm build`,
-`pnpm lint`, `pnpm type-check`.
+`pnpm test`, `pnpm lint`, `pnpm type-check`.
 
 Package build scripts: `@upstep/js` and `@upstep/react-native` build with
 `pnpm --filter <pkg> build`.

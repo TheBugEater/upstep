@@ -116,12 +116,12 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
       },
       {
         type: "p",
-        text: "Connecting it takes either one Claude Code command or a short Codex setup, both scoped to a single project by its API key:",
+        text: "Connecting it takes either one Claude Code command or a short Codex setup, both scoped to a single project by a private MCP key:",
       },
       {
         type: "code",
         lang: "bash",
-        code: 'claude mcp add --transport http upstep https://upstep.dev/api/mcp \\\n  --header "Authorization: Bearer YOUR_API_KEY"\n\nexport UPSTEP_API_KEY="YOUR_API_KEY"\ncodex mcp add upstep --url https://upstep.dev/api/mcp \\\n  --bearer-token-env-var UPSTEP_API_KEY',
+        code: 'claude mcp add --transport http upstep https://upstep.dev/api/mcp \\\n  --header "Authorization: Bearer YOUR_MCP_KEY"\n\nexport UPSTEP_MCP_KEY="YOUR_MCP_KEY"\ncodex mcp add upstep --url https://upstep.dev/api/mcp \\\n  --bearer-token-env-var UPSTEP_MCP_KEY',
       },
       { type: "h2", text: "Dev-only, by default" },
       {

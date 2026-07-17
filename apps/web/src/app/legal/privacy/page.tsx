@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/legal/privacy" },
 };
 
-const EFFECTIVE = "June 23, 2026";
+const EFFECTIVE = "July 17, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -77,6 +77,9 @@ export default function PrivacyPage() {
                 <strong>Railway / Neon</strong>: cloud infrastructure and
                 database hosting
               </li>
+              <li>
+                <strong>OnRamp</strong>: optional product analytics on the hosted Upstep service
+              </li>
             </ul>
             <p>
               Each service has its own privacy policy governing how they handle
@@ -124,9 +127,10 @@ export default function PrivacyPage() {
             <p>
               We use HTTPS for all data in transit. Database access is
               restricted and credentials are never stored in client-facing code.
-              API keys are stored hashed where possible. No security measure is
-              perfect, and we encourage you to report any vulnerabilities
-              responsibly.
+              Private MCP keys are stored as one-way hashes. Publishable SDK
+              keys are stored in a retrievable form because project owners must
+              embed them in client applications. No security measure is perfect,
+              and we encourage you to report vulnerabilities responsibly.
             </p>
           </Section>
 

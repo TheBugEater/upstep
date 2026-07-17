@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/legal/terms" },
 };
 
-const EFFECTIVE = "June 23, 2026";
+const EFFECTIVE = "July 17, 2026";
 
 export default function TermsPage() {
   return (
@@ -37,8 +37,9 @@ export default function TermsPage() {
             <p>
               You sign in via GitHub or Google OAuth. You are responsible for
               keeping your account secure and for all activity that occurs under
-              it. You must not share your API keys publicly or allow
-              unauthorized access to your projects.
+              it. Publishable SDK keys are designed for client applications,
+              but private MCP keys must not be shared publicly. You must not
+              allow unauthorized access to your projects.
             </p>
           </Section>
 
@@ -90,9 +91,11 @@ export default function TermsPage() {
 
           <Section title="7. Intellectual property">
             <p>
-              The Upstep platform, branding, and SDKs are our intellectual
-              property. Your content and data remain yours. Nothing in these
-              Terms transfers ownership of either party&rsquo;s IP.
+              Upstep software is available under the open-source licenses in
+              its repository. Those licenses govern copying, modification and
+              distribution of the software. The Upstep name and logos remain
+              subject to the project&rsquo;s trademark policy. Your content and
+              data remain yours.
             </p>
           </Section>
 

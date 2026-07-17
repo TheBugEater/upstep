@@ -86,6 +86,7 @@ export default async function ProjectPage({
           projectSlug={project.slug}
           apiKey={project.apiKey}
           baseUrl={baseUrl}
+          mcpConfigured={!!project.mcpKeyHash}
           moderationEnabled={project.moderationEnabled}
           isOwner={isOwner}
           ownerPlan={ownerPlan}

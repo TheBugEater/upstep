@@ -2,12 +2,14 @@
   "name": "@upstep/web",
   "version": "0.0.1",
   "private": true,
+  "license": "AGPL-3.0-only",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
@@ -21,7 +23,6 @@
     "@prisma/client": "^6.2.1",
     "@upstep/js": "^0.5.11",
     "@upstep/types": "workspace:*",
-    "bcryptjs": "^3.0.3",
     "nanoid": "^5.0.9",
     "next": "15.5.19",
     "next-auth": "^5.0.0-beta.25",
@@ -32,7 +33,6 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",

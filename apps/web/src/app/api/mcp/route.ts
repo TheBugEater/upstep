@@ -3,19 +3,20 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { enforceProjectAndClientLimits, rateLimitResponse } from "@/lib/rate-limit";
 import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
+import { hashMcpKey, isMcpKey } from "@/lib/mcp-credentials";
 
 /**
  * Upstep MCP server - Streamable HTTP transport (JSON responses).
  *
  * Any MCP client (Claude Code, Codex, Claude Desktop, Cursor, …) can connect with:
  *   claude mcp add --transport http upstep https://upstep.dev/api/mcp \
- *     --header "Authorization: Bearer <project API key>"
+ *     --header "Authorization: Bearer <project MCP key>"
  *
- *   export UPSTEP_API_KEY="<project API key>"
+ *   export UPSTEP_MCP_KEY="<project MCP key>"
  *   codex mcp add upstep --url https://upstep.dev/api/mcp \
- *     --bearer-token-env-var UPSTEP_API_KEY
+ *     --bearer-token-env-var UPSTEP_MCP_KEY
  *
- * The API key scopes every tool to a single project, so an agent can browse,
+ * The secret MCP key scopes every tool to a single project, so an agent can browse,
  * triage, create, and comment on feedback - nothing else.
  */
 
@@ -33,11 +34,10 @@ type Project = NonNullable<Awaited<ReturnType<typeof authenticate>>>;
 
 async function authenticate(req: NextRequest) {
   const bearer = req.headers.get("authorization");
-  const apiKey =
-    bearer?.replace(/^Bearer\s+/i, "").trim() || req.headers.get("x-api-key") || "";
-  if (!apiKey) return null;
+  const mcpKey = bearer?.replace(/^Bearer\s+/i, "").trim() ?? "";
+  if (!isMcpKey(mcpKey)) return null;
   return db.project.findUnique({
-    where: { apiKey },
+    where: { mcpKeyHash: hashMcpKey(mcpKey) },
     select: { id: true, name: true, moderationEnabled: true },
   });
 }
@@ -728,7 +728,7 @@ export async function POST(req: NextRequest) {
   const project = await authenticate(req);
   if (!project) {
     return NextResponse.json(
-      { jsonrpc: "2.0", id: null, error: { code: -32001, message: "Unauthorized: pass your project API key as a Bearer token" } },
+      { jsonrpc: "2.0", id: null, error: { code: -32001, message: "Unauthorized: pass your private project MCP key as a Bearer token" } },
       { status: 401, headers: { "WWW-Authenticate": "Bearer" } }
     );
   }

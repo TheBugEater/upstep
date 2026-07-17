@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 type RouteContext = { params: Promise<{ id: string }> };
 
 // ─── POST /api/projects/[id]/rotate-key ──────────────────────────────────────
-// Generates a new API key and invalidates the old one.
+// Generates a new public SDK key and invalidates the old one. This credential
+// is intentionally never accepted by privileged dashboard or MCP endpoints.
 
 export async function POST(_req: NextRequest, { params }: RouteContext) {
   const session = await auth();
@@ -22,7 +23,7 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const newApiKey = randomBytes(24).toString("base64url");
+  const newApiKey = `upstep_pk_${randomBytes(24).toString("base64url")}`;
 
   const updated = await db.project.update({
     where: { id },

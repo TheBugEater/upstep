@@ -215,22 +215,22 @@ onPressed: () => Upstep.of(context, listen: false).openSheet(),`,
     description: "Connect Claude Code, Codex, Cursor, or another MCP client to one Upstep project, then use safe prompts to turn feedback into product work.",
     category: "MCP",
     minutes: 14,
-    intro: "Upstep exposes a hosted Streamable HTTP MCP server. A project API key scopes every request to exactly one feedback board, allowing an agent to read, organize, and update the backlog without access to your wider account.",
-    prerequisites: ["An Upstep project with an API key", "A compatible MCP client such as Claude Code, Codex, or Cursor", "A clear distinction between customer-visible feedback and internal development tasks"],
+    intro: "Upstep exposes a hosted Streamable HTTP MCP server. A private MCP key scopes every request to exactly one feedback board, allowing an agent to read, organize, and update the backlog without access to your wider account.",
+    prerequisites: ["An Upstep project with a private MCP key generated from its MCP tab", "A compatible MCP client such as Claude Code, Codex, or Cursor", "A clear distinction between customer-visible feedback and internal development tasks"],
     sections: [
-      { title: "Understand the access boundary", body: "The API key does not grant access to every Upstep project. It scopes the agent to one project’s feedback, statuses, labels, boards, and comments. Create separate keys by creating separate projects when client, team, or environment boundaries matter.", details: ["Do not commit a project key to Git.", "Store the key in your shell environment or MCP client secret store.", "Rotate a key in Upstep Settings if it is exposed."] },
+      { title: "Understand the access boundary", body: "The private MCP key scopes the agent to one project’s feedback, statuses, labels, boards, and comments. It is separate from the publishable SDK key embedded in your app.", details: ["Do not commit an MCP key to Git.", "Store it in your shell environment or MCP client secret store.", "Rotate it from the MCP tab if it is exposed."] },
       {
         title: "Configure Claude Code",
-        body: "Claude Code can add the hosted MCP server through its command line. Substitute the API key only in your shell environment; the command references the value rather than writing it into a repository file.",
+        body: "Claude Code can add the hosted MCP server through its command line. Generate a private key from the MCP tab and keep it outside your repository.",
         code: `claude mcp add --transport http upstep https://upstep.dev/api/mcp \\
-  --header "Authorization: Bearer YOUR_PROJECT_KEY"`,
+  --header "Authorization: Bearer YOUR_MCP_KEY"`,
       },
       {
         title: "Configure Codex",
-        body: "For Codex, keep the project key in an environment variable and let the MCP configuration reference it. This is safer than storing a bearer token in a checked-in configuration file.",
-        code: `export UPSTEP_API_KEY="upstep_your_project_key"
+        body: "For Codex, keep the MCP key in an environment variable and let the MCP configuration reference it. This is safer than storing a bearer token in a checked-in configuration file.",
+        code: `export UPSTEP_MCP_KEY="upstep_mcp_your_private_key"
 codex mcp add upstep --url https://upstep.dev/api/mcp \\
-  --bearer-token-env-var UPSTEP_API_KEY`,
+  --bearer-token-env-var UPSTEP_MCP_KEY`,
       },
       {
         title: "Configure another Streamable HTTP MCP client",
@@ -240,7 +240,7 @@ codex mcp add upstep --url https://upstep.dev/api/mcp \\
     "upstep": {
       "url": "https://upstep.dev/api/mcp",
       "headers": {
-        "Authorization": "Bearer YOUR_PROJECT_KEY"
+        "Authorization": "Bearer YOUR_MCP_KEY"
       }
     }
   }
@@ -271,7 +271,7 @@ codex mcp add upstep --url https://upstep.dev/api/mcp \\
         checklist: ["Weekly: summarize new open feedback and report vote movement.", "Weekly: surface duplicate clusters for human review.", "Monthly: compare completed work with the most requested themes.", "Before shipping: draft, then review, any customer-facing comments."] },
     ],
     troubleshooting: [
-      { issue: "The client reports an authentication error.", answer: "Confirm the project API key is current and that the Authorization header is exactly Bearer followed by the key. Then restart or reload the MCP client." },
+      { issue: "The client reports an authentication error.", answer: "Confirm you used the private key generated in the MCP tab—not the publishable SDK key—and that the Authorization header is exactly Bearer followed by the key." },
       { issue: "The agent cannot see expected feedback.", answer: "Check that the key belongs to the intended project and that the feedback is not in a different project or hidden pending-review state." },
       { issue: "The agent made a customer-visible change too early.", answer: "Use prompt constraints: start read-only, create internal tasks by default, and require a human review before comments or public-status changes." },
     ],

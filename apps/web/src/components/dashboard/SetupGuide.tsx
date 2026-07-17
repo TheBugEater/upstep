@@ -21,13 +21,19 @@ const FRAMEWORKS: { id: FrameworkId; label: string }[] = [
 /* ───────────────────── Button + slide-over drawer ───────────────────── */
 
 export function SetupGuideButton({
+  projectId,
   apiKey,
   baseUrl,
+  mcpConfigured,
+  isOwner,
   defaultOpen = false,
   sidebar = false,
 }: {
+  projectId: string;
   apiKey: string;
   baseUrl: string;
+  mcpConfigured: boolean;
+  isOwner: boolean;
   defaultOpen?: boolean;
   sidebar?: boolean;
 }) {
@@ -89,7 +95,7 @@ export function SetupGuideButton({
             </header>
 
             <div className="overflow-y-auto px-6 py-6">
-              <SetupGuideContent apiKey={apiKey} baseUrl={baseUrl} />
+              <SetupGuideContent projectId={projectId} apiKey={apiKey} baseUrl={baseUrl} mcpConfigured={mcpConfigured} isOwner={isOwner} />
             </div>
           </div>
         </div>
@@ -100,7 +106,7 @@ export function SetupGuideButton({
 
 /* ─────────────────────────── Guide content ──────────────────────────── */
 
-function SetupGuideContent({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
+function SetupGuideContent({ projectId, apiKey, baseUrl, mcpConfigured, isOwner }: { projectId: string; apiKey: string; baseUrl: string; mcpConfigured: boolean; isOwner: boolean }) {
   const [fw, setFw] = useState<FrameworkId>("react");
   const { step } = useOnRamp();
   const install = INSTALL[fw];
@@ -175,7 +181,7 @@ function SetupGuideContent({ apiKey, baseUrl }: { apiKey: string; baseUrl: strin
 
       <Patterns framework={fw} />
 
-      <McpSetup apiKey={apiKey} baseUrl={baseUrl} />
+      <McpSetup projectId={projectId} baseUrl={baseUrl} configured={mcpConfigured} isOwner={isOwner} />
 
       <AiPrompt framework={fw} apiKey={apiKey} baseUrl={baseUrl} />
     </div>
@@ -232,7 +238,7 @@ function Patterns({ framework }: { framework: FrameworkId }) {
 // inbox over MCP (triage, tasks, replies). AiPrompt instead generates a
 // prompt for coding assistants to write the widget integration itself.
 
-function McpSetup({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
+function McpSetup({ projectId, baseUrl, configured, isOwner }: { projectId: string; baseUrl: string; configured: boolean; isOwner: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -255,7 +261,7 @@ function McpSetup({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
             project&apos;s inbox directly, list feedback, file Dev-only tasks,
             move cards, and reply to voters, without leaving your editor.
           </p>
-          <McpCard apiKey={apiKey} baseUrl={baseUrl} />
+          <McpCard projectId={projectId} baseUrl={baseUrl} configured={configured} isOwner={isOwner} />
         </div>
       )}
     </div>
