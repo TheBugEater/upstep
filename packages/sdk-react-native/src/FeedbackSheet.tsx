@@ -280,6 +280,7 @@ function FeedCard({
             : <StatusDot status={item.status} />}
           <Text style={[styles.cardDate, { color: p.textFaint }]}>{fmtDate(item.createdAt)}</Text>
         </View>
+        <LabelBadges labels={item.labels} p={p} />
       </View>
 
       <Text style={[styles.chevron, { color: p.textFaint }]}>›</Text>
@@ -338,6 +339,7 @@ function FeedDetailBody({
         {item.status === "PENDING"
           ? <PendingBadge />
           : <StatusBadge status={item.status} p={p} />}
+        <LabelBadges labels={item.labels} p={p} />
       </View>
 
       <Text style={[styles.detailContent, { color: p.textSoft }]}>{item.content}</Text>
@@ -560,6 +562,21 @@ function StatusBadge({ status, p }: { status: string; p: Palette }) {
   );
 }
 
+function LabelBadges({ labels, p }: { labels: Feedback["labels"]; p: Palette }) {
+  if (!labels?.length) return null;
+
+  return (
+    <View style={styles.labelBadges}>
+      {labels.map((label) => (
+        <View key={label.id} style={[styles.labelBadge, { backgroundColor: p.bgSoft, borderColor: label.color }]}>
+          <View style={[styles.labelDot, { backgroundColor: label.color }]} />
+          <Text style={[styles.labelBadgeText, { color: p.textSoft }]} numberOfLines={1}>{label.name}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
@@ -641,12 +658,16 @@ const styles = StyleSheet.create({
   cardDesc: { fontSize: 12.5, lineHeight: 17, marginBottom: 6 },
   cardMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
   cardDate: { fontSize: 11 },
+  labelBadges: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 },
+  labelBadge: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, maxWidth: "100%" },
+  labelDot: { width: 6, height: 6, borderRadius: 3 },
+  labelBadgeText: { fontSize: 11, fontWeight: "500", flexShrink: 1 },
   chevron: { fontSize: 22, fontWeight: "300", marginLeft: 4 },
 
   // Detail
   detailPad: { paddingTop: 4 },
   detailTitle: { fontSize: 22, fontWeight: "700", letterSpacing: -0.4, marginBottom: 10, lineHeight: 28 },
-  badgeRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
   detailContent: { fontSize: 15, lineHeight: 23, marginBottom: 24 },
   upvoteBtn: {
     flexDirection: "row", alignItems: "center", gap: 8,

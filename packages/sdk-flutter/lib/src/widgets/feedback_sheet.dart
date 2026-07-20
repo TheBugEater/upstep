@@ -264,6 +264,7 @@ class _FeedbackCard extends StatelessWidget {
                       children: <Widget>[
                         Chip(label: Text(item.type.label)),
                         Chip(label: Text(_statusLabel(item.status))),
+                        ...item.labels.map(_labelChip),
                       ],
                     ),
                   ],
@@ -326,6 +327,7 @@ class _FeedbackDetailPage extends StatelessWidget {
                       Chip(label: Text(item.type.label)),
                       Chip(label: Text(_statusLabel(item.status))),
                       Chip(label: Text('${item.upvotes} upvotes')),
+                      ...item.labels.map(_labelChip),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -501,4 +503,22 @@ String _statusLabel(FeedbackStatus status) {
     case FeedbackStatus.closed:
       return 'Closed';
   }
+}
+
+Widget _labelChip(Label label) {
+  return Chip(
+    avatar: CircleAvatar(
+      backgroundColor: _labelColor(label.color),
+      radius: 5,
+    ),
+    label: Text(label.name),
+  );
+}
+
+Color _labelColor(String value) {
+  final hex = value.replaceFirst('#', '');
+  if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hex)) {
+    return const Color(0xFF6366F1);
+  }
+  return Color(int.parse('FF$hex', radix: 16));
 }

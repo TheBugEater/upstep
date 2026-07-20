@@ -68,6 +68,9 @@ export async function GET(req: NextRequest) {
     orderBy: { [sort]: "desc" },
     take: limit + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    include: {
+      labels: { select: { id: true, name: true, color: true } },
+    },
   });
 
   const hasMore = items.length > limit;

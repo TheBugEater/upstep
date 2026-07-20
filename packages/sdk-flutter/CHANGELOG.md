@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Show dashboard custom labels on feedback cards and detail views.
+
 ## 0.1.0
 
 - Initial Flutter SDK release

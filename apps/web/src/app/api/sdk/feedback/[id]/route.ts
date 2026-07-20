@@ -38,6 +38,7 @@ export async function GET(
     where: { id, projectId: project.id },
     include: {
       comments: { orderBy: { createdAt: "asc" } },
+      labels: { select: { id: true, name: true, color: true } },
     },
   });
 
