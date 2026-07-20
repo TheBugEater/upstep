@@ -85,6 +85,29 @@ class Label {
   }
 }
 
+class BoardStatus {
+  BoardStatus({
+    required this.id,
+    required this.name,
+    required this.color,
+    required this.isDone,
+  });
+
+  final String id;
+  final String name;
+  final String color;
+  final bool isDone;
+
+  factory BoardStatus.fromJson(Map<String, dynamic> json) {
+    return BoardStatus(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      color: json['color'] as String,
+      isDone: json['isDone'] as bool? ?? false,
+    );
+  }
+}
+
 class FeedbackItem {
   FeedbackItem({
     required this.id,
@@ -101,6 +124,7 @@ class FeedbackItem {
     this.flagged,
     this.internal,
     this.labels = const <Label>[],
+    this.boardStatus,
     this.metadata = const <String, dynamic>{},
     this.userVote,
   });
@@ -118,6 +142,7 @@ class FeedbackItem {
   final bool? flagged;
   final bool? internal;
   final List<Label> labels;
+  final BoardStatus? boardStatus;
   final Map<String, dynamic> metadata;
   final DateTime createdAt;
   final VoteValue? userVote;
@@ -139,6 +164,9 @@ class FeedbackItem {
       labels: ((json['labels'] as List<dynamic>?) ?? const <dynamic>[])
           .map((dynamic item) => Label.fromJson(item as Map<String, dynamic>))
           .toList(),
+      boardStatus: json['boardStatus'] is Map<String, dynamic>
+          ? BoardStatus.fromJson(json['boardStatus'] as Map<String, dynamic>)
+          : null,
       metadata:
           (json['metadata'] as Map<String, dynamic>?) ??
           const <String, dynamic>{},
@@ -171,6 +199,7 @@ class FeedbackItem {
       flagged: flagged,
       internal: internal,
       labels: labels,
+      boardStatus: boardStatus,
       metadata: metadata,
       createdAt: createdAt,
       userVote: clearVote ? null : userVote ?? this.userVote,
@@ -224,6 +253,7 @@ class FeedbackDetail extends FeedbackItem {
     super.flagged,
     super.internal,
     super.labels,
+    super.boardStatus,
     super.metadata,
     super.userVote,
   });
@@ -246,6 +276,7 @@ class FeedbackDetail extends FeedbackItem {
       flagged: base.flagged,
       internal: base.internal,
       labels: base.labels,
+      boardStatus: base.boardStatus,
       metadata: base.metadata,
       createdAt: base.createdAt,
       userVote: base.userVote,

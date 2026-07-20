@@ -277,7 +277,7 @@ function FeedCard({
           <TypeBadge type={item.type} p={p} />
           {item.status === "PENDING"
             ? <PendingBadge />
-            : <StatusDot status={item.status} />}
+            : <StatusDot status={item.status} color={item.boardStatus?.color} />}
           <Text style={[styles.cardDate, { color: p.textFaint }]}>{fmtDate(item.createdAt)}</Text>
         </View>
         <LabelBadges labels={item.labels} p={p} />
@@ -338,7 +338,7 @@ function FeedDetailBody({
         <TypeBadge type={item.type} p={p} />
         {item.status === "PENDING"
           ? <PendingBadge />
-          : <StatusBadge status={item.status} p={p} />}
+          : <StatusBadge status={item.status} boardStatus={item.boardStatus} p={p} />}
         <LabelBadges labels={item.labels} p={p} />
       </View>
 
@@ -549,15 +549,19 @@ const STATUS_COLOR: Record<string, string> = {
   PENDING: "#ea580c", CLOSED: "#6b7280",
 };
 
-function StatusDot({ status }: { status: string }) {
-  return <View style={[styles.statusDot, { backgroundColor: STATUS_COLOR[status] ?? "#9ca3af" }]} />;
+function StatusDot({ status, color }: { status: string; color?: string }) {
+  return <View style={[styles.statusDot, { backgroundColor: color ?? STATUS_COLOR[status] ?? "#9ca3af" }]} />;
 }
 
-function StatusBadge({ status, p }: { status: string; p: Palette }) {
+function StatusBadge({
+  status, boardStatus, p,
+}: {
+  status: string; boardStatus: Feedback["boardStatus"]; p: Palette;
+}) {
   return (
     <View style={[styles.statusBadge, { backgroundColor: p.bgSoft, borderColor: p.border }]}>
-      <StatusDot status={status} />
-      <Text style={[styles.statusBadgeText, { color: p.textSoft }]}>{status.replace("_", " ")}</Text>
+      <StatusDot status={status} color={boardStatus?.color} />
+      <Text style={[styles.statusBadgeText, { color: p.textSoft }]}>{boardStatus?.name ?? status.replace("_", " ")}</Text>
     </View>
   );
 }

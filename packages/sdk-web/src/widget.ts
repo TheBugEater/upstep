@@ -363,6 +363,7 @@ export class UpstepWidget {
           <p class="upstep-feedback-content">${escapeHtml(f.content)}</p>
           <div class="upstep-feedback-meta">
             <span class="upstep-badge upstep-badge-${f.type.toLowerCase()}">${f.type}</span>
+            <span class="upstep-badge upstep-badge-general">${escapeHtml(f.boardStatus?.name ?? f.status.replace("_", " "))}</span>
             <span class="upstep-feedback-date">${new Date(f.createdAt).toLocaleDateString()}</span>
           </div>
         </div>

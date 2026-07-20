@@ -399,7 +399,7 @@ function FeedList({
                 <TypeBadge type={f.type} p={p} />
                 {f.status === "PENDING"
                   ? <PendingBadge />
-                  : <StatusBadge status={f.status} p={p} />}
+                  : <StatusBadge status={f.status} boardStatus={f.boardStatus} p={p} />}
                 <span style={{ fontSize: 11, color: p.textFaint }}>{fmtDate(f.createdAt)}</span>
               </div>
             </div>
@@ -451,7 +451,7 @@ function FeedDetail({ feedbackId, accent, p, font }: { feedbackId: string; accen
       {title && <div style={{ fontSize: 20, fontWeight: 700, color: p.text, letterSpacing: "-.02em", marginBottom: 10, lineHeight: 1.3 }}>{title}</div>}
       <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
         <TypeBadge type={item.type} p={p} />
-        {item.status === "PENDING" ? <PendingBadge /> : <StatusBadge status={item.status} p={p} />}
+        {item.status === "PENDING" ? <PendingBadge /> : <StatusBadge status={item.status} boardStatus={item.boardStatus} p={p} />}
       </div>
       <p style={{ fontSize: 15, lineHeight: 1.6, color: p.textSoft, marginBottom: 20 }}>{item.content}</p>
 
@@ -655,12 +655,16 @@ function PendingBadge() {
   );
 }
 
-function StatusBadge({ status, p }: { status: string; p: Palette }) {
-  const color = STATUS_COLOR[status] ?? "#9ca3af";
+function StatusBadge({
+  status, boardStatus, p,
+}: {
+  status: string; boardStatus: Feedback["boardStatus"]; p: Palette;
+}) {
+  const color = boardStatus?.color ?? STATUS_COLOR[status] ?? "#9ca3af";
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: p.bgSoft, border: `1px solid ${p.border}`, borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 600, color: p.textSoft }}>
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }} />
-      {status.replace("_", " ")}
+      {boardStatus?.name ?? status.replace("_", " ")}
     </span>
   );
 }

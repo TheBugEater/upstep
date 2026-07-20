@@ -20,6 +20,14 @@ export interface Label {
   color: string;
 }
 
+/** The dashboard column assigned to a feedback item, when custom statuses are enabled. */
+export interface BoardStatus {
+  id: string;
+  name: string;
+  color: string;
+  isDone: boolean;
+}
+
 export interface Feedback {
   id: string;
   projectId: string;
@@ -37,6 +45,8 @@ export interface Feedback {
   /** Dev-only — hidden from the public SDK widget. */
   internal?: boolean;
   labels?: Label[];
+  /** Custom dashboard column. Prefer its name and color when displaying status. */
+  boardStatus?: BoardStatus | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
   /** The current user's vote, if any — populated by the API when userId is known. */

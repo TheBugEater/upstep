@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: {
       labels: { select: { id: true, name: true, color: true } },
+      boardStatus: { select: { id: true, name: true, color: true, isDone: true } },
     },
   });
 

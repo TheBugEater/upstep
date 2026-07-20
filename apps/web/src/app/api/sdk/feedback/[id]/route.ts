@@ -39,6 +39,7 @@ export async function GET(
     include: {
       comments: { orderBy: { createdAt: "asc" } },
       labels: { select: { id: true, name: true, color: true } },
+      boardStatus: { select: { id: true, name: true, color: true, isDone: true } },
     },
   });
 

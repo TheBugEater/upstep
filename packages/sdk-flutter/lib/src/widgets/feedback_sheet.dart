@@ -263,7 +263,7 @@ class _FeedbackCard extends StatelessWidget {
                       runSpacing: 8,
                       children: <Widget>[
                         Chip(label: Text(item.type.label)),
-                        Chip(label: Text(_statusLabel(item.status))),
+                        _statusChip(item.status, item.boardStatus),
                         ...item.labels.map(_labelChip),
                       ],
                     ),
@@ -325,7 +325,7 @@ class _FeedbackDetailPage extends StatelessWidget {
                     runSpacing: 8,
                     children: <Widget>[
                       Chip(label: Text(item.type.label)),
-                      Chip(label: Text(_statusLabel(item.status))),
+                      _statusChip(item.status, item.boardStatus),
                       Chip(label: Text('${item.upvotes} upvotes')),
                       ...item.labels.map(_labelChip),
                     ],
@@ -488,6 +488,19 @@ class _SubmitTabState extends State<_SubmitTab> {
       ),
     );
   }
+}
+
+Widget _statusChip(FeedbackStatus status, BoardStatus? boardStatus) {
+  if (boardStatus != null) {
+    return Chip(
+      avatar: CircleAvatar(
+        backgroundColor: _labelColor(boardStatus.color),
+        radius: 5,
+      ),
+      label: Text(boardStatus.name),
+    );
+  }
+  return Chip(label: Text(_statusLabel(status)));
 }
 
 String _statusLabel(FeedbackStatus status) {
