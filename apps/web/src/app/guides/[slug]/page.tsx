@@ -55,6 +55,11 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
             <p className="text-lg text-muted leading-relaxed">{guide.description}</p>
             <p className="mt-5 text-sm text-ink-soft leading-relaxed">{guide.intro}</p>
 
+            <aside className="mt-7 rounded-2xl border border-clay/15 bg-clay/5 p-5 text-sm text-muted leading-6">
+              <h2 className="font-semibold text-ink">Where this integration fits</h2>
+              <p className="mt-2">This guide adds the collection layer. Use it with an <Link href="/feedback-board" className="font-medium text-clay hover:text-clay-hover">in-app feedback board</Link> so users can see existing requests, vote on them, and follow progress instead of sending isolated messages.</p>
+            </aside>
+
             <section className="mt-10 rounded-2xl border border-line bg-card p-5 sm:p-6">
               <h2 className="text-sm font-semibold text-ink">Before you begin</h2>
               <ul className="mt-3 space-y-2">

@@ -18,6 +18,7 @@ export function Footer() {
             title="Product"
             links={[
               ["Features", "/#features"],
+              ["Feedback board", "/feedback-board"],
               ["How it works", "/#how"],
               ["Pricing", "/pricing"],
               ["Use cases", "/use-cases"],

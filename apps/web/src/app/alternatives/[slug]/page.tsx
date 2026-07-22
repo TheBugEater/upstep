@@ -165,6 +165,7 @@ export default async function AlternativePage({
           <p className="text-muted mb-8 max-w-md mx-auto">
             Free plan. 2-line integration. No credit card, no sales call, no redirect to a third-party board.
           </p>
+          <p className="mb-6 text-sm text-muted">See how an <Link href="/feedback-board" className="font-medium text-clay hover:text-clay-hover">in-app feedback board</Link> works before you compare plans.</p>
           <Link
             href="/login"
             className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft"
