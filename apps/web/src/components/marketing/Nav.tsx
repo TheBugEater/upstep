@@ -7,13 +7,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_LINKS: [string, string][] = [
   ["Features", "/#features"],
-  ["Feedback board", "/feedback-board"],
   ["How it works", "/#how"],
-  ["MCP", "/#mcp"],
-  ["Developers", "/#integrate"],
-  ["Open source", "/#open-source"],
   ["Pricing", "/pricing"],
-  ["Guides", "/guides"],
 ];
 
 export function Nav() {
