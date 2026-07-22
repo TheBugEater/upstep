@@ -7,12 +7,12 @@ import { TOOLS } from "./data";
 export const metadata: Metadata = {
   title: "Free Tools for Product Teams",
   description:
-    "Free, no-signup tools for product teams: a RICE prioritization calculator, a feedback widget generator, and more.",
+    "Free, no-signup tools for app naming, product planning, customer research, launches, feedback, and SaaS metrics.",
   alternates: { canonical: "/tools" },
   openGraph: {
     title: "Free Tools for Product Teams | Upstep",
     description:
-      "Free, no-signup tools for product teams: a RICE prioritization calculator, a feedback widget generator, and more.",
+      "Free, no-signup tools for app naming, product planning, customer research, launches, feedback, and SaaS metrics.",
     url: "/tools",
     images: ["/opengraph-image"],
   },
