@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { getSiteUrl } from "./site-url";
 
 const TYPE_LABEL: Record<string, string> = {
   BUG: "Bug report",
@@ -36,7 +37,7 @@ export async function sendFeedbackNotification({
 
   const resend = new Resend(apiKey);
   const from = process.env.RESEND_FROM_EMAIL ?? "Upstep <notifications@upstep.app>";
-  const baseUrl = (process.env.AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const baseUrl = getSiteUrl();
   const dashboardUrl = `${baseUrl}/dashboard/projects/${projectId}`;
 
   const typeLabel = TYPE_LABEL[feedback.type] ?? feedback.type;

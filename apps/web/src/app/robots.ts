@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
+import { getSiteUrl } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
-  const base = (process.env.AUTH_URL ?? "https://upstep.dev").replace(/\/$/, "");
+  const base = getSiteUrl();
   return {
     rules: {
       userAgent: "*",

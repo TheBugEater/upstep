@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { getSiteUrl } from "./site-url";
 
 // ─── Payload shapes ────────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ export async function triggerIntegrations(payload: IntegrationPayload): Promise<
   if (!project || !["PRO", "BUSINESS"].includes(project.owner.plan)) return;
   if (!project.integrations.length) return;
 
-  const baseUrl = (process.env.AUTH_URL ?? "https://upstep.dev").replace(/\/$/, "");
+  const baseUrl = getSiteUrl();
   const dashboardUrl = `${baseUrl}/dashboard/projects/${payload.project.id}`;
 
   await Promise.all(

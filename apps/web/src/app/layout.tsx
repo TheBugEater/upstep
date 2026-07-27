@@ -4,6 +4,7 @@ import "./globals.css";
 import { OnRampProvider } from "@onramp-sdk/react";
 import { OnRampRouteTracker } from "@onramp-sdk/react/next";
 import { auth } from "@/lib/auth";
+import { getSiteUrl } from "@/lib/site-url";
 import { OnRampIdentify } from "@/components/OnRampIdentify";
 
 const sans = Inter({
@@ -25,7 +26,7 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
-const BASE_URL = (process.env.AUTH_URL ?? "https://upstep.dev").replace(/\/$/, "");
+const BASE_URL = getSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

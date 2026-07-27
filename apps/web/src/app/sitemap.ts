@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getSiteUrl } from "@/lib/site-url";
 import { COMPETITORS } from "./alternatives/data";
 import { INTEGRATIONS } from "./integrations/data";
 import { USE_CASES } from "./use-cases/data";
@@ -7,7 +8,7 @@ import { TOOLS } from "./tools/data";
 import { GUIDES } from "./guides/data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = (process.env.AUTH_URL ?? "https://upstep.dev").replace(/\/$/, "");
+  const base = getSiteUrl();
   const now = new Date();
   return [
     { url: base, lastModified: now, changeFrequency: "weekly", priority: 1 },

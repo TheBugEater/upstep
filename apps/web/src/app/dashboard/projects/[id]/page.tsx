@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getSiteUrl } from "@/lib/site-url";
 import { redirect, notFound } from "next/navigation";
 import { ProjectWorkspace } from "@/components/workspace/ProjectWorkspace";
 
@@ -71,7 +72,7 @@ export default async function ProjectPage({
     }),
   ]);
 
-  const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
+  const baseUrl = getSiteUrl();
 
   const { plan: ownerPlan, ...ownerRest } = project.owner;
 

@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { getSiteUrl } from "./site-url";
 
 const key = process.env.STRIPE_SECRET_KEY;
 
@@ -17,7 +18,5 @@ export function billingEnabled(): boolean {
 
 /** Absolute base URL for redirect targets. */
 export function appUrl(path = ""): string {
-  const base =
-    process.env.AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
-  return `${base}${path}`;
+  return `${getSiteUrl()}${path}`;
 }
