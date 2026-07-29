@@ -549,7 +549,7 @@ const STATUS_COLOR: Record<string, string> = {
   PENDING: "#ea580c", CLOSED: "#6b7280",
 };
 
-function StatusDot({ status, color }: { status: string; color?: string }) {
+function StatusDot({ status, color }: { status: string; color?: string | undefined }) {
   return <View style={[styles.statusDot, { backgroundColor: color ?? STATUS_COLOR[status] ?? "#9ca3af" }]} />;
 }
 
