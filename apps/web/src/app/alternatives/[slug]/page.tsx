@@ -19,7 +19,7 @@ export async function generateMetadata({
   const c = COMPETITORS[slug];
   if (!c) return {};
   return {
-    title: `Best ${c.name} Alternative. ${c.headline}`,
+    title: `${c.name} Alternatives: Upstep vs ${c.name}`,
     description: `Looking for a ${c.name} alternative? Upstep is a developer-first feedback widget with a free plan, 2-line integration, and React Native support. No redirects, no per-seat pricing.`,
     alternates: { canonical: `/alternatives/${slug}` },
     openGraph: {

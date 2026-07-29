@@ -10,14 +10,14 @@ import { Pricing } from "@/components/marketing/Pricing";
 import { JsonLd } from "@/components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Upstep | Feedback Widget, Voting Boards & MCP for Your Product",
+  title: "User Feedback Widget & Voting Board for Apps | Upstep",
   description:
-    "Open-source feedback and voting for web and mobile apps. Triage on fluid boards, publish a roadmap, and let AI agents manage feedback through MCP.",
+    "Collect in-app user feedback, feature requests, and votes with an open-source feedback widget for web and mobile apps. Triage on fluid boards and publish a roadmap.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Upstep | Feedback Widget, Voting Boards & MCP for Your Product",
+    title: "User Feedback Widget & Voting Board for Apps | Upstep",
     description:
-      "Open-source feedback and voting for web and mobile apps, with fluid boards, public roadmaps, and a built-in MCP server for AI agents.",
+      "Collect in-app user feedback, feature requests, and votes with an open-source feedback widget for web and mobile apps.",
     url: "/",
   },
 };
@@ -94,7 +94,7 @@ function Hero() {
             </Link>
 
             <h1 className="mt-6 font-serif text-5xl md:text-[3.75rem] leading-[1.05] tracking-tight text-ink">
-              Feedback that{" "}
+              User feedback that{" "}
               <span className="text-clay italic">ships itself</span>
             </h1>
 
