@@ -33,8 +33,8 @@ importers:
         specifier: ^2.7.4
         version: 2.11.2(@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3))
       '@onramp-sdk/react':
-        specifier: ^0.5.2
-        version: 0.5.2(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+        specifier: ^0.7.1
+        version: 0.7.1(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@prisma/client':
         specifier: ^6.2.1
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
@@ -1128,20 +1128,17 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@onramp-sdk/core@0.6.3':
-    resolution: {integrity: sha512-0Rry3Ivg3VlA9yXl8y+z+rcE7+wVg48QKB1eiD9+nI67Bi/lhxJqduNvkCU3FVjVlaDx34WeDiQlYZsWEh+1Vw==}
+  '@onramp-sdk/core@0.8.0':
+    resolution: {integrity: sha512-wjKwzEDOQjN0YoOHRD7GUtY7bz+7HDYAGu1g7IuDAS8vHo10ph0o82vZZo8bPIEv3ohgGLcavoruEYip4vRmpw==}
 
-  '@onramp-sdk/react@0.5.2':
-    resolution: {integrity: sha512-nbn3l7NdkHb7E4N6j6KBONOJLb6DQNZ5MOOYeY0pLKYQFlZu1HuGuTh+UUgakKz8b/8vvEjf39zPEuFG0qCVRA==}
+  '@onramp-sdk/react@0.7.1':
+    resolution: {integrity: sha512-s4KOfYJoYxWgjf71w6uesZIbvKtDDddltC/z1RyUawT+rLbMRLW7zDTlGsZjtB9S7QT7ConjsIApfVPbhsthBw==}
     peerDependencies:
       next: '>=13.0.0'
       react: '>=18.0.0'
     peerDependenciesMeta:
       next:
         optional: true
-
-  '@onramp-sdk/shared@0.4.1':
-    resolution: {integrity: sha512-Dh4TQBVm80oFkS/U2NikAopgs9k0wx1wO01qjEFlI0NuCIRQqezIJ9O0IUifH+vurRBP24XWodTSsvTvRne4VQ==}
 
   '@onramp-sdk/shared@0.4.2':
     resolution: {integrity: sha512-6GGSZP3GuuN9Iilj5DCLi8NyXQR/yoeI7vxzcli84iMypXoj68Yxu6Yldv27gGg+a6T3kyV6qfB3llqXbNlCOA==}
@@ -4152,20 +4149,17 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
 
-  '@onramp-sdk/core@0.6.3':
+  '@onramp-sdk/core@0.8.0':
     dependencies:
-      '@onramp-sdk/shared': 0.4.1
-      zod: 3.25.76
+      '@onramp-sdk/shared': 0.4.2
 
-  '@onramp-sdk/react@0.5.2(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@onramp-sdk/react@0.7.1(next@15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@onramp-sdk/core': 0.6.3
+      '@onramp-sdk/core': 0.8.0
       '@onramp-sdk/shared': 0.4.2
       react: 19.2.7
     optionalDependencies:
       next: 15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-
-  '@onramp-sdk/shared@0.4.1': {}
 
   '@onramp-sdk/shared@0.4.2': {}
 
