@@ -28,6 +28,7 @@ export function SetupGuideButton({
   isOwner,
   defaultOpen = false,
   sidebar = false,
+  onClose,
 }: {
   projectId: string;
   apiKey: string;
@@ -36,9 +37,19 @@ export function SetupGuideButton({
   isOwner: boolean;
   defaultOpen?: boolean;
   sidebar?: boolean;
+  onClose?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const { step } = useOnRamp();
+
+  useEffect(() => {
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
+
+  function close() {
+    setOpen(false);
+    onClose?.();
+  }
 
   // Lock background scroll while the drawer is open.
   useEffect(() => {
@@ -72,7 +83,7 @@ export function SetupGuideButton({
         <div className="fixed inset-0 z-50">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
-            onClick={() => setOpen(false)}
+            onClick={close}
           />
           <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-canvas shadow-lift flex flex-col animate-fade-up">
             <header className="flex items-center justify-between px-6 h-16 border-b border-line shrink-0">
@@ -86,7 +97,7 @@ export function SetupGuideButton({
                 </div>
               </div>
               <button
-                onClick={() => setOpen(false)}
+                onClick={close}
                 aria-label="Close"
                 className="w-8 h-8 rounded-lg text-muted hover:bg-surface hover:text-ink transition flex items-center justify-center"
               >

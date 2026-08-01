@@ -101,9 +101,10 @@ export function DashboardShell({ children, email, name, plan, projects }: Props)
   const currentProject = liveProjects.find((project) => project.id === currentProjectId);
   const activeTab = searchParams.get("tab") ?? "feedback";
   const activePanel = searchParams.get("panel");
+  const setupGuideOpen = searchParams.get("setup") === "1";
   const panelExpanded = expanded || mobileOpen;
   const pageTitle = currentProject
-    ? ({ feedback: "Feedback", completed: "Completed", pending: "Pending review", mcp: "MCP", integrations: "Integrations", settings: "Settings" }[activeTab] ?? "Feedback")
+    ? (setupGuideOpen ? "Setup guide" : ({ feedback: "Feedback", completed: "Completed", pending: "Pending review", mcp: "MCP", integrations: "Integrations", settings: "Settings" }[activeTab] ?? "Feedback"))
     : pathname.startsWith("/dashboard/billing") ? "Billing" : pathname.startsWith("/dashboard/projects/new") ? "New project" : "Overview";
 
   const projectHref = (tab: string, panel?: string) => currentProject ? `/dashboard/projects/${currentProject.id}?tab=${tab}${panel ? `&panel=${panel}` : ""}` : "/dashboard";
@@ -156,6 +157,7 @@ export function DashboardShell({ children, email, name, plan, projects }: Props)
                   <NavItem href={projectHref("pending")} label="Pending review" icon="clock" active={activeTab === "pending"} count={currentProject.pendingCount} attention={currentProject.pendingCount > 0} expanded={panelExpanded} />
                 </NavGroup>
                 <NavGroup label="Connect" expanded={panelExpanded}>
+                  <NavItem href={`${projectHref("settings")}&setup=1`} label="Setup guide" icon="help" active={setupGuideOpen} expanded={panelExpanded} />
                   <NavItem href={projectHref("mcp")} label="MCP & agents" icon="sparkle" active={activeTab === "mcp"} expanded={panelExpanded} />
                   <NavItem href={projectHref("integrations")} label="Integrations" icon="plug" active={activeTab === "integrations"} expanded={panelExpanded} />
                 </NavGroup>

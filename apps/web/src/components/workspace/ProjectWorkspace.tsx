@@ -598,7 +598,7 @@ export function ProjectWorkspace({
       )}
 
       {tab === "settings" && (
-        <div><div className="mb-5 flex items-start justify-between gap-4"><SectionHeader title="Project settings" description="API access, moderation, members, and project controls" /><SetupGuideButton projectId={projectId} apiKey={apiKey} baseUrl={baseUrl} mcpConfigured={mcpConfigured} isOwner={isOwner} /></div><SettingsTab
+        <div><div className="mb-5 flex items-start justify-between gap-4"><SectionHeader title="Project settings" description="API access, moderation, members, and project controls" /><SetupGuideButton projectId={projectId} apiKey={apiKey} baseUrl={baseUrl} mcpConfigured={mcpConfigured} isOwner={isOwner} defaultOpen={searchParams.get("setup") === "1"} onClose={() => router.replace(`/dashboard/projects/${projectId}?tab=settings`)} /></div><SettingsTab
           projectId={projectId}
           apiKey={apiKey}
           moderationEnabled={moderationEnabled}
