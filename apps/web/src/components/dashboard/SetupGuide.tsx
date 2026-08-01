@@ -742,11 +742,12 @@ function buildAiPrompt(framework: FrameworkId, apiKey: string, baseUrl: string):
               ? "Wrap your app near the root with Upstep and keep FeedbackSheet mounted in the widget tree so openSheet() can present it from anywhere."
             : "Mount the provider once at the app root so the widget is available on every screen.";
 
-  return `I want to integrate Upstep (a drop-in feedback & voting widget) into my ${appLabel} app. Before writing any code, ask me these questions one at a time and wait for my answers:
+  return `I want to integrate Upstep (a drop-in feedback & voting widget) into my ${appLabel} app. Before writing code, inspect the existing project first. Find its authentication/session code and determine whether a stable signed-in user ID is already available. Only ask me about authentication if that is genuinely unclear from the codebase.
 
-1. Do users log in to this app? If yes, what does the signed-in user object look like and how do I access it (e.g. \`session.user.id\`, \`useUser().id\`, \`auth.currentUser.uid\`)?
-2. Where should the Feedback button appear, on every screen, or only specific pages?
-3. Do you want a floating button (default) or should it open from your own UI element like a menu item or settings row?
+Then ask me these product decisions one at a time and wait for my answers:
+
+1. Where should the Feedback button appear, on every screen, or only specific pages?
+2. Do you want a floating button (default) or should it open from your own UI element like a menu item or settings row?
 
 Once I answer, wire up the integration using these details:
 
