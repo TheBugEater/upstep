@@ -54,7 +54,11 @@ const SOFTWARE_LD = {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-canvas">
-      <Script src="https://getonramp.dev/widget.js" data-token="O6vqz3BfBQhhL7Pl-5usrw" strategy="afterInteractive" />
+      <Script
+        src="https://getonramp.dev/widget.js"
+        data-token="QW40tGIExZhy7v8FahUcEQ"
+        strategy="afterInteractive"
+      />
       <JsonLd data={SOFTWARE_LD} />
       <Nav />
       <Hero />
@@ -102,11 +106,15 @@ function Hero() {
 
             <p className="mt-6 text-lg text-muted leading-relaxed max-w-md">
               Drop Upstep into your app in 2 lines of code. Users report bugs
-              and vote on ideas, your team triages on a fluid board, and your
-              AI agent closes the loop over MCP.
+              and vote on ideas, your team triages on a fluid board, and your AI
+              agent closes the loop over MCP.
             </p>
 
-            <form action="/login" method="GET" className="mt-8 flex flex-wrap items-center gap-3">
+            <form
+              action="/login"
+              method="GET"
+              className="mt-8 flex flex-wrap items-center gap-3"
+            >
               <input
                 type="text"
                 name="appName"
@@ -136,7 +144,9 @@ function Hero() {
                 Free plan available · 2-line integration · No credit card
               </p>
               <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
-                <span className="text-clay" aria-hidden>★</span>
+                <span className="text-clay" aria-hidden>
+                  ★
+                </span>
                 10K+ feedback items processed
               </p>
             </div>
@@ -164,7 +174,9 @@ function OpenSource() {
         <div className="relative grid min-w-0 items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-medium text-white/70">
-              <span className="text-clay" aria-hidden>◆</span>
+              <span className="text-clay" aria-hidden>
+                ◆
+              </span>
               Open source · Self-hostable · Built in public
             </div>
             <h2 className="mt-5 max-w-xl font-serif text-4xl leading-tight tracking-tight text-white md:text-5xl">
@@ -206,17 +218,38 @@ function OpenSource() {
             </div>
             <div className="overflow-x-auto pb-1">
               <div className="min-w-[520px] space-y-2 leading-relaxed text-white/65">
-                <p><span className="text-clay">$</span> git clone https://github.com/TheBugEater/upstep.git</p>
-                <p><span className="text-clay">$</span> cd upstep</p>
-                <p><span className="text-clay">$</span> cp apps/web/.env.example apps/web/.env</p>
-                <p><span className="text-clay">$</span> docker compose up --build</p>
-                <p className="pt-3 text-[#73D18B]">✓ dashboard · api · mcp · postgres</p>
+                <p>
+                  <span className="text-clay">$</span> git clone
+                  https://github.com/TheBugEater/upstep.git
+                </p>
+                <p>
+                  <span className="text-clay">$</span> cd upstep
+                </p>
+                <p>
+                  <span className="text-clay">$</span> cp apps/web/.env.example
+                  apps/web/.env
+                </p>
+                <p>
+                  <span className="text-clay">$</span> docker compose up --build
+                </p>
+                <p className="pt-3 text-[#73D18B]">
+                  ✓ dashboard · api · mcp · postgres
+                </p>
               </div>
             </div>
             <div className="mt-6 grid grid-cols-3 gap-2 border-t border-white/10 pt-5 text-center">
-              <div><p className="text-sm font-semibold text-white">AGPL</p><p className="mt-1 text-[10px] text-white/35">server</p></div>
-              <div><p className="text-sm font-semibold text-white">MIT</p><p className="mt-1 text-[10px] text-white/35">SDKs</p></div>
-              <div><p className="text-sm font-semibold text-white">No Redis</p><p className="mt-1 text-[10px] text-white/35">required</p></div>
+              <div>
+                <p className="text-sm font-semibold text-white">AGPL</p>
+                <p className="mt-1 text-[10px] text-white/35">server</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">MIT</p>
+                <p className="mt-1 text-[10px] text-white/35">SDKs</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">No Redis</p>
+                <p className="mt-1 text-[10px] text-white/35">required</p>
+              </div>
             </div>
           </div>
         </div>
@@ -229,9 +262,21 @@ function OpenSource() {
 
 function HowItWorks() {
   const steps = [
-    { n: "01", title: "Create a project", body: "Sign in and spin up a project. You get a unique API key instantly." },
-    { n: "02", title: "Drop in the widget", body: "Add the SDK to your app with two lines of code. It mounts itself." },
-    { n: "03", title: "Triage & ship", body: "Feedback rolls into your board sorted by votes. Ship what matters." },
+    {
+      n: "01",
+      title: "Create a project",
+      body: "Sign in and spin up a project. You get a unique API key instantly.",
+    },
+    {
+      n: "02",
+      title: "Drop in the widget",
+      body: "Add the SDK to your app with two lines of code. It mounts itself.",
+    },
+    {
+      n: "03",
+      title: "Triage & ship",
+      body: "Feedback rolls into your board sorted by votes. Ship what matters.",
+    },
   ];
 
   return (
@@ -248,7 +293,9 @@ function HowItWorks() {
             <div key={s.n} className="relative">
               <div className="font-serif text-5xl text-clay/30 mb-4">{s.n}</div>
               <h3 className="font-semibold text-ink text-lg mb-2">{s.title}</h3>
-              <p className="text-sm text-muted leading-relaxed max-w-xs">{s.body}</p>
+              <p className="text-sm text-muted leading-relaxed max-w-xs">
+                {s.body}
+              </p>
             </div>
           ))}
         </div>
@@ -281,13 +328,27 @@ function Mcp() {
 
             <ul className="mt-8 space-y-4">
               {[
-                ["Triage from your editor", "“What's the most-voted bug?” answered without leaving your flow."],
-                ["Internal by default", "Agent tasks are created Dev-only, and it can spin up its own board. Users never see the machinery."],
-                ["Agents that act", "Create tasks, change statuses, comment. Every change lands on the live board."],
-                ["Nothing to deploy", "The server is part of Upstep. Point your client at one URL and go."],
+                [
+                  "Triage from your editor",
+                  "“What's the most-voted bug?” answered without leaving your flow.",
+                ],
+                [
+                  "Internal by default",
+                  "Agent tasks are created Dev-only, and it can spin up its own board. Users never see the machinery.",
+                ],
+                [
+                  "Agents that act",
+                  "Create tasks, change statuses, comment. Every change lands on the live board.",
+                ],
+                [
+                  "Nothing to deploy",
+                  "The server is part of Upstep. Point your client at one URL and go.",
+                ],
               ].map(([t, d]) => (
                 <li key={t} className="flex gap-3">
-                  <span className="mt-0.5 w-5 h-5 rounded-full bg-clay/15 text-clay flex items-center justify-center text-xs shrink-0">✓</span>
+                  <span className="mt-0.5 w-5 h-5 rounded-full bg-clay/15 text-clay flex items-center justify-center text-xs shrink-0">
+                    ✓
+                  </span>
                   <div>
                     <span className="text-sm font-medium text-ink">{t}.</span>{" "}
                     <span className="text-sm text-muted">{d}</span>
@@ -299,20 +360,30 @@ function Mcp() {
             <div className="mt-8 rounded-xl border border-line bg-card p-4 font-mono text-xs text-muted overflow-x-auto shadow-soft">
               <p className="text-faint mb-1"># Claude Code</p>
               <p className="whitespace-nowrap">
-                <span className="text-clay">claude</span> mcp add --transport http upstep \
+                <span className="text-clay">claude</span> mcp add --transport
+                http upstep \
               </p>
-              <p className="pl-4 whitespace-nowrap">https://upstep.dev/api/mcp \</p>
               <p className="pl-4 whitespace-nowrap">
-                --header <span className="text-ink-soft">&quot;Authorization: Bearer YOUR_MCP_KEY&quot;</span>
+                https://upstep.dev/api/mcp \
+              </p>
+              <p className="pl-4 whitespace-nowrap">
+                --header{" "}
+                <span className="text-ink-soft">
+                  &quot;Authorization: Bearer YOUR_MCP_KEY&quot;
+                </span>
               </p>
               <p className="text-faint mt-3 mb-1"># Codex CLI</p>
               <p className="whitespace-nowrap">
-                <span className="text-clay">export</span> UPSTEP_MCP_KEY=&quot;YOUR_MCP_KEY&quot;
+                <span className="text-clay">export</span>{" "}
+                UPSTEP_MCP_KEY=&quot;YOUR_MCP_KEY&quot;
               </p>
               <p className="whitespace-nowrap">
-                <span className="text-clay">codex</span> mcp add upstep --url https://upstep.dev/api/mcp \
+                <span className="text-clay">codex</span> mcp add upstep --url
+                https://upstep.dev/api/mcp \
               </p>
-              <p className="pl-4 whitespace-nowrap">--bearer-token-env-var UPSTEP_MCP_KEY</p>
+              <p className="pl-4 whitespace-nowrap">
+                --bearer-token-env-var UPSTEP_MCP_KEY
+              </p>
             </div>
           </div>
 
@@ -345,10 +416,15 @@ function Integrate() {
             {[
               ["Fully typed", "First-class TypeScript across every SDK."],
               ["Tiny bundle", "The web widget is under 10 kB gzipped."],
-              ["Framework native", "React, vanilla JS, script tag, React Native, or Flutter."],
+              [
+                "Framework native",
+                "React, vanilla JS, script tag, React Native, or Flutter.",
+              ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-0.5 w-5 h-5 rounded-full bg-clay/15 text-clay flex items-center justify-center text-xs shrink-0">✓</span>
+                <span className="mt-0.5 w-5 h-5 rounded-full bg-clay/15 text-clay flex items-center justify-center text-xs shrink-0">
+                  ✓
+                </span>
                 <div>
                   <span className="text-sm font-medium text-ink">{t}.</span>{" "}
                   <span className="text-sm text-muted">{d}</span>
@@ -401,7 +477,8 @@ function CTA() {
             </button>
           </form>
           <p className="mt-4 text-xs text-white/40">
-            Free plan · No credit card · Trusted for 10K+ feedback items and counting
+            Free plan · No credit card · Trusted for 10K+ feedback items and
+            counting
           </p>
         </div>
       </div>
@@ -411,11 +488,23 @@ function CTA() {
 
 /* ───────────────────────── Shared heading ──────────────────────── */
 
-function SectionHeading({ eyebrow, title, sub }: { eyebrow: string; title: string; sub: string }) {
+function SectionHeading({
+  eyebrow,
+  title,
+  sub,
+}: {
+  eyebrow: string;
+  title: string;
+  sub: string;
+}) {
   return (
     <div className="max-w-2xl">
-      <span className="text-xs font-semibold uppercase tracking-wider text-clay">{eyebrow}</span>
-      <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight text-ink">{title}</h2>
+      <span className="text-xs font-semibold uppercase tracking-wider text-clay">
+        {eyebrow}
+      </span>
+      <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight text-ink">
+        {title}
+      </h2>
       <p className="mt-4 text-muted leading-relaxed">{sub}</p>
     </div>
   );
