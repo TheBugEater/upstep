@@ -54,11 +54,13 @@ const SOFTWARE_LD = {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-canvas">
-      <Script
+      <script
         src="https://getonramp.dev/widget.js"
-        data-token="QW40tGIExZhy7v8FahUcEQ"
-        strategy="afterInteractive"
-      />
+        data-token="gb3xKQWOhYP_BFqUF7mW6Q"
+        data-width="280"
+        data-height="108"
+        async
+      ></script>
       <JsonLd data={SOFTWARE_LD} />
       <Nav />
       <Hero />
