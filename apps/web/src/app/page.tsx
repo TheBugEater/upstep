@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { CodeShowcase } from "@/components/marketing/CodeShowcase";
@@ -53,6 +54,7 @@ const SOFTWARE_LD = {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-canvas">
+      <Script src="https://getonramp.dev/widget.js" data-token="O6vqz3BfBQhhL7Pl-5usrw" strategy="afterInteractive" />
       <JsonLd data={SOFTWARE_LD} />
       <Nav />
       <Hero />
