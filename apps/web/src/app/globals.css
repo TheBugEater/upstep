@@ -77,6 +77,11 @@
     @apply bg-canvas text-ink antialiased font-sans;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+  /* The OnRamp widget script appends its iframe to the end of <body>; center it */
+  body > iframe[title="OnRamp stats"] {
+    display: block;
+    margin: 1.5rem auto;
+  }
   ::selection {
     @apply bg-clay/25 text-ink;
   }
