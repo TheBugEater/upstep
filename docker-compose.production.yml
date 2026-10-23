@@ -1,0 +1,111 @@
+{
+  "services": {
+    "postgres": {
+      "image": "postgres:18.6",
+      "container_name": "upstep-postgres",
+      "environment": {
+        "POSTGRES_USER": "${POSTGRES_USER}",
+        "POSTGRES_DB": "${POSTGRES_DB}",
+        "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}"
+      },
+      "volumes": [
+        "/data/upstep/postgres:/var/lib/postgresql"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "upstep",
+          "-d",
+          "upstep"
+        ],
+        "interval": "5s",
+        "timeout": "5s",
+        "retries": 20
+      },
+      "restart": "unless-stopped",
+      "stop_grace_period": "60s",
+      "mem_limit": "1g",
+      "networks": [
+        "default"
+      ]
+    },
+    "app": {
+      "image": "upstep/production:github",
+      "container_name": "upstep-app",
+      "build": {
+        "context": ".",
+        "dockerfile": "Dockerfile",
+        "args": {
+          "NEXT_PUBLIC_ONRAMP_API_KEY": "${API_NEXT_PUBLIC_ONRAMP_API_KEY}",
+          "NEXT_PUBLIC_UPSTEP_API_KEY": "${API_NEXT_PUBLIC_UPSTEP_API_KEY}",
+          "NEXT_PUBLIC_UPSTEP_BASE_URL": "${API_NEXT_PUBLIC_UPSTEP_BASE_URL}"
+        }
+      },
+      "environment": {
+        "AUTH_SECRET": "${API_AUTH_SECRET}",
+        "AUTH_URL": "${API_AUTH_URL}",
+        "CRON_SECRET": "${API_CRON_SECRET}",
+        "DATABASE_URL": "${API_DATABASE_URL}",
+        "DIRECT_URL": "${API_DIRECT_URL}",
+        "GITHUB_CLIENT_ID": "${API_GITHUB_CLIENT_ID}",
+        "GITHUB_CLIENT_SECRET": "${API_GITHUB_CLIENT_SECRET}",
+        "GOOGLE_CLIENT_ID": "${API_GOOGLE_CLIENT_ID}",
+        "GOOGLE_CLIENT_SECRET": "${API_GOOGLE_CLIENT_SECRET}",
+        "NEXT_PUBLIC_ONRAMP_API_KEY": "${API_NEXT_PUBLIC_ONRAMP_API_KEY}",
+        "NEXT_PUBLIC_UPSTEP_API_KEY": "${API_NEXT_PUBLIC_UPSTEP_API_KEY}",
+        "NEXT_PUBLIC_UPSTEP_BASE_URL": "${API_NEXT_PUBLIC_UPSTEP_BASE_URL}",
+        "STRIPE_PRICE_BUSINESS": "${API_STRIPE_PRICE_BUSINESS}",
+        "STRIPE_PRICE_PRO": "${API_STRIPE_PRICE_PRO}",
+        "STRIPE_SECRET_KEY": "${API_STRIPE_SECRET_KEY}",
+        "STRIPE_WEBHOOK_SECRET": "${API_STRIPE_WEBHOOK_SECRET}",
+        "NODE_ENV": "${API_NODE_ENV}",
+        "PORT": "${API_PORT}"
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 20,
+        "start_period": "30s"
+      },
+      "init": true,
+      "restart": "unless-stopped",
+      "stop_grace_period": "60s",
+      "mem_limit": "1g",
+      "networks": [
+        "default",
+        "dokploy-network"
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      },
+      "labels": {
+        "traefik.enable": "true",
+        "traefik.docker.network": "dokploy-network",
+        "traefik.http.routers.upstep-app.rule": "Host(`upstep.dev`)",
+        "traefik.http.routers.upstep-app.entrypoints": "websecure",
+        "traefik.http.routers.upstep-app.tls.certresolver": "letsencrypt",
+        "traefik.http.services.upstep-app.loadbalancer.server.port": "3000",
+        "traefik.http.routers.upstep-app.service": "upstep-app",
+        "traefik.http.routers.upstep-app-http.rule": "Host(`upstep.dev`)",
+        "traefik.http.routers.upstep-app-http.entrypoints": "web",
+        "traefik.http.routers.upstep-app-http.middlewares": "redirect-to-https@file"
+      }
+    }
+  },
+  "networks": {
+    "default": {},
+    "dokploy-network": {
+      "external": true
+    }
+  }
+}
