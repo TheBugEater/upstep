@@ -12,6 +12,20 @@ export function Footer() {
               Feedback that moves you forward. Collect, vote, and ship what
               your users actually want.
             </p>
+            <a
+              href="https://thelaunchstory.com/launches/upstep"
+              target="_blank"
+              rel="noopener"
+              className="inline-block mt-5"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://thelaunchstory.com/badge/upstep.svg?variant=launched&theme=light&v=5"
+                alt="Launched on The Launch Story"
+                width={216}
+                height={52}
+              />
+            </a>
           </div>
 
           <FooterCol
