@@ -29,6 +29,31 @@ export function googleChatWebhookUrl(value: string): URL {
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "Pending review", OPEN: "Open", IN_PROGRESS: "In progress", DONE: "Done", CLOSED: "Closed",
 };
+const STATUS_COLOR: Record<string, string> = {
+  PENDING: "#f59e0b", OPEN: "#94a3b8", IN_PROGRESS: "#3b82f6", DONE: "#22c55e", CLOSED: "#64748b",
+};
+const TYPE_LABEL: Record<string, string> = { BUG: "Bug report", FEATURE: "Feature request", GENERAL: "General feedback" };
+
+function safeColor(value: string | undefined, fallback = "#94a3b8") {
+  return value && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+}
+
+function badge(name: string, color: string, limit = 100) {
+  // Only the dot uses the exact board color; the name inherits Chat's readable
+  // foreground in both themes, including for very light or dark label colors.
+  return `<font color="${safeColor(color)}">●</font> <b>${escape(name, limit)}</b>`;
+}
+
+function buttonColor(hex: string) {
+  const value = Number.parseInt(safeColor(hex).slice(1), 16);
+  return { red: ((value >> 16) & 255) / 255, green: ((value >> 8) & 255) / 255, blue: (value & 255) / 255 };
+}
+
+type CardWidget =
+  | { textParagraph: { text: string } }
+  | { decoratedText: { topLabel: string; text: string; bottomLabel?: string; wrapText: boolean } }
+  | { buttonList: { buttons: { text: string; color: ReturnType<typeof buttonColor>; onClick: { openLink: { url: string } }; altText: string }[] } };
+type CardSection = { header?: string; widgets: CardWidget[] };
 
 // Card paragraphs support HTML. Feedback and names must stay plain text, including
 // strings that resemble Google Chat mentions or links.
@@ -44,30 +69,60 @@ export function googleChatMessage(payload: IntegrationPayload, issueUrl: string)
   // Chat derives the thread preview from its first message. Use the issue title
   // there and in the card header, without turning title text into @mentions.
   const topic = (title.length > 200 ? title.slice(0, 200) + "…" : title).replace(/</g, "‹").replace(/>/g, "›");
+  const lifecycle = payload.event === "STATUS_CHANGED" ? payload.newStatus : feedback.status;
+  // Pending moderation has its own status even when a default board column exists.
+  const statusName = payload.event === "STATUS_CHANGED"
+    ? payload.newStatusName ?? STATUS_LABEL[payload.newStatus] ?? payload.newStatus
+    : lifecycle === "PENDING" ? STATUS_LABEL.PENDING! : feedback.boardStatus?.name ?? STATUS_LABEL[lifecycle ?? ""] ?? "Open";
+  const currentColor = payload.event === "STATUS_CHANGED"
+    ? safeColor(payload.newStatusColor ?? (feedback.boardStatus?.name === statusName ? feedback.boardStatus.color : undefined), STATUS_COLOR[payload.newStatus])
+    : safeColor(lifecycle === "PENDING" ? undefined : feedback.boardStatus?.color, STATUS_COLOR[lifecycle ?? ""]);
   let headline: string;
-  let update: string;
+  const updates: CardWidget[] = [];
   switch (payload.event) {
     case "ISSUE_SHARED":
       headline = "Issue discussion";
-      update = "Reply in this thread to discuss this issue with your team.";
       break;
     case "NEW_FEEDBACK":
       headline = "New issue";
-      update = "Reply in this thread to discuss this issue with your team.";
       break;
     case "STATUS_CHANGED":
       headline = "Status changed";
-      update = `<b>Status:</b> ${escape(payload.oldStatusName ?? STATUS_LABEL[payload.oldStatus] ?? payload.oldStatus, 100)} → ${escape(payload.newStatusName ?? STATUS_LABEL[payload.newStatus] ?? payload.newStatus, 100)}`;
+      updates.push({ textParagraph: { text: `${badge(payload.oldStatusName ?? STATUS_LABEL[payload.oldStatus] ?? payload.oldStatus, safeColor(payload.oldStatusColor, STATUS_COLOR[payload.oldStatus]))} → ${badge(statusName, currentColor)}` } });
       break;
     case "NEW_COMMENT":
       headline = "New UpStep comment";
-      update = `<b>${escape(payload.comment.authorName?.trim() || "UpStep Team", 100)}:</b><br>${escape(payload.comment.content)}`;
+      updates.push({ decoratedText: { topLabel: "Comment by", text: escape(payload.comment.authorName?.trim() || "UpStep Team", 100), wrapText: true } });
+      updates.push({ textParagraph: { text: escape(payload.comment.content, 1_600) } });
       break;
     case "NEW_VOTE":
       headline = payload.vote.value === "UP" ? "New upvote" : "New downvote";
-      update = `<b>Votes:</b> ${payload.feedback.upvotes} up · ${payload.feedback.downvotes} down`;
+      updates.push({ textParagraph: { text: `<b>${payload.feedback.upvotes}</b> upvotes · <b>${payload.feedback.downvotes}</b> downvotes` } });
       break;
   }
+  const metadata: CardWidget[] = [{ decoratedText: {
+    topLabel: `${project.name.slice(0, 100).replace(/[<>]/g, "")} · ${TYPE_LABEL[feedback.type] ?? feedback.type.slice(0, 30)}`,
+    text: badge(statusName, currentColor),
+    bottomLabel: `Assigned to ${feedback.assignee?.name?.trim().slice(0, 100) || (feedback.assignee ? "Teammate" : "Unassigned")}${feedback.internal ? " · Internal task" : ""}`.replace(/[<>]/g, ""),
+    wrapText: true,
+  } }];
+  if (feedback.labels?.length) {
+    const labels = feedback.labels.slice(0, 8).map((label) => badge(label.name, label.color, 50));
+    if (feedback.labels.length > 8) labels.push(`+${feedback.labels.length - 8} more`);
+    metadata.push({ decoratedText: { topLabel: "Labels", text: labels.join(" &nbsp; "), wrapText: true } });
+  }
+  const sections: CardSection[] = [{ widgets: metadata }];
+  if (payload.event === "NEW_FEEDBACK" || payload.event === "ISSUE_SHARED") {
+    if (feedback.content.trim()) sections.push({ header: "Description", widgets: [{ textParagraph: { text: escape(feedback.content, 1_200) } }] });
+    sections.push({ widgets: [{ textParagraph: { text: "Reply in this thread to discuss this issue with your team." } }] });
+  } else {
+    // Replies focus on what changed instead of repeating the full description.
+    sections.push({ header: headline, widgets: updates });
+  }
+  sections.push({ widgets: [{ buttonList: { buttons: [{
+    text: "Open issue in UpStep", color: buttonColor(currentColor),
+    onClick: { openLink: { url: issueUrl } }, altText: "Open this issue in UpStep",
+  }] } }] });
   return {
     text: topic,
     // A stable key keeps all selected events for one issue in the same thread.
@@ -76,12 +131,7 @@ export function googleChatMessage(payload: IntegrationPayload, issueUrl: string)
       cardId: "upstep-issue",
       card: {
         header: { title: topic, subtitle: `UpStep · ${headline}` },
-        sections: [{ widgets: [
-          { textParagraph: { text: `${escape(project.name, 100)} · ${escape(feedback.type, 30)}` } },
-          { textParagraph: { text: escape(feedback.content) } },
-          { textParagraph: { text: update } },
-          { buttonList: { buttons: [{ text: "Open issue in UpStep", onClick: { openLink: { url: issueUrl } } }] } },
-        ] }],
+        sections,
       },
     }],
   };

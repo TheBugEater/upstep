@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const access = await getProjectAccess(id, session.user.id);
   if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const feedback = await db.feedback.findFirst({ where: { id: fid, projectId: id }, include: { boardStatus: { select: { name: true } } } });
+  const feedback = await db.feedback.findFirst({ where: { id: fid, projectId: id }, include: { boardStatus: { select: { name: true, color: true } } } });
   if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json().catch(() => null);
@@ -104,8 +104,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       feedback: { id: fid, title: feedback.title, content: feedback.content, type: feedback.type },
       oldStatus: feedback.status,
       newStatus: effectiveNewStatus,
-      ...(feedback.boardStatus ? { oldStatusName: feedback.boardStatus.name } : {}),
-      ...(resolvedStatusId !== undefined && updated.boardStatus ? { newStatusName: updated.boardStatus.name } : {}),
+      ...(feedback.boardStatus ? { oldStatusName: feedback.boardStatus.name, oldStatusColor: feedback.boardStatus.color } : {}),
+      ...(resolvedStatusId !== undefined && updated.boardStatus ? { newStatusName: updated.boardStatus.name, newStatusColor: updated.boardStatus.color } : {}),
     });
     kickNotificationProcessor();
   }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mock, test } from "node:test";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import { createProjectInvitation, acceptProjectInvitation } from "./project-invitations";
 import { hashInvitationToken, INVITATION_LIFETIME_MS } from "./invitation-tokens";
 import { processNotificationJobs } from "./notification-queue";
@@ -35,6 +35,20 @@ test("project invitation database lifecycle", { skip: !databaseUrl }, async (t) 
   const owner = await client.user.create({ data: { email: `owner-${randomUUID()}@example.test`, name: "Owner" } });
   const project = await client.project.create({ data: { name: "Invitation test", slug: `invite-${randomUUID()}`, ownerId: owner.id } });
   const base = { projectId: project.id, projectName: project.name, inviterName: owner.name };
+  // Parallel collaboration tests queue their own jobs. This suite must neither
+  // deliver those jobs nor compare counts that other suites can change.
+  const jobScope: Prisma.NotificationJobWhereInput = { payload: { path: ["projectId"], equals: project.id } };
+  const deliveryQueue = new Proxy(client.notificationJob, {
+    get(target, property) {
+      if (property === "findMany") return (args: Prisma.NotificationJobFindManyArgs) => target.findMany({ ...args, where: { AND: [args.where ?? {}, jobScope] } });
+      if (property === "updateMany") return (args: Prisma.NotificationJobUpdateManyArgs) => target.updateMany({ ...args, where: { AND: [args.where ?? {}, jobScope] } });
+      if (property === "deleteMany") return (args: Prisma.NotificationJobDeleteManyArgs) => target.deleteMany({ ...args, where: { AND: [args.where ?? {}, jobScope] } });
+      return Reflect.get(target, property);
+    },
+  });
+  const deliveryClient = new Proxy(client, {
+    get(target, property) { return property === "notificationJob" ? deliveryQueue : Reflect.get(target, property); },
+  });
   async function invite() {
     const email = `invite-${randomUUID()}@example.test`;
     const result = await client.$transaction((tx) => createProjectInvitation({ ...base, email }, tx));
@@ -100,7 +114,7 @@ test("project invitation database lifecycle", { skip: !databaseUrl }, async (t) 
     const latest = await client.projectInvitation.findUniqueOrThrow({ where: { id: replaced.record.id } });
     assert.notEqual(latest.tokenHash, replaced.record.tokenHash);
 
-    await processNotificationJobs(100, client);
+    await processNotificationJobs(100, deliveryClient);
     assert.ok(!sent.some((email) => email.to.includes(expired.email)));
     assert.ok(!sent.some((email) => email.to.includes(revoked.email)));
     const replacementSends = sent.filter((email) => email.to.includes(replaced.email));
@@ -110,13 +124,13 @@ test("project invitation database lifecycle", { skip: !databaseUrl }, async (t) 
 
   await t.test("a transaction rollback leaves neither the invitation nor its email job", async () => {
     const email = `rollback-${randomUUID()}@example.test`;
-    const beforeJobs = await client.notificationJob.count();
+    const beforeJobs = await client.notificationJob.count({ where: jobScope });
     await assert.rejects(client.$transaction(async (tx) => {
       await createProjectInvitation({ ...base, email }, tx);
       throw new Error("Forced rollback");
     }), /Forced rollback/);
     assert.equal(await client.projectInvitation.count({ where: { email } }), 0);
-    assert.equal(await client.notificationJob.count(), beforeJobs);
+    assert.equal(await client.notificationJob.count({ where: jobScope }), beforeJobs);
   });
 
   await t.test("concurrent accepts create just one membership and existing members aren't reinvited", async () => {
@@ -140,11 +154,11 @@ test("project invitation database lifecycle", { skip: !databaseUrl }, async (t) 
       }
       return new Response(null, { status: 202 });
     });
-    await processNotificationJobs(100, client);
+    await processNotificationJobs(100, deliveryClient);
     const job = await client.notificationJob.findFirstOrThrow({ where: { payload: { path: ["invitationId"], equals: record.id } } });
     assert.equal(job.status, "PENDING");
     await client.notificationJob.update({ where: { id: job.id }, data: { availableAt: new Date(0) } });
-    await processNotificationJobs(100, client);
+    await processNotificationJobs(100, deliveryClient);
     assert.equal(keys.length, 2);
     assert.equal(keys[0], keys[1]);
     assert.equal(keys[0], (job.payload as unknown as ProjectInvitationPayload).idempotencyKey);

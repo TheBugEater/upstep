@@ -6,12 +6,18 @@ import type { Prisma } from "@prisma/client";
 // ─── Payload shapes ────────────────────────────────────────────────────────────
 
 type ProjectInfo = { id: string; name: string };
-type FeedbackInfo = { id: string; title: string | null; content: string; type: string; status?: string; flagged?: boolean };
+type FeedbackInfo = {
+  id: string; title: string | null; content: string; type: string; status?: string; flagged?: boolean;
+  boardStatus?: { name: string; color: string; isDone: boolean } | null;
+  labels?: { name: string; color: string }[];
+  assignee?: { name: string | null } | null;
+  internal?: boolean;
+};
 
 export type IntegrationPayload =
   | { event: "ISSUE_SHARED"; project: ProjectInfo; feedback: FeedbackInfo; integrationId: string }
   | { event: "NEW_FEEDBACK";   project: ProjectInfo; feedback: FeedbackInfo }
-  | { event: "STATUS_CHANGED"; project: ProjectInfo; feedback: FeedbackInfo; oldStatus: string; newStatus: string; oldStatusName?: string; newStatusName?: string }
+  | { event: "STATUS_CHANGED"; project: ProjectInfo; feedback: FeedbackInfo; oldStatus: string; newStatus: string; oldStatusName?: string; newStatusName?: string; oldStatusColor?: string; newStatusColor?: string }
   | { event: "NEW_VOTE";       project: ProjectInfo; feedback: FeedbackInfo & { upvotes: number; downvotes: number }; vote: { value: string } }
   | { event: "NEW_COMMENT";    project: ProjectInfo; feedback: FeedbackInfo; comment: { content: string; authorName: string | null } };
 

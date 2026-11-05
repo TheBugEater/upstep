@@ -62,6 +62,9 @@ test("project task collaboration permissions and lifecycle", { skip: !databaseUr
   });
 
   await t.test("comments retain authenticated authors, reply context and atomic notification jobs", async () => {
+    const review = await client.status.create({ data: { projectId: project.id, name: "Review", color: "#a855f7" } });
+    const billing = await client.label.create({ data: { projectId: project.id, name: "Billing", color: "#ef4444" } });
+    await client.feedback.update({ where: { id: task.id }, data: { statusId: review.id, assigneeId: member.id, labels: { connect: { id: billing.id } } } });
     const first = await addTaskComment({ projectId: project.id, feedbackId: task.id, actorId: owner.id, content: "First comment" }, client);
     const reply = await addTaskComment({ projectId: project.id, feedbackId: task.id, actorId: member.id, content: "  Investigating\nnow  ", parentId: first.id }, client);
     assert.equal(first.authorId, owner.id);
@@ -72,6 +75,14 @@ test("project task collaboration permissions and lifecycle", { skip: !databaseUr
     assert.equal(reply.parentId, first.id);
     assert.equal(reply.content, "Investigating\nnow");
     assert.equal(await client.notificationJob.count({ where: { payload: { path: ["project", "id"], equals: project.id } } }), 2);
+    const job = await client.notificationJob.findFirstOrThrow({ where: { payload: { path: ["comment", "content"], equals: "First comment" } } });
+    const snapshot = job.payload as unknown as IntegrationPayload;
+    assert.equal(snapshot.feedback.boardStatus?.color, "#a855f7");
+    assert.deepEqual(snapshot.feedback.labels, [{ name: "Billing", color: "#ef4444" }]);
+    assert.equal(snapshot.feedback.assignee?.name, "Member");
+    await client.status.update({ where: { id: review.id }, data: { color: "#000000" } });
+    const retained = await client.notificationJob.findUniqueOrThrow({ where: { id: job.id } });
+    assert.equal((retained.payload as unknown as IntegrationPayload).feedback.boardStatus?.color, "#a855f7");
     await assert.rejects(addTaskComment({ projectId: project.id, feedbackId: otherTask.id, actorId: member.id, content: "Wrong thread", parentId: first.id }, client));
     await assert.rejects(addTaskComment({ projectId: project.id, feedbackId: task.id, actorId: outsider.id, content: "No access" }, client));
     await assert.rejects(addTaskComment({ projectId: project.id, feedbackId: task.id, actorId: member.id, content: "  " }, client));
@@ -103,6 +114,8 @@ test("project task collaboration permissions and lifecycle", { skip: !databaseUr
     const job = await client.notificationJob.findUniqueOrThrow({ where: { id } });
     const payload = job.payload as unknown as IntegrationPayload;
     assert.equal(payload.event, "ISSUE_SHARED");
+    assert.equal(payload.feedback.boardStatus?.color, "#000000");
+    assert.equal(payload.feedback.labels?.[0]?.color, "#ef4444");
     const requests: URL[] = [];
     const stub = mock.method(globalThis, "fetch", async (url: RequestInfo | URL, init?: RequestInit) => {
       assert.equal(new URL(String(url)).searchParams.has("requestId"), false);

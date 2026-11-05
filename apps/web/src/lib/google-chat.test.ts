@@ -51,7 +51,61 @@ test("all issue events share one thread and link directly to the issue", () => {
   assert.notEqual(googleChatMessage({ ...base, event: "NEW_FEEDBACK", project: { ...base.project, id: "another-project" } }, issueUrl).thread.threadKey,
     googleChatMessage(events[0]!, issueUrl).thread.threadKey);
   const status = JSON.stringify(googleChatMessage(events[1]!, issueUrl));
-  assert.ok(status.includes("To do → Review"));
+  assert.ok(status.includes("To do</b> →"));
+  assert.ok(status.includes("Review</b>"));
+});
+
+test("cards use actual status and label colors, show assignees, and tint the action", () => {
+  const message = googleChatMessage({
+    ...base, event: "ISSUE_SHARED", integrationId: "chat-test",
+    feedback: { ...base.feedback, status: "IN_PROGRESS", internal: true,
+      boardStatus: { name: "Review & QA", color: "#a855f7", isDone: false },
+      labels: [{ name: "Billing <urgent>", color: "#ef4444" }, { name: "Mobile", color: "#06b6d4" }],
+      assignee: { name: "Jane Smith" },
+    },
+  }, issueUrl);
+  const body = JSON.stringify(message);
+  assert.ok(body.includes('color=\\"#a855f7\\"'));
+  assert.ok(body.includes('color=\\"#ef4444\\"'));
+  assert.ok(body.includes('color=\\"#06b6d4\\"'));
+  assert.ok(body.includes("Review &amp; QA"));
+  assert.ok(body.includes("Billing &lt;urgent&gt;"));
+  assert.ok(body.includes("Assigned to Jane Smith · Internal task"));
+  const action = message.cardsV2[0]!.card.sections.at(-1)!.widgets[0]!;
+  assert.ok("buttonList" in action);
+  assert.deepEqual(action.buttonList.buttons[0]!.color, { red: 168 / 255, green: 85 / 255, blue: 247 / 255 });
+});
+
+test("status replies retain both event colors and comments focus on the named author's update", () => {
+  const status = JSON.stringify(googleChatMessage({ ...base, event: "STATUS_CHANGED", oldStatus: "OPEN", newStatus: "DONE", oldStatusName: "Review", newStatusName: "Shipped", oldStatusColor: "#a855f7", newStatusColor: "#22c55e" }, issueUrl));
+  assert.ok(status.includes('color=\\"#a855f7\\"'));
+  assert.ok(status.includes('color=\\"#22c55e\\"'));
+  assert.ok(status.includes("Review</b> →"));
+  assert.ok(status.includes("Shipped</b>"));
+  assert.ok(!status.includes(base.feedback.content));
+  const comment = JSON.stringify(googleChatMessage(events[2]!, issueUrl));
+  assert.ok(comment.includes("Sam"));
+  assert.ok(comment.includes("Investigating"));
+  assert.ok(!comment.includes(base.feedback.content));
+});
+
+test("legacy jobs, pending moderation, malformed colors, and excessive labels render safely", () => {
+  const legacy = JSON.stringify(googleChatMessage(events[0]!, issueUrl));
+  assert.ok(legacy.includes("Open</b>"));
+  assert.ok(legacy.includes("Unassigned"));
+  const pending = JSON.stringify(googleChatMessage({ ...base, event: "NEW_FEEDBACK", feedback: { ...base.feedback, status: "PENDING", boardStatus: { name: "Open", color: "#000000", isDone: false } } }, issueUrl));
+  assert.ok(pending.includes("Pending review</b>"));
+  assert.ok(pending.includes('color=\\"#f59e0b\\"'));
+  const maliciousColor = '#fff\" onmouseover=\"bad';
+  const bounded = JSON.stringify(googleChatMessage({ ...base, event: "NEW_FEEDBACK", feedback: {
+    ...base.feedback, boardStatus: { name: "Safe", color: maliciousColor, isDone: false },
+    labels: Array.from({ length: 100 }, (_, i) => ({ name: `<Label ${i}>`.repeat(100), color: maliciousColor })),
+    assignee: { name: null },
+  } }, issueUrl));
+  assert.ok(!bounded.includes("onmouseover"));
+  assert.ok(bounded.includes("+92 more"));
+  assert.ok(bounded.includes("Assigned to Teammate"));
+  assert.ok(Buffer.byteLength(bounded) < 32_000);
 });
 
 test("escapes issue and comment content, preserves author names, and bounds message size", () => {

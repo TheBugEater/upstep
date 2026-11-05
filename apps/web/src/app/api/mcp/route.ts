@@ -311,7 +311,7 @@ const feedbackSelect = {
   internal: true,
   flagged: true,
   createdAt: true,
-  boardStatus: { select: { name: true, isDone: true } },
+  boardStatus: { select: { name: true, color: true, isDone: true } },
   labels: { select: { name: true } },
 } as const;
 
@@ -505,7 +505,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         return toolError("status_name is required with lifecycle_status. Use list_statuses to choose an existing column.");
       }
 
-      const existing = await db.feedback.findFirst({ where: { id, projectId: project.id }, include: { boardStatus: { select: { name: true } } } });
+      const existing = await db.feedback.findFirst({ where: { id, projectId: project.id }, include: { boardStatus: { select: { name: true, color: true } } } });
       if (!existing) return toolError("Feedback not found in this project.");
 
       let statusPatch: { statusId: string; status: TaskLifecycle } | null = null;
@@ -555,8 +555,8 @@ async function callTool(project: Project, name: string, args: Record<string, unk
           feedback: { id, title: existing.title, content: existing.content, type: existing.type },
           oldStatus: existing.status,
           newStatus: statusPatch.status,
-          ...(existing.boardStatus ? { oldStatusName: existing.boardStatus.name } : {}),
-          ...(updated.boardStatus ? { newStatusName: updated.boardStatus.name } : {}),
+          ...(existing.boardStatus ? { oldStatusName: existing.boardStatus.name, oldStatusColor: existing.boardStatus.color } : {}),
+          ...(updated.boardStatus ? { newStatusName: updated.boardStatus.name, newStatusColor: updated.boardStatus.color } : {}),
         });
         kickNotificationProcessor();
       }

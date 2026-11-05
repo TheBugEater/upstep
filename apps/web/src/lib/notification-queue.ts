@@ -9,14 +9,16 @@ import {
 import { triggerIntegrations, type IntegrationPayload } from "./integrations";
 import { hashInvitationToken } from "./invitation-tokens";
 import { GoogleChatDeliveryError } from "./google-chat";
+import { withIntegrationContext } from "./integration-context";
 
 type QueueClient = Pick<Prisma.TransactionClient, "notificationJob">;
 type NotificationClient = Pick<Prisma.TransactionClient, "notificationJob" | "rateLimitBucket" | "projectInvitation" | "project">;
 let retryTimer: NodeJS.Timeout | null = null;
 
-export async function queueIntegration(payload: IntegrationPayload, client: QueueClient = db) {
+export async function queueIntegration(payload: IntegrationPayload, client: QueueClient & Pick<Prisma.TransactionClient, "feedback"> = db) {
+  const enriched = await withIntegrationContext(payload, client);
   return client.notificationJob.create({
-    data: { type: "INTEGRATION", payload: payload as unknown as Prisma.InputJsonValue },
+    data: { type: "INTEGRATION", payload: enriched as unknown as Prisma.InputJsonValue },
   });
 }
 

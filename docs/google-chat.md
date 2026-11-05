@@ -29,6 +29,18 @@ votes join the same thread rather than starting unrelated conversations.
 Custom board column names appear in status updates, including moves between two
 unfinished columns. Both dashboard and MCP updates are supported.
 
+Cards display the current status with its configured board color, label names with
+their own colors, the assignee, and the issue type and project. The issue button
+uses the status color; names retain Chat's normal foreground for readability.
+Opening cards include the description, while status, comment, and vote replies
+focus on the update. Status transitions show both the previous and new colors;
+comments identify their author. Colors, labels, and assignment are captured when
+the event is queued so retries preserve its context. Older queued jobs without
+that context use lifecycle status colors and omit unavailable labels. These
+layouts use [Google's supported card formatting](https://developers.google.com/workspace/chat/format-messages#format_text_that_appears_in_cards).
+Previously posted cards keep their original layout; the new layout applies to
+future messages.
+
 Connecting a space does not automatically post or backfill existing issues. Open
 an existing task and choose **Start Google Chat discussion** to share its context
 and start or continue its thread immediately. Any project teammate can do this;

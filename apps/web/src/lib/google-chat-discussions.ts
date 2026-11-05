@@ -4,6 +4,7 @@ import { db } from "./db";
 import { getProjectAccess } from "./project-auth";
 import { collaborationTransaction, CollaborationError } from "./project-collaboration";
 import type { IntegrationPayload } from "./integrations";
+import { withIntegrationContext } from "./integration-context";
 
 export function discussionJobId(integrationId: string, feedbackId: string) {
   return "chat-discussion-" + createHash("sha256").update(JSON.stringify([integrationId, feedbackId])).digest("hex");
@@ -19,7 +20,7 @@ export async function startGoogleChatDiscussion(input: { projectId: string; feed
     const feedback = await tx.feedback.findFirst({ where: { id: input.feedbackId, projectId: input.projectId } });
     if (!feedback) throw new CollaborationError("Task not found.", 404);
     const id = discussionJobId(integration.id, feedback.id);
-    const payload: IntegrationPayload = { event: "ISSUE_SHARED", project: { id: input.projectId, name: project.name }, feedback: { id: feedback.id, title: feedback.title, content: feedback.content, type: feedback.type }, integrationId: integration.id };
+    const payload = await withIntegrationContext<IntegrationPayload>({ event: "ISSUE_SHARED", project: { id: input.projectId, name: project.name }, feedback: { id: feedback.id, title: feedback.title, content: feedback.content, type: feedback.type }, integrationId: integration.id }, tx);
     const job = await tx.notificationJob.upsert({ where: { id }, create: { id, type: "INTEGRATION", payload: payload as unknown as Prisma.InputJsonValue }, update: {} });
     if (job.status === "FAILED") {
       await tx.notificationJob.update({ where: { id }, data: { status: "PENDING", attempts: 0, availableAt: new Date(), lastError: null, lockedAt: null } });

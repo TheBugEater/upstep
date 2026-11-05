@@ -42,9 +42,9 @@ test("MCP task workflow updates real columns, lifecycle filters, and notificatio
   });
   await client.status.createMany({ data: [
     { projectId: project.id, name: "Open", order: 0 },
-    { projectId: project.id, name: "In Progress", order: 1 },
-    { projectId: project.id, name: "Building", order: 2 },
-    { projectId: project.id, name: "Shipped", order: 3, isDone: true },
+    { projectId: project.id, name: "In Progress", order: 1, color: "#3b82f6" },
+    { projectId: project.id, name: "Building", order: 2, color: "#a855f7" },
+    { projectId: project.id, name: "Shipped", order: 3, color: "#22c55e", isDone: true },
   ] });
   let requestId = 0;
   async function rpc(method: string, params = {}) {
@@ -88,6 +88,12 @@ test("MCP task workflow updates real columns, lifecycle filters, and notificatio
   assert.equal(completed.board_column, "Shipped");
   assert.equal(completed.lifecycle_status, "DONE");
   assert.equal(completed.done, true);
+  const completionJob = await client.notificationJob.findFirstOrThrow({ where: { AND: [
+    { payload: { path: ["project", "id"], equals: project.id } },
+    { payload: { path: ["newStatusName"], equals: "Shipped" } },
+  ] } });
+  assert.equal((completionJob.payload as { oldStatusColor: string }).oldStatusColor, "#a855f7");
+  assert.equal((completionJob.payload as { newStatusColor: string }).newStatusColor, "#22c55e");
   assert.equal((await tool("list_feedback", { status: "IN_PROGRESS" })).count, 0);
   assert.equal((await tool("list_feedback", { status: "DONE" })).items[0].id, id);
   const completionNote = "Completed: fixed the task status mapping. Validation: lifecycle tests passed. Commit: abc1234 (test fixture).";
