@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { TeamMember } from "@/components/workspace/ProjectWorkspace";
 
 interface Props {
@@ -10,6 +10,9 @@ interface Props {
   isOwner: boolean;
   teamMembers: TeamMember[];
 }
+
+type PendingInvitation = { id: string; email: string; expiresAt: string; lastSentAt: string; createdAt: string };
+type InviteResponse = { error?: string; emailQueued?: boolean; alreadyMember?: boolean; invitation?: PendingInvitation | null };
 
 export function SettingsTab({
   projectId,
@@ -35,7 +38,52 @@ export function SettingsTab({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState("");
+  const [inviteNotice, setInviteNotice] = useState("");
+  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
+  const [loadingInvitations, setLoadingInvitations] = useState(isOwner);
+  const [invitationAction, setInvitationAction] = useState<string | null>(null);
+  const [pendingError, setPendingError] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOwner) return;
+    const controller = new AbortController();
+    void fetch(`/api/projects/${projectId}/invitations`, { signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Couldn't load pending invitations.");
+        setInvitations(await res.json() as PendingInvitation[]);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) setPendingError(error instanceof Error ? error.message : "Couldn't load pending invitations.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoadingInvitations(false); });
+    return () => controller.abort();
+  }, [isOwner, projectId]);
+
+  function updateInvitation(invitation: PendingInvitation) {
+    setInvitations((previous) => [...previous.filter((item) => item.id !== invitation.id), invitation]);
+  }
+
+  async function manageInvitation(id: string, action: "resend" | "revoke") {
+    setInvitationAction(id);
+    setInviteError("");
+    setInviteNotice("");
+    try {
+      const url = `/api/projects/${projectId}/invitations/${id}${action === "resend" ? "/resend" : ""}`;
+      const res = await fetch(url, { method: action === "resend" ? "POST" : "DELETE" });
+      const data = await res.json() as InviteResponse;
+      if (!res.ok) throw new Error(data.error || "Couldn't update this invitation.");
+      if (action === "revoke" || data.alreadyMember) {
+        setInvitations((previous) => previous.filter((item) => item.id !== id));
+      } else if (data.invitation) updateInvitation(data.invitation);
+      setInviteNotice(action === "revoke" ? "Invitation revoked." : data.alreadyMember ? "This teammate has already joined."
+        : data.emailQueued ? "Invitation email queued. The previous link no longer works." : "An invitation is already pending. Try again shortly if you need a new link.");
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : "Couldn't update this invitation.");
+    } finally {
+      setInvitationAction(null);
+    }
+  }
 
   async function rotateKey() {
     startRotate(async () => {
@@ -79,25 +127,25 @@ export function SettingsTab({
     if (!inviteEmail.trim() || inviting) return;
     setInviting(true);
     setInviteError("");
+    setInviteNotice("");
     try {
       const res = await fetch(`/api/projects/${projectId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inviteEmail.trim() }),
       });
-      const data = (await res.json()) as { error?: string; user: { id: string; name: string | null; email: string } };
+      const data = (await res.json()) as InviteResponse;
       if (!res.ok) {
         setInviteError((data as { error?: string }).error ?? "Failed to add member.");
       } else {
-        const newMember: TeamMember = {
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email,
-          role: "MEMBER",
-        };
-        setMembers((prev) => [...prev, newMember]);
+        if (data.invitation) updateInvitation(data.invitation);
+        setInviteNotice(data.alreadyMember ? "This teammate already has access to this project."
+          : data.emailQueued ? "Invitation email queued. They can create an account when they accept."
+          : "An invitation is already pending for this email. Use Resend below if needed.");
         setInviteEmail("");
       }
+    } catch {
+      setInviteError("Couldn't add this teammate. Please try again.");
     } finally {
       setInviting(false);
     }
@@ -161,7 +209,7 @@ export function SettingsTab({
             <input
               type="email"
               value={inviteEmail}
-              onChange={(e) => { setInviteEmail(e.target.value); setInviteError(""); }}
+              onChange={(e) => { setInviteEmail(e.target.value); setInviteError(""); setInviteNotice(""); }}
               placeholder="teammate@company.com"
               className="flex-1 text-sm rounded-xl border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint focus:outline-none focus:border-clay/40 transition"
             />
@@ -170,11 +218,29 @@ export function SettingsTab({
               disabled={inviting || !inviteEmail.trim()}
               className="px-4 py-2 rounded-xl bg-primary text-primary-fg text-sm font-medium hover:bg-primary/85 transition disabled:opacity-40 shrink-0"
             >
-              {inviting ? "Adding…" : "Add"}
+              {inviting ? "Sending…" : "Invite"}
             </button>
           </form>
         )}
         {inviteError && <p className="text-xs text-danger mt-2">{inviteError}</p>}
+        {inviteNotice && <p className="text-xs text-muted mt-2" role="status">{inviteNotice}</p>}
+        {isOwner && <p className="text-xs text-faint mt-3">Invite any email address. They can create an account when accepting. Invitations expire after seven days.</p>}
+        {isOwner && <div className="mt-6 border-t border-line pt-5">
+          <h4 className="text-xs font-semibold text-ink mb-3">Pending invitations</h4>
+          {loadingInvitations && <p className="text-xs text-muted">Loading invitations…</p>}
+          {pendingError && <p className="text-xs text-danger" role="alert">{pendingError}</p>}
+          {!loadingInvitations && !pendingError && invitations.length === 0 && <p className="text-xs text-faint">No pending invitations.</p>}
+          <div className="space-y-3">{invitations.map((invitation) => (
+            <div key={invitation.id} className="flex flex-wrap items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-ink truncate">{invitation.email}</p>
+                <p className="text-[11px] text-faint">{new Date(invitation.expiresAt) <= new Date() ? "Expired" : `Expires ${new Date(invitation.expiresAt).toLocaleDateString()}`}</p>
+              </div>
+              <button type="button" disabled={!!invitationAction} onClick={() => void manageInvitation(invitation.id, "resend")} className="text-xs text-muted hover:text-ink disabled:opacity-40">{invitationAction === invitation.id ? "Updating…" : "Resend"}</button>
+              <button type="button" disabled={!!invitationAction} onClick={() => void manageInvitation(invitation.id, "revoke")} className="text-xs text-muted hover:text-danger disabled:opacity-40">Revoke</button>
+            </div>
+          ))}</div>
+        </div>}
       </div>
 
       {/* ── API Key (owner only) ─────────────────────────────────────────────── */}

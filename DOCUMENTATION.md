@@ -131,9 +131,10 @@ Defined in [apps/web/.env.example](apps/web/.env.example). All live in
 | `STRIPE_WEBHOOK_SECRET`                     | Optional | Verifies Stripe webhook signatures               |
 | `STRIPE_PRICE_PRO`                          | Optional | Stripe price id for the Pro plan                 |
 | `STRIPE_PRICE_BUSINESS`                     | Optional | Stripe price id for the Business plan            |
-| `SENDPANDA_API_KEY`                        | Optional | Send-only SendPanda key for feedback notifications |
+| `SENDPANDA_API_KEY`                        | Optional | Send-only SendPanda key for transactional emails   |
 | `SENDPANDA_FROM_EMAIL`                     | Optional | Sender on a domain verified in SendPanda           |
 | `SENDPANDA_FEEDBACK_TEMPLATE_ID`            | Optional | Published feedback notification template          |
+| `SENDPANDA_INVITATION_TEMPLATE_ID`          | Optional | Published project invitation template             |
 | `SENDPANDA_TEST_TEMPLATE_ID`                | Optional | Published email setup test template               |
 | `NEXT_PUBLIC_ONRAMP_API_KEY`                | Optional | Enables hosted-service analytics                  |
 
@@ -143,12 +144,14 @@ is on Free).
 
 ### Transactional email
 
-Feedback notifications use SendPanda via the server-side `sendEmail({ to,
+Feedback notifications and project invitations use SendPanda via the server-side `sendEmail({ to,
 subject, text, html?, idempotencyKey? })` helper in `apps/web/src/lib/email.ts`.
 It posts to `https://api.sendpanda.email/v1/emails` with bearer authentication
 from `SENDPANDA_API_KEY`. Non-2xx responses throw with the response body so the
 existing notification queue can retry. Feedback notifications remain disabled
 when the key is blank; direct calls to `sendEmail` throw if it is missing.
+Invitations never silently complete without a key: they remain retryable and
+eventually record a failure if sending stays misconfigured.
 
 Keep the real send-only key in `apps/web/.env` (ignored by Git), or your deployment's
 environment settings. Set `SENDPANDA_FROM_EMAIL` to a sender on a verified domain.
@@ -166,14 +169,16 @@ Send one test email to `businesscodepulse@gmail.com` using the same helper:
 
 ```bash
 pnpm --filter @upstep/web email:test
+# Preview the invitation email (use your public HTTPS app URL; no access is changed)
+AUTH_URL=https://your-public-upstep-domain.example pnpm --filter @upstep/web email:test --invitation
 ```
 
 The script loads Next.js environment files from `apps/web` and sends only to that
 fixed test recipient. Provider reference: [SendPanda API docs](https://api.sendpanda.email/docs).
 
 Source templates are in `apps/web/src/lib/email-templates.ts`: feedback notifications
-(bug reports, feature requests, and general feedback) and the email setup test.
-Both include HTML, plain text, and an UpStep Team sign-off. The app uses published
+(bug reports, feature requests, and general feedback), project invitations, and
+the email setup test. All include HTML, plain text, and an UpStep Team sign-off. The app uses published
 SendPanda templates when their IDs are configured, or renders the same source
 templates locally when self-hosting without IDs. Template sends pass `template_id`
 and `variables` instead of inline HTML/text; `sendEmail` supports both modes.
@@ -189,11 +194,44 @@ publishes that version, and saves the IDs directly to the ignored `apps/web/.env
 It never sends email. Test recipients are fixed in `scripts/send-test-email.ts`.
 
 For Dokploy, `docker-compose.production.yml` maps `API_SENDPANDA_API_KEY`,
-`API_SENDPANDA_FROM_EMAIL`, `API_SENDPANDA_FEEDBACK_TEMPLATE_ID`, and
+`API_SENDPANDA_FROM_EMAIL`, `API_SENDPANDA_FEEDBACK_TEMPLATE_ID`,
+`API_SENDPANDA_INVITATION_TEMPLATE_ID`, and
 `API_SENDPANDA_TEST_TEMPLATE_ID` from the service environment to the app's
 corresponding `SENDPANDA_*` variables. Setting the key enables feedback emails;
 redeploy to apply runtime environment changes. Keep these values in Dokploy's
 environment settings, never build arguments or `NEXT_PUBLIC_*` variables.
+
+### Project invitations
+
+Owners can invite any email from **Project settings → Team**, including people
+without an UpStep account. This creates a pending invitation and an email job
+in one database transaction. Existing members are not emailed again. Duplicate
+requests reuse the pending invitation; **Resend** rotates the link (at most once
+per minute), and **Revoke** invalidates it. Invitations expire after seven days.
+
+The recipient follows the email link, then signs in or creates an account with
+Google or GitHub using the invited email. The invitation survives the OAuth
+round trip. Access is granted only after an authenticated **Accept invitation**
+submission; email scanners and link previews cannot join a project. A different
+signed-in email is offered **Switch account**. A used link cannot regrant access
+after the member is removed.
+
+The invitation table stores a SHA-256 token digest. The email outbox retains the
+secret needed to send the link; never expose or log its payload. The link secret
+is exchanged for an HttpOnly, SameSite cookie before rendering the invitation
+page or visiting OAuth, and the exchange route is excluded from crawler analytics.
+The worker skips revoked, expired, accepted, or superseded invitation emails.
+Hosted production processes the durable queue every minute using the Dokploy
+**UpStep notification retries** schedule. Self-hosters can run
+`node /app/apps/web/scripts/process-notifications.mjs` inside the app container
+on the same schedule; it authenticates with the runtime `CRON_SECRET`.
+
+The additive `ProjectInvitation` migration must run before deploying this flow.
+Integration tests use an explicit `UPSTEP_INVITATION_TEST_DATABASE_URL` pointing
+only at a local/CI test database; they cover signup after invitation, acceptance,
+wrong accounts, concurrent requests, expiry, revocation, resend, and rollback.
+
+See [transactional email coverage](docs/email-coverage.md) for remaining email gaps.
 
 ---
 

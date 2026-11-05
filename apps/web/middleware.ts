@@ -9,5 +9,6 @@ export default apiKey
   : () => NextResponse.next();
 
 export const config = {
-  matcher: "/((?!_next/static|_next/image|favicon.ico).*)",
+  // The invitation exchange URL contains a secret; never report it to analytics.
+  matcher: "/((?!_next/static|_next/image|favicon.ico|api/invitations/open).*)",
 };

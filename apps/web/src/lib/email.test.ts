@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, mock, test } from "node:test";
-import { sendEmail, sendFeedbackNotification } from "./email";
+import { sendEmail, sendFeedbackNotification, sendProjectInvitationNotification, type ProjectInvitationPayload } from "./email";
 import { EMAIL_TEMPLATES, renderEmailTemplate } from "./email-templates";
+import { generateInvitationToken } from "./invitation-tokens";
 
 const originalEnv = { ...process.env };
 const message = {
@@ -27,6 +28,7 @@ beforeEach(() => {
   process.env.SENDPANDA_API_KEY = "test-only-key";
   process.env.SENDPANDA_FROM_EMAIL = "UpStep Team <hello@upstep.dev>";
   delete process.env.SENDPANDA_FEEDBACK_TEMPLATE_ID;
+  delete process.env.SENDPANDA_INVITATION_TEMPLATE_ID;
   process.env.AUTH_URL = "https://upstep.dev";
   // All tests must stub fetch explicitly; never contact a real recipient.
   mock.method(globalThis, "fetch", async () => {
@@ -36,7 +38,7 @@ beforeEach(() => {
 
 afterEach(() => {
   mock.restoreAll();
-  for (const name of ["SENDPANDA_API_KEY", "SENDPANDA_FROM_EMAIL", "SENDPANDA_FEEDBACK_TEMPLATE_ID", "AUTH_URL"]) {
+  for (const name of ["SENDPANDA_API_KEY", "SENDPANDA_FROM_EMAIL", "SENDPANDA_FEEDBACK_TEMPLATE_ID", "SENDPANDA_INVITATION_TEMPLATE_ID", "AUTH_URL"]) {
     if (originalEnv[name] === undefined) delete process.env[name];
     else process.env[name] = originalEnv[name];
   }
@@ -152,4 +154,59 @@ test("published feedback templates receive variables without inline HTML or text
 test("local template rendering rejects missing variables and subject header injection", () => {
   assert.throws(() => renderEmailTemplate(EMAIL_TEMPLATES.feedback, {}), /Missing email template variable/);
   assert.throws(() => renderEmailTemplate(EMAIL_TEMPLATES.feedback, { subject: "Bad\r\nBcc: someone@example.com" }), /Invalid email subject/);
+});
+
+const invitation: ProjectInvitationPayload = {
+  kind: "PROJECT_INVITATION",
+  invitationId: "invitation-test",
+  token: generateInvitationToken(),
+  toEmail: message.to,
+  recipientName: "Alex <Teammate>",
+  inviterName: "Jane & Sam",
+  projectName: "Website <Launch>",
+  projectId: "project-invitation-test",
+};
+
+test("project invitations greet the recipient, name the inviter, and explain signup", async () => {
+  const idempotencyKey = randomUUID();
+  mock.method(globalThis, "fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(init?.body as string);
+    assert.deepEqual(body.to, [message.to]);
+    assert.equal(body.from, "UpStep Team <hello@upstep.dev>");
+    assert.equal(body.subject, "You're invited to Website <Launch> on UpStep");
+    assert.match(body.html, /Hi Alex &lt;Teammate&gt;/);
+    assert.match(body.html, /Jane &amp; Sam/);
+    assert.match(body.html, /Website &lt;Launch&gt;/);
+    assert.match(body.text, /creates your account automatically/);
+    assert.match(body.text, /expires in seven days/);
+    assert.match(body.text, /The UpStep Team/);
+    assert.ok(body.html.includes(`https://upstep.dev/api/invitations/open?token=${invitation.token}`));
+    assert.equal(new Headers(init?.headers).get("Idempotency-Key"), idempotencyKey);
+    return new Response(null, { status: 202 });
+  });
+  await sendProjectInvitationNotification({ ...invitation, idempotencyKey });
+});
+
+test("published invitation templates use safe name fallbacks and template variables", async () => {
+  process.env.SENDPANDA_INVITATION_TEMPLATE_ID = "tpl_invitation_test";
+  mock.method(globalThis, "fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(init?.body as string);
+    assert.equal(body.template_id, "tpl_invitation_test");
+    assert.equal(body.html, undefined);
+    assert.equal(body.text, undefined);
+    assert.equal(body.variables.recipient_name, "there");
+    assert.equal(body.variables.inviter_name, "Your project owner");
+    assert.equal(body.variables.invitation_url, `https://upstep.dev/api/invitations/open?token=${invitation.token}`);
+    const rendered = renderEmailTemplate(EMAIL_TEMPLATES.invitation, body.variables);
+    assert.ok(!rendered.html.includes("{{"));
+    return new Response(null, { status: 202 });
+  });
+  await sendProjectInvitationNotification({ ...invitation, recipientName: null, inviterName: " ", projectId: "project/test" });
+});
+
+test("invitation failures propagate so the notification queue can retry", async () => {
+  mock.method(globalThis, "fetch", async () => new Response("Temporary provider failure", { status: 503 }));
+  await assert.rejects(sendProjectInvitationNotification(invitation), /503.*Temporary provider failure/);
+  delete process.env.SENDPANDA_API_KEY;
+  await assert.rejects(sendProjectInvitationNotification(invitation), /SENDPANDA_API_KEY is not configured/);
 });

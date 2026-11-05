@@ -19,8 +19,11 @@ export default function LoginPage() {
 function LoginForm() {
   const { step } = useOnRamp();
   const [providers, setProviders] = useState<Awaited<ReturnType<typeof getProviders>>>(null);
-  const appName = useSearchParams().get("appName")?.trim();
-  const callbackUrl = appName ? `/dashboard?newProject=${encodeURIComponent(appName)}` : "/dashboard";
+  const searchParams = useSearchParams();
+  const appName = searchParams.get("appName")?.trim();
+  const requestedReturn = searchParams.get("returnTo") ?? "";
+  const inviteReturn = /^\/invite\/[A-Za-z0-9-]+$/.test(requestedReturn) ? requestedReturn : null;
+  const callbackUrl = inviteReturn ?? (appName ? `/dashboard?newProject=${encodeURIComponent(appName)}` : "/dashboard");
 
   useEffect(() => {
     void getProviders().then(setProviders);
@@ -40,10 +43,10 @@ function LoginForm() {
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-sm">
             <h1 className="font-serif text-3xl tracking-tight text-ink">
-              {appName ? `Let's set up ${appName}` : "Welcome back"}
+              {inviteReturn ? "Join your team on UpStep" : appName ? `Let's set up ${appName}` : "Welcome back"}
             </h1>
             <p className="mt-2 text-sm text-muted">
-              {appName
+              {inviteReturn ? "Create an account or sign in using the email address that received your invitation." : appName
                 ? "Sign in and we'll create your project automatically."
                 : "Sign in to manage feedback for your projects."}
             </p>

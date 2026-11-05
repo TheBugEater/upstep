@@ -58,6 +58,45 @@ You're receiving this because you own the {{project_name}} project on UpStep.`,
 </body>
 </html>`,
   },
+  invitation: {
+    name: "UpStep — Project invitation",
+    subject: "You're invited to {{project_name}} on UpStep",
+    text: `Hi {{recipient_name}},
+
+{{inviter_name}} invited you to the {{project_name}} project on UpStep.
+
+Accept the invitation to view and triage the project's feedback.
+New to UpStep? Continuing with Google or GitHub creates your account automatically.
+Use the email address this message was sent to. This link expires in seven days.
+
+Accept invitation: {{invitation_url}}
+
+Best,
+The UpStep Team
+
+If you weren't expecting this, you can ignore this email.`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:40px 16px;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#000000;">
+  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+      <tr><td style="padding-bottom:24px;font-size:18px;font-weight:700;">UpStep</td></tr>
+      <tr><td style="padding:24px;border:1px solid #e5e5e5;border-radius:16px;">
+        <h1 style="margin:0 0 20px;font-size:24px;line-height:1.3;">You're invited to the team</h1>
+        <p style="font-size:15px;line-height:1.6;">Hi {{recipient_name}},</p>
+        <p style="font-size:15px;line-height:1.6;"><strong>{{inviter_name}}</strong> invited you to the <strong>{{project_name}}</strong> project on UpStep.</p>
+        <p style="font-size:15px;line-height:1.6;color:#525252;">Accept the invitation to view and triage the project's feedback. New to UpStep? Continuing with Google or GitHub creates your account automatically. Use the email address this message was sent to.</p>
+        <p style="margin:28px 0;"><a href="{{invitation_url}}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#000000;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;">Accept invitation →</a></p>
+        <p style="font-size:13px;line-height:1.6;color:#525252;">This link expires in seven days.</p>
+        <p style="font-size:15px;line-height:1.6;">Best,<br><strong>The UpStep Team</strong></p>
+      </td></tr>
+      <tr><td style="padding-top:20px;font-size:12px;line-height:1.6;color:#737373;">If you weren't expecting this, you can ignore this email.</td></tr>
+    </table>
+  </td></tr></table>
+</body>
+</html>`,
+  },
   test: {
     name: "UpStep — Email setup test",
     subject: "Your UpStep email setup is ready",

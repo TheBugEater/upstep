@@ -3,6 +3,8 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireOwner } from "@/lib/project-auth";
+import { createProjectInvitation } from "@/lib/project-invitations";
+import { kickNotificationProcessor } from "@/lib/notification-queue";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -29,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
 // ─── POST /api/projects/[id]/members ─────────────────────────────────────────
 
-const addSchema = z.object({ email: z.string().email() });
+const addSchema = z.object({ email: z.string().trim().toLowerCase().email() });
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
   const session = await auth();
@@ -38,8 +40,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   }
 
   const { id } = await params;
-  const isOwner = await requireOwner(id, session.user.id);
-  if (!isOwner) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const project = await db.project.findFirst({
+    where: { id, ownerId: session.user.id },
+    select: { name: true, owner: { select: { name: true, email: true } } },
+  });
+  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json().catch(() => null);
   const parsed = addSchema.safeParse(body);
@@ -50,31 +55,20 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const { email } = parsed.data;
 
   // Can't invite yourself (already the owner).
-  if (email.toLowerCase() === session.user.email?.toLowerCase()) {
+  if (email === project.owner.email.trim().toLowerCase()) {
     return NextResponse.json(
       { error: "You're already the owner of this project." },
       { status: 400 }
     );
   }
 
-  const invitee = await db.user.findUnique({
-    where: { email: email.toLowerCase() },
-    select: { id: true, name: true, email: true, image: true },
-  });
-  if (!invitee) {
-    return NextResponse.json(
-      { error: "No Upstep account found for that email. They need to sign up first." },
-      { status: 404 }
-    );
-  }
+  const result = await db.$transaction((tx) => createProjectInvitation({
+    projectId: id,
+    projectName: project.name,
+    inviterName: project.owner.name,
+    email,
+  }, tx));
+  if (result.emailQueued) kickNotificationProcessor();
 
-  // Upsert so re-inviting is idempotent.
-  const member = await db.projectMember.upsert({
-    where: { projectId_userId: { projectId: id, userId: invitee.id } },
-    create: { projectId: id, userId: invitee.id, role: "MEMBER" },
-    update: {},
-    include: { user: { select: { id: true, name: true, email: true, image: true } } },
-  });
-
-  return NextResponse.json(member, { status: 201 });
+  return NextResponse.json(result, { status: result.emailQueued ? 201 : 200 });
 }

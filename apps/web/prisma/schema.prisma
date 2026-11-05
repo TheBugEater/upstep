@@ -93,6 +93,7 @@ model Project {
   owner        User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   feedback     Feedback[]
   members      ProjectMember[]
+  invitations  ProjectInvitation[]
   integrations Integration[]
   labels       Label[]
   statuses     Status[]
@@ -206,6 +207,25 @@ model ProjectMember {
 
   @@unique([projectId, userId])
   @@index([userId])
+}
+
+model ProjectInvitation {
+  id           String    @id @default(cuid())
+  projectId    String
+  email        String
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  lastSentAt   DateTime  @default(now())
+  acceptedAt   DateTime?
+  acceptedById String?
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, email])
+  @@index([projectId, acceptedAt, revokedAt])
 }
 
 model Integration {

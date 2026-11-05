@@ -56,6 +56,7 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 export type FeedbackNotificationPayload = {
+  kind?: "FEEDBACK";
   idempotencyKey?: string;
   toEmail: string;
   projectName: string;
@@ -68,6 +69,43 @@ export type FeedbackNotificationPayload = {
     status: string;
   };
 };
+
+export type ProjectInvitationPayload = {
+  kind: "PROJECT_INVITATION";
+  invitationId: string;
+  token: string;
+  idempotencyKey?: string;
+  toEmail: string;
+  recipientName: string | null;
+  inviterName: string | null;
+  projectName: string;
+  projectId: string;
+};
+
+export type EmailNotificationPayload = FeedbackNotificationPayload | ProjectInvitationPayload;
+
+export async function sendProjectInvitationNotification({
+  idempotencyKey,
+  toEmail,
+  recipientName,
+  inviterName,
+  projectName,
+  token,
+}: ProjectInvitationPayload) {
+  const variables = {
+    recipient_name: recipientName?.trim() || "there",
+    inviter_name: inviterName?.trim() || "Your project owner",
+    project_name: projectName,
+    invitation_url: `${getSiteUrl()}/api/invitations/open?token=${encodeURIComponent(token)}`,
+  };
+  const templateId = process.env.SENDPANDA_INVITATION_TEMPLATE_ID;
+  // Unlike optional feedback alerts, never silently complete an unsent invitation.
+  await sendEmail({
+    to: toEmail,
+    ...(templateId ? { templateId, variables } : renderEmailTemplate(EMAIL_TEMPLATES.invitation, variables)),
+    ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
+  });
+}
 
 export async function sendFeedbackNotification({
   idempotencyKey,
