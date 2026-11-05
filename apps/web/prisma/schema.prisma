@@ -73,6 +73,7 @@ model User {
   memberships ProjectMember[]
   assignedFeedback Feedback[] @relation("FeedbackAssignee")
   comments Comment[] @relation("CommentAuthor")
+  mcpCredentials McpCredential[]
 }
 
 model Project {
@@ -82,8 +83,7 @@ model Project {
   // Public publishable key embedded in browser/mobile SDKs. Never grants
   // dashboard or MCP write access.
   apiKey     String   @unique @default(cuid())
-  // SHA-256 digest of the separately generated MCP secret. The plaintext is
-  // returned once and never stored.
+  // Legacy shared MCP key. New keys belong to a user and project instead.
   mcpKeyHash String?  @unique
   ownerId    String
   createdAt  DateTime @default(now())
@@ -100,8 +100,25 @@ model Project {
   labels       Label[]
   statuses     Status[]
   boards       Board[]
+  mcpCredentials McpCredential[]
 
   @@index([ownerId, updatedAt])
+}
+
+model McpCredential {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  // Only a SHA-256 digest is stored. Revocation clears it without deleting the credential record.
+  keyHash   String?  @unique
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model Feedback {

@@ -12,9 +12,12 @@ export const MCP_TASK_WORKFLOW =
   "Read-only browsing or triage does not start or complete tasks. Change only tasks you are actually working on. " +
   "Comments may be customer-visible: keep completion notes suitable for that audience and exclude secrets. Other progress comments require a user request.";
 
-export function mcpInstructions(projectName: string) {
+export function mcpInstructions(projectName: string, actor?: { id: string; name: string; role: string } | null) {
   return `Feedback inbox and task board for the project ${JSON.stringify(projectName)}. ` +
     "Use get_project_overview first to see what's inside and list_feedback to browse by votes. " +
+    (actor
+      ? `Authenticated teammate: ${JSON.stringify({ id: actor.id, name: actor.name, role: actor.role })}. Personal credentials use this teammate's name for comments; author_name cannot impersonate another person. New tasks default to this teammate and list_feedback defaults to their tasks. Set assignee_id=all to browse the entire project, me to filter or assign to yourself, or a teammate id to assign work; null means unassigned. Before taking work, read its assignment and do not take over another teammate's task without instruction. Creating boards and columns requires owner or admin access. `
+      : "This is a legacy shared project key. It does not identify an individual teammate. Use personal keys for named comments, personal task lists, and independent key revocation. ") +
     MCP_TASK_WORKFLOW + " " +
     "Keep agent work internal: create_feedback defaults to internal=true (Dev-only, hidden from the public widget), " +
     "and create_board gives you a separate workspace without touching the main board. " +

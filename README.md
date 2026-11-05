@@ -156,9 +156,11 @@ pnpm build
 | Credential | Where it belongs | Access |
 | --- | --- | --- |
 | `upstep_pk_…` | Browser and mobile SDKs | Publishable; limited to the public feedback API |
-| `upstep_mcp_…` | Secret stores and MCP clients | Private; project-scoped read/write access |
+| `upstep_mcp_…` | Secret stores and MCP clients | Private; user-and-project-scoped access following current membership and role |
 
-Private MCP keys are returned once and stored only as SHA-256 digests. Never
+Personal MCP keys are returned once and stored only as SHA-256 digests. Each
+teammate manages their own key; see [personal MCP access](docs/mcp-personal-access.md)
+for identity, assignment defaults, revocation, and migration of legacy shared keys. Never
 use a publishable SDK key as an authorization boundary for private data. Read
 the full [security policy](SECURITY.md) before exposing a production instance.
 

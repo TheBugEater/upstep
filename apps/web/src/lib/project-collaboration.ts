@@ -41,6 +41,7 @@ export async function removeProjectMember(input: { projectId: string; actorId: s
     if (!member) throw new CollaborationError("Member not found.", 404);
     if (!access.isOwner && member.role !== "MEMBER") throw new CollaborationError("Only the owner can remove an admin.", 403);
     await tx.feedback.updateMany({ where: { projectId: input.projectId, assigneeId: input.userId }, data: { assigneeId: null } });
+    await tx.mcpCredential.updateMany({ where: { projectId: input.projectId, userId: input.userId }, data: { keyHash: null, revokedAt: new Date() } });
     await tx.projectMember.delete({ where: { id: member.id } });
     return { ok: true };
   }, client);

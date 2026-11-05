@@ -3,7 +3,9 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { enforceProjectAndClientLimits, rateLimitResponse } from "@/lib/rate-limit";
 import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
-import { hashMcpKey, isMcpKey } from "@/lib/mcp-credentials";
+import { authenticateMcpKey } from "@/lib/mcp-access";
+import { assertProjectAssignee } from "@/lib/task-assignment";
+import { CollaborationError, collaborationTransaction } from "@/lib/project-collaboration";
 import { feedbackLifecycle, type TaskLifecycle } from "@/lib/feedback-lifecycle";
 import { MCP_TASK_WORKFLOW, mcpInstructions } from "@/lib/mcp-workflow";
 
@@ -37,11 +39,7 @@ type Project = NonNullable<Awaited<ReturnType<typeof authenticate>>>;
 async function authenticate(req: NextRequest) {
   const bearer = req.headers.get("authorization");
   const mcpKey = bearer?.replace(/^Bearer\s+/i, "").trim() ?? "";
-  if (!isMcpKey(mcpKey)) return null;
-  return db.project.findUnique({
-    where: { mcpKeyHash: hashMcpKey(mcpKey) },
-    select: { id: true, name: true, moderationEnabled: true },
-  });
+  return authenticateMcpKey(mcpKey);
 }
 
 // ─── JSON-RPC plumbing ────────────────────────────────────────────────────────
@@ -83,6 +81,7 @@ const listFeedbackArgs = z.object({
   status: z.enum(["PENDING", "OPEN", "IN_PROGRESS", "DONE", "CLOSED"]).optional(),
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
   search: z.string().optional(),
+  assignee_id: z.string().min(1).nullable().optional(),
   sort: z.enum(["votes", "newest"]).default("votes"),
   limit: z.number().int().min(1).max(100).default(25),
 });
@@ -95,11 +94,13 @@ const createFeedbackArgs = z.object({
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).default("GENERAL"),
   status_name: z.string().optional().describe("Board column to place the task in"),
   internal: z.boolean().default(true),
+  assignee_id: z.string().min(1).nullable().optional(),
   labels: z.array(z.string().min(1).max(50)).max(10).optional(),
 });
 
 const updateFeedbackArgs = z.object({
   id: z.string(),
+  assignee_id: z.string().min(1).nullable().optional(),
   status_name: z.string().trim().min(1).optional(),
   lifecycle_status: z.enum(["OPEN", "IN_PROGRESS", "DONE"]).optional(),
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
@@ -145,19 +146,20 @@ const TOOLS = [
   {
     name: "get_project_overview",
     description:
-      "Snapshot of the project: feedback counts, board columns, top-voted open items, and the task workflow. Read this first; implementation work must move to In Progress at the start and a done column after completion.",
+      "Snapshot of the project: authenticated teammate identity, team member IDs for assignment, feedback counts, board columns, top-voted open items, and the task workflow. Read this first; implementation work must move to In Progress at the start and a done column after completion.",
     inputSchema: { type: "object", properties: {} },
   },
   {
     name: "list_feedback",
     description:
-      "List feedback items (bugs, feature requests, general) with votes and board status. Sorted by votes by default.",
+      "List feedback items with votes, assignment, and board status. Personal keys default to the authenticated teammate's tasks. Use assignee_id=all for the full project, me for your tasks, or null for unassigned work. Sorted by votes by default.",
     inputSchema: {
       type: "object",
       properties: {
         status: { type: "string", enum: ["PENDING", "OPEN", "IN_PROGRESS", "DONE", "CLOSED"], description: "Filter by lifecycle status" },
         type: { type: "string", enum: ["BUG", "FEATURE", "GENERAL"], description: "Filter by feedback type" },
         search: { type: "string", description: "Full-text match against title and content" },
+        assignee_id: { type: ["string", "null"], description: "Filter by teammate id, me, all, or null for unassigned. Personal keys default to me; legacy shared keys default to all." },
         sort: { type: "string", enum: ["votes", "newest"], description: "Sort order (default votes)" },
         limit: { type: "number", description: "Max items to return, 1-100 (default 25)" },
       },
@@ -175,7 +177,7 @@ const TOOLS = [
   {
     name: "create_feedback",
     description:
-      "Create a feedback item or internal task. internal=true (the default) marks it Dev-only: it shows on the team board but is hidden from the public widget, so agent work never leaks into the user-facing roadmap.",
+      "Create a feedback item or internal task. Personal keys assign it to the authenticated teammate by default; assignee_id can select another current teammate or null for unassigned. internal=true (the default) marks it Dev-only, visible on the team board and hidden from the public widget.",
     inputSchema: {
       type: "object",
       properties: {
@@ -184,6 +186,7 @@ const TOOLS = [
         type: { type: "string", enum: ["BUG", "FEATURE", "GENERAL"], description: "Item type (default GENERAL)" },
         status_name: { type: "string", description: "Name of the board column to place it in (default: first column)" },
         internal: { type: "boolean", description: "Hide from the public widget (default true)" },
+        assignee_id: { type: ["string", "null"], description: "Assign to a current teammate id or me; null leaves unassigned. Personal keys default to the authenticated teammate." },
         labels: {
           type: "array",
           items: { type: "string" },
@@ -201,6 +204,7 @@ const TOOLS = [
       type: "object",
       properties: {
         id: { type: "string", description: "Feedback id" },
+        assignee_id: { type: ["string", "null"], description: "Assign to a current teammate id or me, or null to unassign. Omit to preserve the current assignment." },
         status_name: { type: "string", description: "Existing target board column name from list_statuses; required when setting lifecycle_status" },
         lifecycle_status: { type: "string", enum: ["OPEN", "IN_PROGRESS", "DONE"], description: "Use IN_PROGRESS when starting work (including custom active-work columns), DONE only after completion and validation, or OPEN when returning to the backlog. Must agree with the target column done flag." },
         type: { type: "string", enum: ["BUG", "FEATURE", "GENERAL"] },
@@ -222,13 +226,13 @@ const TOOLS = [
   },
   {
     name: "add_comment",
-    description: "Post a comment on a feedback item as the team. After completing an implementation task and verifying its Done status, leave a concise completion note with what changed, actual validation results, and a verified commit SHA, pull request URL, or deployment URL when available, unless the user requested no comments. Never invent evidence or include secrets. Verify posted=true; read get_feedback before retrying an uncertain request to avoid duplicates. Comments may be visible to the user who submitted the item.",
+    description: "Post a comment using the authenticated teammate's identity for personal keys; author_name cannot override it. Legacy shared keys use the supplied team display name. After completing a task and verifying its Done status, leave a concise completion note with what changed, actual validation results, and verified commit or deployment links when available, unless the user requested no comments. Never invent evidence or include secrets. Verify posted=true; read get_feedback before retrying an uncertain request to avoid duplicates. Comments may be customer-visible.",
     inputSchema: {
       type: "object",
       properties: {
         feedback_id: { type: "string", description: "Feedback id" },
         content: { type: "string", description: "Comment body, up to 2000 characters. For completed tasks: summary, actual validation results, and verified commit SHA or links when available." },
-        author_name: { type: "string", description: "Display name (default \"UpStep Team\")" },
+        author_name: { type: "string", description: "Personal keys always use the authenticated teammate name. Legacy keys use this display name (default UpStep Team)." },
       },
       required: ["feedback_id", "content"],
     },
@@ -311,6 +315,8 @@ const feedbackSelect = {
   internal: true,
   flagged: true,
   createdAt: true,
+  assigneeId: true,
+  assignee: { select: { name: true } },
   boardStatus: { select: { name: true, color: true, isDone: true } },
   labels: { select: { name: true } },
 } as const;
@@ -326,6 +332,8 @@ function serialize(f: {
   internal: boolean;
   flagged: boolean;
   createdAt: Date;
+  assigneeId: string | null;
+  assignee: { name: string | null } | null;
   boardStatus: { name: string; isDone: boolean } | null;
   labels: { name: string }[];
 }) {
@@ -334,6 +342,8 @@ function serialize(f: {
     title: f.title ?? f.content.slice(0, 80),
     content: f.content,
     type: f.type,
+    assignee_id: f.assigneeId,
+    assignee_name: f.assignee?.name ?? null,
     board_column: f.boardStatus?.name ?? null,
     done: f.boardStatus?.isDone ?? f.status === "DONE",
     lifecycle_status: f.status,
@@ -380,7 +390,7 @@ async function resolveOrCreateLabels(projectId: string, names: string[]): Promis
 async function callTool(project: Project, name: string, args: Record<string, unknown>) {
   switch (name) {
     case "get_project_overview": {
-      const [byStatus, byType, statuses, top] = await Promise.all([
+      const [byStatus, byType, statuses, top, team] = await Promise.all([
         db.feedback.groupBy({ by: ["status"], _count: { id: true }, where: { projectId: project.id } }),
         db.feedback.groupBy({ by: ["type"], _count: { id: true }, where: { projectId: project.id } }),
         db.status.findMany({ where: { projectId: project.id }, orderBy: { order: "asc" } }),
@@ -390,9 +400,19 @@ async function callTool(project: Project, name: string, args: Record<string, unk
           take: 5,
           select: feedbackSelect,
         }),
+        db.project.findUniqueOrThrow({ where: { id: project.id }, select: {
+          owner: { select: { id: true, name: true, email: true } },
+          members: { select: { role: true, user: { select: { id: true, name: true, email: true } } } },
+        } }),
       ]);
       return toolText({
         project: project.name,
+        current_user: project.actor,
+        team_members: [
+          { id: team.owner.id, name: team.owner.name?.trim() || team.owner.email, role: "OWNER" },
+          ...team.members.filter((member) => member.user.id !== team.owner.id).map((member) => ({ id: member.user.id, name: member.user.name?.trim() || member.user.email, role: member.role })),
+        ],
+        credential_type: project.actor ? "personal" : "legacy_shared",
         task_workflow: MCP_TASK_WORKFLOW,
         moderation_enabled: project.moderationEnabled,
         counts_by_status: Object.fromEntries(byStatus.map((r) => [r.status, r._count.id])),
@@ -405,10 +425,13 @@ async function callTool(project: Project, name: string, args: Record<string, unk
     case "list_feedback": {
       const parsed = listFeedbackArgs.safeParse(args);
       if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
-      const { status, type, search, sort, limit } = parsed.data;
+      const { status, type, search, sort, limit, assignee_id } = parsed.data;
+      const assignee = assignee_id === undefined ? (project.actor ? "me" : "all") : assignee_id;
+      if (assignee === "me" && !project.actor) return toolError("This legacy shared key has no user identity. Use a personal project key or choose a teammate id.");
       const items = await db.feedback.findMany({
         where: {
           projectId: project.id,
+          ...(assignee === "all" ? {} : { assigneeId: assignee === "me" ? project.actor!.id : assignee }),
           ...(status ? { status } : {}),
           ...(type ? { type } : {}),
           ...(search
@@ -436,7 +459,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
           ...feedbackSelect,
           comments: {
             orderBy: { createdAt: "asc" },
-            select: { content: true, authorName: true, isOwner: true, createdAt: true },
+            select: { content: true, authorName: true, authorId: true, isOwner: true, createdAt: true },
           },
         },
       });
@@ -446,7 +469,8 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         task_workflow: MCP_TASK_WORKFLOW,
         comments: item.comments.map((c) => ({
           author: c.authorName ?? (c.isOwner ? "Team" : "User"),
-          from_team: c.isOwner,
+          author_id: c.authorId,
+          from_team: c.isOwner || !!c.authorId,
           content: c.content,
           created_at: c.createdAt.toISOString(),
         })),
@@ -456,7 +480,9 @@ async function callTool(project: Project, name: string, args: Record<string, unk
     case "create_feedback": {
       const parsed = createFeedbackArgs.safeParse(args);
       if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
-      const { title, content, type, status_name, internal, labels } = parsed.data;
+      const { title, content, type, status_name, internal, labels, assignee_id } = parsed.data;
+      if (assignee_id === "me" && !project.actor) return toolError("Use a personal key to assign work to me.");
+      const assigneeId = assignee_id === "me" ? project.actor!.id : assignee_id === undefined ? project.actor?.id ?? null : assignee_id;
 
       let boardStatus = status_name ? await resolveStatus(project.id, status_name) : null;
       if (status_name && !boardStatus) {
@@ -473,18 +499,22 @@ async function callTool(project: Project, name: string, args: Record<string, unk
 
       const labelIds = await resolveOrCreateLabels(project.id, labels ?? []);
 
-      const created = await db.feedback.create({
-        data: {
-          projectId: project.id,
-          title,
-          content: content || title,
-          type,
-          internal,
-          status: boardStatus ? feedbackLifecycle(boardStatus) : "OPEN",
-          statusId: boardStatus?.id ?? null,
-          ...(labelIds.length ? { labels: { connect: labelIds.map((id) => ({ id })) } } : {}),
-        },
-        select: feedbackSelect,
+      const created = await collaborationTransaction(async (tx) => {
+        await assertProjectAssignee(project.id, assigneeId, tx);
+        return tx.feedback.create({
+          data: {
+            projectId: project.id,
+            title,
+            content: content || title,
+            type,
+            internal,
+            assigneeId,
+            status: boardStatus ? feedbackLifecycle(boardStatus) : "OPEN",
+            statusId: boardStatus?.id ?? null,
+            ...(labelIds.length ? { labels: { connect: labelIds.map((id) => ({ id })) } } : {}),
+          },
+          select: feedbackSelect,
+        });
       });
 
       await queueIntegration({
@@ -500,7 +530,9 @@ async function callTool(project: Project, name: string, args: Record<string, unk
     case "update_feedback": {
       const parsed = updateFeedbackArgs.safeParse(args);
       if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
-      const { id, status_name, lifecycle_status, type, title, content, add_labels, remove_labels } = parsed.data;
+      const { id, status_name, lifecycle_status, type, title, content, add_labels, remove_labels, assignee_id } = parsed.data;
+      if (assignee_id === "me" && !project.actor) return toolError("Use a personal key to assign work to me.");
+      const assigneeId = assignee_id === "me" ? project.actor!.id : assignee_id;
       if (lifecycle_status && !status_name) {
         return toolError("status_name is required with lifecycle_status. Use list_statuses to choose an existing column.");
       }
@@ -536,16 +568,20 @@ async function callTool(project: Project, name: string, args: Record<string, unk
       if (addLabelIds.length) labelsPatch.connect = addLabelIds.map((id) => ({ id }));
       if (removeLabelIds.length) labelsPatch.disconnect = removeLabelIds.map((id) => ({ id }));
 
-      const updated = await db.feedback.update({
-        where: { id },
-        data: {
-          ...(statusPatch ?? {}),
-          ...(type ? { type } : {}),
-          ...(title ? { title } : {}),
-          ...(content ? { content } : {}),
-          ...(Object.keys(labelsPatch).length ? { labels: labelsPatch } : {}),
-        },
-        select: feedbackSelect,
+      const updated = await collaborationTransaction(async (tx) => {
+        await assertProjectAssignee(project.id, assigneeId, tx);
+        return tx.feedback.update({
+          where: { id },
+          data: {
+            ...(statusPatch ?? {}),
+            ...(assigneeId !== undefined ? { assigneeId } : {}),
+            ...(type ? { type } : {}),
+            ...(title ? { title } : {}),
+            ...(content ? { content } : {}),
+            ...(Object.keys(labelsPatch).length ? { labels: labelsPatch } : {}),
+          },
+          select: feedbackSelect,
+        });
       });
 
       if (statusPatch && (statusPatch.status !== existing.status || statusPatch.statusId !== existing.statusId)) {
@@ -578,8 +614,9 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         data: {
           feedbackId: feedback_id,
           content,
-          authorName: author_name?.trim() || "UpStep Team",
-          isOwner: true,
+          authorName: project.actor?.name ?? (author_name?.trim() || "UpStep Team"),
+          authorId: project.actor?.id ?? null,
+          isOwner: project.actor?.isOwner ?? true,
         },
       });
 
@@ -669,6 +706,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
     }
 
     case "create_board": {
+      if (!project.canManage) return toolError("Only project owners and admins can create boards and columns.");
       const parsed = createBoardArgs.safeParse(args);
       if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
       const { name, columns, done_column, filters } = parsed.data;
@@ -743,7 +781,7 @@ export async function POST(req: NextRequest) {
   const project = await authenticate(req);
   if (!project) {
     return NextResponse.json(
-      { jsonrpc: "2.0", id: null, error: { code: -32001, message: "Unauthorized: pass your private project MCP key as a Bearer token" } },
+      { jsonrpc: "2.0", id: null, error: { code: -32001, message: "Unauthorized: pass an active personal project MCP key as a Bearer token" } },
       { status: 401, headers: { "WWW-Authenticate": "Bearer" } }
     );
   }
@@ -751,6 +789,7 @@ export async function POST(req: NextRequest) {
   const limited = await enforceProjectAndClientLimits(req, project.id, "mcp", {
     project: 2_000,
     client: 120,
+    ...(project.actor ? { clientIdentifier: `user:${project.id}:${project.actor.id}` } : {}),
   });
   if (limited) return rateLimitResponse(limited);
 
@@ -774,16 +813,16 @@ export async function POST(req: NextRequest) {
         serverInfo: {
           name: "upstep",
           title: `Upstep | ${project.name}`,
-          version: "1.1.1",
+          version: "1.2.0",
         },
-        instructions: mcpInstructions(project.name),
+        instructions: mcpInstructions(project.name, project.actor),
       });
 
     case "ping":
       return rpcResult(msg.id, {});
 
     case "tools/list":
-      return rpcResult(msg.id, { tools: TOOLS });
+      return rpcResult(msg.id, { tools: project.canManage ? TOOLS : TOOLS.filter((tool) => tool.name !== "create_board") });
 
     case "tools/call": {
       const name = (msg.params?.name as string) ?? "";
@@ -792,6 +831,7 @@ export async function POST(req: NextRequest) {
         const result = await callTool(project, name, args);
         return rpcResult(msg.id, result);
       } catch (err) {
+        if (err instanceof CollaborationError) return rpcResult(msg.id, toolError(err.message));
         console.error("[mcp] tool call failed:", err);
         return rpcResult(msg.id, toolError("Internal error while running the tool."));
       }

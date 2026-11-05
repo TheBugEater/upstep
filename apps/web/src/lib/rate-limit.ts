@@ -57,14 +57,14 @@ export async function enforceProjectAndClientLimits(
   req: NextRequest,
   projectId: string,
   scope: string,
-  limits: { project: number; client: number; windowMs?: number }
+  limits: { project: number; client: number; windowMs?: number; clientIdentifier?: string }
 ) {
   const windowMs = limits.windowMs ?? 60_000;
   const [project, client] = await Promise.all([
     checkRateLimit({ scope, identifier: `project:${projectId}`, limit: limits.project, windowMs }),
     checkRateLimit({
       scope,
-      identifier: `client:${projectId}:${requestIdentifier(req)}`,
+      identifier: limits.clientIdentifier ?? `client:${projectId}:${requestIdentifier(req)}`,
       limit: limits.client,
       windowMs,
     }),

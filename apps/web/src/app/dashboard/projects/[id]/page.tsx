@@ -99,7 +99,7 @@ export default async function ProjectPage({
           projectSlug={project.slug}
           apiKey={project.apiKey}
           baseUrl={baseUrl}
-          mcpConfigured={!!project.mcpKeyHash}
+          mcpConfigured={!!await db.mcpCredential.count({ where: { projectId: id, userId: session.user.id, keyHash: { not: null }, revokedAt: null } })}
           moderationEnabled={project.moderationEnabled}
           isOwner={isOwner}
           canManage={canManage}

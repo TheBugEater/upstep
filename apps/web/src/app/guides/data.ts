@@ -215,13 +215,13 @@ onPressed: () => Upstep.of(context, listen: false).openSheet(),`,
     description: "Connect Claude Code, Codex, Cursor, or another MCP client to one Upstep project, then use safe prompts to turn feedback into product work.",
     category: "MCP",
     minutes: 14,
-    intro: "Upstep exposes a hosted Streamable HTTP MCP server. A private MCP key scopes every request to exactly one feedback board, allowing an agent to read, organize, and update the backlog without access to your wider account.",
-    prerequisites: ["An Upstep project with a private MCP key generated from its MCP tab", "A compatible MCP client such as Claude Code, Codex, or Cursor", "A clear distinction between customer-visible feedback and internal development tasks"],
+    intro: "Upstep exposes a hosted Streamable HTTP MCP server. A personal MCP key belongs to one teammate and one project. Agents use that teammate’s identity and current project permissions, with independently revocable access.",
+    prerequisites: ["An Upstep project you own or belong to, with your personal MCP key generated from its MCP tab", "A compatible MCP client such as Claude Code, Codex, or Cursor", "A clear distinction between customer-visible feedback and internal development tasks"],
     sections: [
-      { title: "Understand the access boundary", body: "The private MCP key scopes the agent to one project’s feedback, statuses, labels, boards, and comments. It is separate from the publishable SDK key embedded in your app.", details: ["Do not commit an MCP key to Git.", "Store it in your shell environment or MCP client secret store.", "Rotate it from the MCP tab if it is exposed."] },
+      { title: "Understand the access boundary", body: "Each teammate generates their own key from the MCP tab. It scopes their agent to one project and follows their current membership and role. Comments use their authenticated name, new tasks default to them, and task lists default to their assignments. Owners and admins can create boards; other teammates use existing boards. It is separate from the publishable SDK key embedded in your app.", details: ["Do not commit an MCP key to Git.", "Store it in your shell environment or MCP client secret store.", "Rotate your personal key from the MCP tab if it is exposed; teammates keep their own connections."] },
       {
         title: "Configure Claude Code",
-        body: "Claude Code can add the hosted MCP server through its command line. Generate a private key from the MCP tab and keep it outside your repository.",
+        body: "Claude Code can add the hosted MCP server through its command line. Generate your personal key from the MCP tab and keep it outside your repository. Use the project-specific command shown there when connecting multiple projects.",
         code: `claude mcp add --transport http upstep https://upstep.dev/api/mcp \\
   --header "Authorization: Bearer YOUR_MCP_KEY"`,
       },
@@ -263,7 +263,12 @@ codex mcp add upstep --url https://upstep.dev/api/mcp \\
 - label it "triage";
 - do not change customer-visible request titles or status;
 - finish with a table of every created task and why it was created.`,
-        details: ["create_feedback defaults to internal: true.", "update_feedback can move work by board-column name.", "add_comment posts a customer-visible team comment, so reserve it for reviewed responses."],
+        details: ["create_feedback defaults to internal: true.", "update_feedback can move work by board-column name and assign it with assignee_id (me, a current teammate ID, or null to unassign).", "add_comment posts a customer-visible team comment, so reserve it for reviewed responses."],
+      },
+      {
+        title: "Work with personal project credentials",
+        body: "Everyone can generate, rotate, or revoke their own key without affecting other teammates. Project owners can also revoke individual team keys from the MCP tab. Removing a teammate revokes their personal keys, and re-inviting them requires generating a new key.",
+        details: ["Use get_project_overview to see the authenticated user and team member IDs.", "Personal list_feedback calls default to your tasks. Set assignee_id: all to browse the full project, me for your assignments, or null for unassigned tasks.", "Use the MCP tab’s separate server name and environment variable for each project so connections do not overwrite each other.", "Legacy shared keys keep working during migration, but cannot identify individuals or distinguish people who share them. Generate personal keys, remove old shared connections from clients, then have the owner revoke the legacy key."],
       },
       {
         title: "Keep implementation status current",

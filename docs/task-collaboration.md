@@ -42,7 +42,9 @@ this feature.
 | Manage integrations and invitations | No | Yes | Yes |
 | Remove regular members | No | Yes | Yes |
 | Promote/demote admins or remove admins | No | No | Yes |
-| Rotate SDK/MCP keys, delete project, manage billing | No | No | Yes |
+| Generate, rotate or revoke their own personal MCP key | Yes | Yes | Yes |
+| Revoke another teammate's MCP key or the legacy shared key | No | No | Yes |
+| Rotate SDK keys, delete project, manage billing | No | No | Yes |
 
 The owner changes Member/Admin roles under **Project settings → Team**. Role
 changes apply to that project only. The owner cannot be demoted by this control,
