@@ -108,7 +108,7 @@ codex mcp add upstep --url ${mcpUrl} --bearer-token-env-var UPSTEP_MCP_KEY`,
         </div>
 
         <p className="mt-3 text-xs leading-relaxed text-muted">
-          Agents are instructed to mark tasks In Progress before working and Done after completing and validating them. Blocked work stays open. Reconnect an existing MCP session to refresh these instructions.
+          Agents are instructed to mark tasks In Progress before working, then Done after completing and validating them, and leave a completion comment with validation results and a commit ID or links when available. Blocked work stays open. Reconnect an existing MCP session to refresh these instructions.
         </p>
 
         {!isOwner ? (

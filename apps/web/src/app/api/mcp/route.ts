@@ -165,7 +165,7 @@ const TOOLS = [
   },
   {
     name: "get_feedback",
-    description: "Fetch one feedback item with its full content, labels, board status, comment thread, and task workflow. Read before implementing; call update_feedback to mark In Progress before work and Done after validation.",
+    description: "Fetch one feedback item with its full content, labels, board status, comment thread, and task workflow. Read before implementing; call update_feedback to mark In Progress before work and Done after validation, then add_comment with completion evidence.",
     inputSchema: {
       type: "object",
       properties: { id: { type: "string", description: "Feedback id" } },
@@ -196,7 +196,7 @@ const TOOLS = [
   {
     name: "update_feedback",
     description:
-      "Update a task or feedback item. REQUIRED when implementing work: before starting, set status_name to the existing active-work column and lifecycle_status to IN_PROGRESS; after completing and validating the requested work, set status_name to an is_done=true column and lifecycle_status to DONE. Verify the returned updated state. Never mark blocked or incomplete work done. Also supports editing title, content, type, and labels.",
+      "Update a task or feedback item. REQUIRED when implementing work: before starting, set status_name to the existing active-work column and lifecycle_status to IN_PROGRESS; after completing and validating the requested work, set status_name to an is_done=true column and lifecycle_status to DONE. Verify the returned updated state, then call add_comment with a completion summary, validation results, and verified commit SHA or links when available, unless the user requested no comments. Never mark blocked or incomplete work done. Also supports editing title, content, type, and labels.",
     inputSchema: {
       type: "object",
       properties: {
@@ -222,12 +222,12 @@ const TOOLS = [
   },
   {
     name: "add_comment",
-    description: "Post a comment on a feedback item as the team. Visible to the user who submitted it.",
+    description: "Post a comment on a feedback item as the team. After completing an implementation task and verifying its Done status, leave a concise completion note with what changed, actual validation results, and a verified commit SHA, pull request URL, or deployment URL when available, unless the user requested no comments. Never invent evidence or include secrets. Verify posted=true; read get_feedback before retrying an uncertain request to avoid duplicates. Comments may be visible to the user who submitted the item.",
     inputSchema: {
       type: "object",
       properties: {
         feedback_id: { type: "string", description: "Feedback id" },
-        content: { type: "string", description: "Comment body" },
+        content: { type: "string", description: "Comment body, up to 2000 characters. For completed tasks: summary, actual validation results, and verified commit SHA or links when available." },
         author_name: { type: "string", description: "Display name (default \"UpStep Team\")" },
       },
       required: ["feedback_id", "content"],
@@ -774,7 +774,7 @@ export async function POST(req: NextRequest) {
         serverInfo: {
           name: "upstep",
           title: `Upstep | ${project.name}`,
-          version: "1.1.0",
+          version: "1.1.1",
         },
         instructions: mcpInstructions(project.name),
       });

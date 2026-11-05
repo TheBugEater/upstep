@@ -90,6 +90,16 @@ test("MCP task workflow updates real columns, lifecycle filters, and notificatio
   assert.equal(completed.done, true);
   assert.equal((await tool("list_feedback", { status: "IN_PROGRESS" })).count, 0);
   assert.equal((await tool("list_feedback", { status: "DONE" })).items[0].id, id);
+  const completionNote = "Completed: fixed the task status mapping. Validation: lifecycle tests passed. Commit: abc1234 (test fixture).";
+  const comment = await tool("add_comment", { feedback_id: id, content: completionNote });
+  assert.equal(comment.posted, true);
+  const savedComment = await client.comment.findUniqueOrThrow({ where: { id: comment.comment_id } });
+  assert.equal(savedComment.feedbackId, id);
+  assert.equal(savedComment.content, completionNote);
+  assert.equal(savedComment.authorName, "UpStep Team");
+  assert.ok((await tool("get_feedback", { id })).comments.some((item: { content: string }) => item.content === completionNote));
+  const notification = await client.notificationJob.findFirstOrThrow({ where: { payload: { path: ["comment", "content"], equals: completionNote } } });
+  assert.equal((notification.payload as { event: string }).event, "NEW_COMMENT");
   assert.equal((await tool("update_feedback", { id, status_name: "Open" })).updated.lifecycle_status, "OPEN");
-  assert.equal(await client.notificationJob.count({ where: { payload: { path: ["project", "id"], equals: project.id } } }), 5);
+  assert.equal(await client.notificationJob.count({ where: { payload: { path: ["project", "id"], equals: project.id } } }), 6);
 });
