@@ -15,6 +15,7 @@ const events: IntegrationPayload[] = [
   { ...base, event: "STATUS_CHANGED", oldStatus: "OPEN", newStatus: "OPEN", oldStatusName: "To do", newStatusName: "Review" },
   { ...base, event: "NEW_COMMENT", comment: { content: "Investigating", authorName: "Sam" } },
   { ...base, event: "NEW_VOTE", feedback: { ...base.feedback, upvotes: 3, downvotes: 1 }, vote: { value: "UP" } },
+  { ...base, event: "ISSUE_SHARED", integrationId: "chat-test" },
 ];
 
 beforeEach(() => {
@@ -39,6 +40,8 @@ test("accepts only credential-bearing Google Chat webhook URLs", () => {
 test("all issue events share one thread and link directly to the issue", () => {
   for (const event of events) {
     const message = googleChatMessage(event, issueUrl);
+    assert.equal(message.text, "Broken checkout");
+    assert.equal(message.cardsV2[0]!.card.header.title, "Broken checkout");
     assert.equal(message.thread.threadKey, "upstep:project-test:issue-test");
     assert.ok(JSON.stringify(message).includes(issueUrl));
     assert.ok(Buffer.byteLength(JSON.stringify(message)) < 32_000);
@@ -58,7 +61,7 @@ test("escapes issue and comment content, preserves author names, and bounds mess
     comment: { content: "<users/all> & <script>".repeat(1_000), authorName: "Jane & Sam" },
   };
   const body = JSON.stringify(googleChatMessage(event, issueUrl));
-  assert.ok(body.includes("&lt;users/all&gt; &amp; bug"));
+  assert.ok(body.includes("‹users/all› & bug"));
   assert.ok(body.includes("Jane &amp; Sam"));
   assert.ok(!body.includes("<users/all>"));
   assert.ok(!body.includes("<script>"));

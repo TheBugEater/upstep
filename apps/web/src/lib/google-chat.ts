@@ -40,6 +40,10 @@ function escape(value: string, limit = 1_000): string {
 
 export function googleChatMessage(payload: IntegrationPayload, issueUrl: string) {
   const { feedback, project } = payload;
+  const title = (feedback.title?.trim() || feedback.content.trim() || "Untitled issue").replace(/\s+/g, " ");
+  // Chat derives the thread preview from its first message. Use the issue title
+  // there and in the card header, without turning title text into @mentions.
+  const topic = (title.length > 200 ? title.slice(0, 200) + "…" : title).replace(/</g, "‹").replace(/>/g, "›");
   let headline: string;
   let update: string;
   switch (payload.event) {
@@ -65,15 +69,15 @@ export function googleChatMessage(payload: IntegrationPayload, issueUrl: string)
       break;
   }
   return {
-    text: `UpStep · ${headline}`,
+    text: topic,
     // A stable key keeps all selected events for one issue in the same thread.
     thread: { threadKey: `upstep:${project.id}:${feedback.id}` },
     cardsV2: [{
       cardId: "upstep-issue",
       card: {
-        header: { title: headline, subtitle: "UpStep" },
+        header: { title: topic, subtitle: `UpStep · ${headline}` },
         sections: [{ widgets: [
-          { textParagraph: { text: `<b>${escape(feedback.title || feedback.content, 200)}</b><br>${escape(project.name, 100)} · ${escape(feedback.type, 30)}` } },
+          { textParagraph: { text: `${escape(project.name, 100)} · ${escape(feedback.type, 30)}` } },
           { textParagraph: { text: escape(feedback.content) } },
           { textParagraph: { text: update } },
           { buttonList: { buttons: [{ text: "Open issue in UpStep", onClick: { openLink: { url: issueUrl } } }] } },

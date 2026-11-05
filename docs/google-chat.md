@@ -21,6 +21,9 @@ See [Google's webhook setup guide](https://developers.google.com/workspace/chat/
 ## Team workflow
 
 A new issue posts its title, description and a link to the exact UpStep issue.
+The opening message and card heading use the issue title so Chat's thread preview
+identifies the task. Event labels appear in the card subtitle. Previously posted
+messages keep their original headings; incoming webhooks only create messages.
 Teammates reply in that Google Chat thread. Selected status changes, comments and
 votes join the same thread rather than starting unrelated conversations.
 Custom board column names appear in status updates, including moves between two
