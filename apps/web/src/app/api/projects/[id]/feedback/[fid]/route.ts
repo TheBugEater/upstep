@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const access = await getProjectAccess(id, session.user.id);
   if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const feedback = await db.feedback.findFirst({ where: { id: fid, projectId: id } });
+  const feedback = await db.feedback.findFirst({ where: { id: fid, projectId: id }, include: { boardStatus: { select: { name: true } } } });
   if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json().catch(() => null);
@@ -83,13 +83,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   });
 
   const effectiveNewStatus = resolvedStatusEnum ?? parsed.data.status;
-  if (effectiveNewStatus && effectiveNewStatus !== feedback.status) {
+  if (effectiveNewStatus && (effectiveNewStatus !== feedback.status || updated.statusId !== feedback.statusId)) {
     await queueIntegration({
       event: "STATUS_CHANGED",
       project: { id, name: updated.project.name },
       feedback: { id: fid, title: feedback.title, content: feedback.content, type: feedback.type },
       oldStatus: feedback.status,
       newStatus: effectiveNewStatus,
+      ...(feedback.boardStatus ? { oldStatusName: feedback.boardStatus.name } : {}),
+      ...(resolvedStatusId !== undefined && updated.boardStatus ? { newStatusName: updated.boardStatus.name } : {}),
     });
     kickNotificationProcessor();
   }

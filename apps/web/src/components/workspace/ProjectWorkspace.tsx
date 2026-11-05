@@ -133,6 +133,7 @@ export function ProjectWorkspace({
     const panel = searchParams.get("panel");
     setShowStatuses(panel === "statuses");
     setShowLabels(panel === "labels");
+    setSelectedId(searchParams.get("issue"));
   }, [searchParams]);
 
   function switchTab(nextTab: Tab) {
@@ -200,7 +201,7 @@ export function ProjectWorkspace({
     window.dispatchEvent(new CustomEvent("upstep:project-counts", { detail: { id: projectId, feedbackCount: items.length + pending.length, activeCount, completedCount, pendingCount: pending.length } }));
   }, [projectId, items.length, pending.length, activeCount, completedCount]);
 
-  const selectedItem = items.find((f) => f.id === selectedId) ?? null;
+  const selectedItem = items.find((f) => f.id === selectedId) ?? pending.find((f) => f.id === selectedId) ?? null;
 
   // ── Background refresh: poll + on window focus ────────────────────────────
   const refresh = useCallback(async () => {
@@ -616,7 +617,14 @@ export function ProjectWorkspace({
           statuses={statuses}
           projectLabels={labels}
           actions={actions}
-          onClose={() => setSelectedId(null)}
+          onClose={() => {
+            setSelectedId(null);
+            if (searchParams.has("issue")) {
+              const next = new URLSearchParams(searchParams.toString());
+              next.delete("issue");
+              router.replace(`/dashboard/projects/${projectId}?${next}`, { scroll: false });
+            }
+          }}
         />
       )}
 

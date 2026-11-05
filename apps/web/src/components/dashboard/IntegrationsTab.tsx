@@ -5,7 +5,7 @@ import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type IntegrationType = "SLACK" | "DISCORD" | "WEBHOOK";
+type IntegrationType = "SLACK" | "DISCORD" | "GOOGLE_CHAT" | "WEBHOOK";
 type IntegrationEvent = "NEW_FEEDBACK" | "STATUS_CHANGED" | "NEW_VOTE" | "NEW_COMMENT";
 
 interface Integration {
@@ -28,6 +28,14 @@ interface Props {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const INTEGRATION_TYPES: { type: IntegrationType; label: string; description: string; placeholder: string; color: string; icon: string }[] = [
+  {
+    type: "GOOGLE_CHAT",
+    label: "Google Chat",
+    description: "Discuss each issue in its own thread, with updates from UpStep.",
+    placeholder: "https://chat.googleapis.com/v1/spaces/…/messages?key=…&token=…",
+    color: "#188038",
+    icon: "G",
+  },
   {
     type: "SLACK",
     label: "Slack",
@@ -84,20 +92,20 @@ export function IntegrationsTab({ projectId, isOwner, isPro, onOpenMcpTab }: Pro
   const [_toggling, startToggle] = useTransition();
 
   useEffect(() => {
-    if (!isPro) return;
+    if (!isPro || !isOwner) return;
     fetch(`/api/projects/${projectId}/integrations`)
       .then((r) => r.json())
       .then((data: { integrations: Integration[] }) => setIntegrations(data.integrations ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [projectId, isPro]);
+  }, [projectId, isPro, isOwner]);
 
   function openForm(type: IntegrationType) {
     setEditingIntegration(null);
     setSelectedType(type);
     setFormName("");
     setFormUrl("");
-    setFormEvents(["NEW_FEEDBACK"]);
+    setFormEvents(type === "GOOGLE_CHAT" ? ["NEW_FEEDBACK", "STATUS_CHANGED", "NEW_COMMENT"] : ["NEW_FEEDBACK"]);
     setFormError("");
     setShowForm(true);
   }
@@ -199,7 +207,7 @@ export function IntegrationsTab({ projectId, isOwner, isPro, onOpenMcpTab }: Pro
           <div className="text-3xl mb-3">🔌</div>
           <h3 className="text-sm font-semibold text-ink mb-1">Integrations require a Pro plan</h3>
           <p className="text-xs text-muted mb-5 max-w-xs mx-auto">
-            Connect Slack, Discord, or custom webhooks to receive real-time notifications when feedback arrives, votes are cast, and more.
+            Connect Google Chat, Slack, Discord, or custom webhooks to receive updates and discuss feedback with your team.
           </p>
           <Link
             href="/dashboard/billing"
@@ -331,7 +339,8 @@ export function IntegrationsTab({ projectId, isOwner, isPro, onOpenMcpTab }: Pro
                             Webhook URL <span className="text-danger">*</span>
                           </label>
                           <input
-                            type="url"
+                            type={typeInfo.type === "GOOGLE_CHAT" ? "password" : "url"}
+                            autoComplete="off"
                             value={formUrl}
                             onChange={(e) => { setFormUrl(e.target.value); setFormError(""); }}
                             placeholder={typeInfo.placeholder}
@@ -485,7 +494,8 @@ export function IntegrationsTab({ projectId, isOwner, isPro, onOpenMcpTab }: Pro
                 Webhook URL <span className="text-danger">*</span>
               </label>
               <input
-                type="url"
+                type={typeInfo.type === "GOOGLE_CHAT" ? "password" : "url"}
+                autoComplete="off"
                 value={formUrl}
                 onChange={(e) => { setFormUrl(e.target.value); setFormError(""); }}
                 placeholder={typeInfo.placeholder}
@@ -501,6 +511,14 @@ export function IntegrationsTab({ projectId, isOwner, isPro, onOpenMcpTab }: Pro
                 <p className="text-xs text-muted mt-1.5">
                   In Discord: <span className="font-medium">Channel Settings → Integrations → Webhooks → New Webhook</span>
                 </p>
+              )}
+              {typeInfo.type === "GOOGLE_CHAT" && (
+                <div className="text-xs text-muted mt-2 space-y-2 leading-relaxed">
+                  <p>In your Google Chat space, open <span className="font-medium text-ink">Apps &amp; integrations → Add webhooks</span>. Name it <span className="font-medium text-ink">UpStep</span> and paste its URL here.</p>
+                  <p>Each issue gets a separate thread. Your team can reply there, and selected UpStep updates join the same thread. Chat replies stay in Google Chat.</p>
+                  <p>Requires a Google Workspace account that allows incoming webhooks. Existing issues start a thread on their next selected update.</p>
+                  <a href="https://developers.google.com/workspace/chat/quickstart/webhooks" target="_blank" rel="noreferrer" className="inline-block text-clay hover:underline">Google Chat setup guide ↗</a>
+                </div>
               )}
             </div>
 

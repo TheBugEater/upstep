@@ -23,7 +23,8 @@ function LoginForm() {
   const appName = searchParams.get("appName")?.trim();
   const requestedReturn = searchParams.get("returnTo") ?? "";
   const inviteReturn = /^\/invite\/[A-Za-z0-9-]+$/.test(requestedReturn) ? requestedReturn : null;
-  const callbackUrl = inviteReturn ?? (appName ? `/dashboard?newProject=${encodeURIComponent(appName)}` : "/dashboard");
+  const issueReturn = /^\/dashboard\/projects\/[A-Za-z0-9-]+\?issue=[A-Za-z0-9-]+$/.test(requestedReturn) ? requestedReturn : null;
+  const callbackUrl = inviteReturn ?? issueReturn ?? (appName ? `/dashboard?newProject=${encodeURIComponent(appName)}` : "/dashboard");
 
   useEffect(() => {
     void getProviders().then(setProviders);

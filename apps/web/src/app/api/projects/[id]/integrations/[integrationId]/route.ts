@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireOwner } from "@/lib/project-auth";
+import { googleChatWebhookUrl } from "@/lib/google-chat";
 
 type RouteContext = { params: Promise<{ id: string; integrationId: string }> };
 
@@ -10,8 +11,8 @@ const INTEGRATION_EVENTS = ["NEW_FEEDBACK", "STATUS_CHANGED", "NEW_VOTE", "NEW_C
 
 const updateSchema = z.object({
   enabled: z.boolean().optional(),
-  name: z.string().max(100).optional(),
-  webhookUrl: z.string().url().optional(),
+  name: z.string().max(100).nullable().optional(),
+  webhookUrl: z.string().url().max(500).optional(),
   events: z.array(z.enum(INTEGRATION_EVENTS)).min(1).optional(),
 });
 
@@ -31,6 +32,11 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const body = await req.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+
+  if (existing.type === "GOOGLE_CHAT") {
+    try { googleChatWebhookUrl(parsed.data.webhookUrl ?? existing.webhookUrl); }
+    catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
+  }
 
   const updated = await db.integration.update({
     where: { id: integrationId },

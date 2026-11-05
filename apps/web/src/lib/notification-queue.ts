@@ -77,7 +77,7 @@ export async function processNotificationJobs(limit = 25, client: NotificationCl
           });
         }
       }
-      await deliver(job.type, job.payload, client);
+      await deliver(job.type, job.payload, client, job.id);
       await client.notificationJob.update({
         where: { id: job.id },
         data: { status: "COMPLETED", completedAt: new Date(), lockedAt: null, lastError: null },
@@ -110,9 +110,9 @@ export async function processNotificationJobs(limit = 25, client: NotificationCl
   return { found: jobs.length, completed, retried };
 }
 
-async function deliver(type: NotificationJobType, payload: Prisma.JsonValue, client: NotificationClient) {
+async function deliver(type: NotificationJobType, payload: Prisma.JsonValue, client: NotificationClient, deliveryId: string) {
   if (type === "INTEGRATION") {
-    await triggerIntegrations(payload as unknown as IntegrationPayload);
+    await triggerIntegrations(payload as unknown as IntegrationPayload, deliveryId);
   } else {
     const email = payload as unknown as EmailNotificationPayload;
     if (email.kind === "PROJECT_INVITATION") {

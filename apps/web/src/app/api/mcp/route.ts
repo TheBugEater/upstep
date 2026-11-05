@@ -496,7 +496,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
       if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
       const { id, status_name, type, title, content, add_labels, remove_labels } = parsed.data;
 
-      const existing = await db.feedback.findFirst({ where: { id, projectId: project.id } });
+      const existing = await db.feedback.findFirst({ where: { id, projectId: project.id }, include: { boardStatus: { select: { name: true } } } });
       if (!existing) return toolError("Feedback not found in this project.");
 
       let statusPatch: { statusId: string; status: "DONE" | "OPEN" } | null = null;
@@ -535,13 +535,15 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         select: feedbackSelect,
       });
 
-      if (statusPatch && statusPatch.status !== existing.status) {
+      if (statusPatch && (statusPatch.status !== existing.status || statusPatch.statusId !== existing.statusId)) {
         await queueIntegration({
           event: "STATUS_CHANGED",
           project: { id: project.id, name: project.name },
           feedback: { id, title: existing.title, content: existing.content, type: existing.type },
           oldStatus: existing.status,
           newStatus: statusPatch.status,
+          ...(existing.boardStatus ? { oldStatusName: existing.boardStatus.name } : {}),
+          ...(updated.boardStatus ? { newStatusName: updated.boardStatus.name } : {}),
         });
         kickNotificationProcessor();
       }

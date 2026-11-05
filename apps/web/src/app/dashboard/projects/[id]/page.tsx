@@ -15,7 +15,7 @@ export default async function ProjectPage({
   if (!session?.user?.id) redirect("/login");
 
   const { id } = await params;
-  await searchParams; // consumed to satisfy Next.js dynamic rendering
+  const { issue } = await searchParams;
 
   // Allow access to both the project owner and invited members.
   const project = await db.project.findUnique({
@@ -71,6 +71,14 @@ export default async function ProjectPage({
       orderBy: { name: "asc" },
     }),
   ]);
+
+  // Chat links must open the exact issue, even if it falls outside the board's
+  // initial result limit. Keep the lookup scoped to the authorized project.
+  if (typeof issue === "string" && !boardFeedback.some((f) => f.id === issue) && !pendingFeedback.some((f) => f.id === issue)) {
+    const linked = await db.feedback.findFirst({ where: { id: issue, projectId: id }, include });
+    if (linked?.status === "PENDING") pendingFeedback.push(linked);
+    else if (linked) boardFeedback.push(linked);
+  }
 
   const baseUrl = getSiteUrl();
 

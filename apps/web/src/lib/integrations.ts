@@ -1,5 +1,7 @@
 import { db } from "./db";
 import { getSiteUrl } from "./site-url";
+import { sendGoogleChat } from "./google-chat";
+import type { Prisma } from "@prisma/client";
 
 // ─── Payload shapes ────────────────────────────────────────────────────────────
 
@@ -8,14 +10,14 @@ type FeedbackInfo = { id: string; title: string | null; content: string; type: s
 
 export type IntegrationPayload =
   | { event: "NEW_FEEDBACK";   project: ProjectInfo; feedback: FeedbackInfo }
-  | { event: "STATUS_CHANGED"; project: ProjectInfo; feedback: FeedbackInfo; oldStatus: string; newStatus: string }
+  | { event: "STATUS_CHANGED"; project: ProjectInfo; feedback: FeedbackInfo; oldStatus: string; newStatus: string; oldStatusName?: string; newStatusName?: string }
   | { event: "NEW_VOTE";       project: ProjectInfo; feedback: FeedbackInfo & { upvotes: number; downvotes: number }; vote: { value: string } }
   | { event: "NEW_COMMENT";    project: ProjectInfo; feedback: FeedbackInfo; comment: { content: string; authorName: string | null } };
 
 // ─── Entry point ───────────────────────────────────────────────────────────────
 
-export async function triggerIntegrations(payload: IntegrationPayload): Promise<void> {
-  const project = await db.project.findUnique({
+export async function triggerIntegrations(payload: IntegrationPayload, deliveryId?: string, client: Pick<Prisma.TransactionClient, "project"> = db): Promise<void> {
+  const project = await client.project.findUnique({
     where: { id: payload.project.id },
     select: {
       owner: { select: { plan: true } },
@@ -38,6 +40,12 @@ export async function triggerIntegrations(payload: IntegrationPayload): Promise<
           return sendSlack(integration.webhookUrl, payload, dashboardUrl);
         case "DISCORD":
           return sendDiscord(integration.webhookUrl, payload, dashboardUrl);
+        case "GOOGLE_CHAT":
+          return sendGoogleChat(
+            integration.webhookUrl, payload,
+            `${baseUrl}/api/projects/${encodeURIComponent(payload.project.id)}/feedback/${encodeURIComponent(payload.feedback.id)}/open`,
+            deliveryId ? `${deliveryId}-${integration.id}` : undefined,
+          );
         case "WEBHOOK":
           return sendWebhook(integration.webhookUrl, payload, dashboardUrl);
       }
@@ -83,7 +91,7 @@ async function sendSlack(url: string, payload: IntegrationPayload, dashboardUrl:
         type: "section",
         fields: [
           { type: "mrkdwn", text: `*Feedback*\n${feedbackTitle(feedback)}` },
-          { type: "mrkdwn", text: `*Status*\n${STATUS_LABEL[oldStatus] ?? oldStatus} → ${STATUS_LABEL[newStatus] ?? newStatus}` },
+          { type: "mrkdwn", text: `*Status*\n${payload.oldStatusName ?? STATUS_LABEL[oldStatus] ?? oldStatus} → ${payload.newStatusName ?? STATUS_LABEL[newStatus] ?? newStatus}` },
         ],
       },
       {
@@ -162,7 +170,7 @@ async function sendDiscord(url: string, payload: IntegrationPayload, dashboardUr
     color = 0xf97316;
     fields = [
       { name: "Project", value: project.name, inline: true },
-      { name: "Status", value: `${STATUS_LABEL[oldStatus] ?? oldStatus} → ${STATUS_LABEL[newStatus] ?? newStatus}`, inline: true },
+      { name: "Status", value: `${payload.oldStatusName ?? STATUS_LABEL[oldStatus] ?? oldStatus} → ${payload.newStatusName ?? STATUS_LABEL[newStatus] ?? newStatus}`, inline: true },
     ];
   } else if (payload.event === "NEW_VOTE") {
     const { project, feedback, vote } = payload;

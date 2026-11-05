@@ -246,6 +246,7 @@ model Integration {
 enum IntegrationType {
   SLACK
   DISCORD
+  GOOGLE_CHAT
   WEBHOOK
 }
 

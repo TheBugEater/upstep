@@ -3,11 +3,12 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireOwner } from "@/lib/project-auth";
+import { googleChatWebhookUrl } from "@/lib/google-chat";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 const INTEGRATION_EVENTS = ["NEW_FEEDBACK", "STATUS_CHANGED", "NEW_VOTE", "NEW_COMMENT"] as const;
-const INTEGRATION_TYPES = ["SLACK", "DISCORD", "WEBHOOK"] as const;
+const INTEGRATION_TYPES = ["SLACK", "DISCORD", "GOOGLE_CHAT", "WEBHOOK"] as const;
 
 const createSchema = z.object({
   type: z.enum(INTEGRATION_TYPES),
@@ -58,6 +59,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const body = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+
+  if (parsed.data.type === "GOOGLE_CHAT") {
+    try { googleChatWebhookUrl(parsed.data.webhookUrl); }
+    catch (error) { return NextResponse.json({ error: (error as Error).message }, { status: 400 }); }
+  }
 
   const integration = await db.integration.create({
     data: {
