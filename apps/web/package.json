@@ -15,7 +15,9 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "stripe:prices": "tsx scripts/create-stripe-prices.ts"
+    "stripe:prices": "tsx scripts/create-stripe-prices.ts",
+    "email:test": "tsx scripts/send-test-email.ts",
+    "email:templates": "tsx scripts/sync-email-templates.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
@@ -28,11 +30,11 @@
     "next-auth": "^5.0.0-beta.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "resend": "^6.14.0",
     "stripe": "^22.2.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@next/env": "15.5.19",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",

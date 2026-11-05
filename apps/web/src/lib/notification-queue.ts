@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Prisma, NotificationJobType } from "@prisma/client";
 import { db } from "./db";
 import { sendFeedbackNotification, type FeedbackNotificationPayload } from "./email";
@@ -14,7 +15,10 @@ export async function queueIntegration(payload: IntegrationPayload, client: Queu
 
 export async function queueEmail(payload: FeedbackNotificationPayload, client: QueueClient = db) {
   return client.notificationJob.create({
-    data: { type: "EMAIL", payload: payload as unknown as Prisma.InputJsonValue },
+    data: {
+      type: "EMAIL",
+      payload: { ...payload, idempotencyKey: payload.idempotencyKey ?? randomUUID() } as unknown as Prisma.InputJsonValue,
+    },
   });
 }
 
@@ -55,6 +59,18 @@ export async function processNotificationJobs(limit = 25) {
     if (!claimed.count) continue;
 
     try {
+      // Persist a key for jobs queued before SendPanda was configured, too.
+      // Every retry, including recovery after a stale lock, uses the same UUID.
+      if (job.type === "EMAIL") {
+        const payload = job.payload as unknown as FeedbackNotificationPayload;
+        if (!payload.idempotencyKey) {
+          job.payload = { ...payload, idempotencyKey: randomUUID() } as unknown as Prisma.JsonValue;
+          await db.notificationJob.update({
+            where: { id: job.id },
+            data: { payload: job.payload as Prisma.InputJsonValue },
+          });
+        }
+      }
       await deliver(job.type, job.payload);
       await db.notificationJob.update({
         where: { id: job.id },

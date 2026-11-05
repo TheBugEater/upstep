@@ -131,12 +131,69 @@ Defined in [apps/web/.env.example](apps/web/.env.example). All live in
 | `STRIPE_WEBHOOK_SECRET`                     | Optional | Verifies Stripe webhook signatures               |
 | `STRIPE_PRICE_PRO`                          | Optional | Stripe price id for the Pro plan                 |
 | `STRIPE_PRICE_BUSINESS`                     | Optional | Stripe price id for the Business plan            |
-| `RESEND_API_KEY` / `RESEND_FROM_EMAIL`      | Optional | Enables feedback notification email               |
+| `SENDPANDA_API_KEY`                        | Optional | Send-only SendPanda key for feedback notifications |
+| `SENDPANDA_FROM_EMAIL`                     | Optional | Sender on a domain verified in SendPanda           |
+| `SENDPANDA_FEEDBACK_TEMPLATE_ID`            | Optional | Published feedback notification template          |
+| `SENDPANDA_TEST_TEMPLATE_ID`                | Optional | Published email setup test template               |
 | `NEXT_PUBLIC_ONRAMP_API_KEY`                | Optional | Enables hosted-service analytics                  |
 
 If the Stripe variables are blank, the app still runs: checkout returns a
 "billing not configured" response and plan limits are still enforced (everyone
 is on Free).
+
+### Transactional email
+
+Feedback notifications use SendPanda via the server-side `sendEmail({ to,
+subject, text, html?, idempotencyKey? })` helper in `apps/web/src/lib/email.ts`.
+It posts to `https://api.sendpanda.email/v1/emails` with bearer authentication
+from `SENDPANDA_API_KEY`. Non-2xx responses throw with the response body so the
+existing notification queue can retry. Feedback notifications remain disabled
+when the key is blank; direct calls to `sendEmail` throw if it is missing.
+
+Keep the real send-only key in `apps/web/.env` (ignored by Git), or your deployment's
+environment settings. Set `SENDPANDA_FROM_EMAIL` to a sender on a verified domain.
+The sender name is **UpStep Team**, e.g. `UpStep Team <hello@upstep.dev>`.
+The example address `hello@your-verified-domain.example` is a placeholder: verify
+your sending domain in SendPanda and replace it before sending. Old Resend
+environment variables are no longer used.
+
+Each new email gets a UUID `Idempotency-Key`. Queued notifications persist that
+UUID and reuse it across retries; direct callers retrying an email must pass the
+same `idempotencyKey` and unchanged content. A 2xx response means **queued**, not
+delivered. Queue completion records successful submission to SendPanda.
+
+Send one test email to `businesscodepulse@gmail.com` using the same helper:
+
+```bash
+pnpm --filter @upstep/web email:test
+```
+
+The script loads Next.js environment files from `apps/web` and sends only to that
+fixed test recipient. Provider reference: [SendPanda API docs](https://api.sendpanda.email/docs).
+
+Source templates are in `apps/web/src/lib/email-templates.ts`: feedback notifications
+(bug reports, feature requests, and general feedback) and the email setup test.
+Both include HTML, plain text, and an UpStep Team sign-off. The app uses published
+SendPanda templates when their IDs are configured, or renders the same source
+templates locally when self-hosting without IDs. Template sends pass `template_id`
+and `variables` instead of inline HTML/text; `sendEmail` supports both modes.
+
+To sync and publish the source templates through an authenticated SendPanda CLI:
+
+```bash
+pnpm --filter @upstep/web email:templates YOUR_SENDPANDA_PROJECT_ID
+```
+
+The script reuses templates by name, creates a version only when content changes,
+publishes that version, and saves the IDs directly to the ignored `apps/web/.env`.
+It never sends email. Test recipients are fixed in `scripts/send-test-email.ts`.
+
+For Dokploy, `docker-compose.production.yml` maps `API_SENDPANDA_API_KEY`,
+`API_SENDPANDA_FROM_EMAIL`, `API_SENDPANDA_FEEDBACK_TEMPLATE_ID`, and
+`API_SENDPANDA_TEST_TEMPLATE_ID` from the service environment to the app's
+corresponding `SENDPANDA_*` variables. Setting the key enables feedback emails;
+redeploy to apply runtime environment changes. Keep these values in Dokploy's
+environment settings, never build arguments or `NEXT_PUBLIC_*` variables.
 
 ---
 

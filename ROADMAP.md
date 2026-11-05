@@ -13,7 +13,7 @@ and pull requests are welcome.
 ## Self-hosting
 
 - Publish versioned container images and signed release artifacts.
-- Add SMTP as an alternative to Resend.
+- Add SMTP as an alternative to SendPanda.
 - Support more authentication options without requiring a hosted provider.
 
 ## Product

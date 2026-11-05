@@ -49,7 +49,7 @@ export default function PrivacyPage() {
               <li>Provision and manage your projects and plan limits</li>
               <li>
                 Send transactional emails (e.g. new feedback notifications) via
-                Resend
+                SendPanda
               </li>
               <li>Process billing and manage your subscription via Stripe</li>
               <li>Measure usage to improve the Service</li>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
                 management
               </li>
               <li>
-                <strong>Resend</strong>: transactional email delivery
+                <strong>SendPanda</strong>: transactional email delivery
               </li>
               <li>
                 <strong>Railway / Neon</strong>: cloud infrastructure and
