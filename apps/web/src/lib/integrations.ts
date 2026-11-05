@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { getSiteUrl } from "./site-url";
-import { googleChatRequestId, sendGoogleChat } from "./google-chat";
+import { sendGoogleChat } from "./google-chat";
 import type { Prisma } from "@prisma/client";
 
 // ─── Payload shapes ────────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ export type IntegrationPayload =
 
 // ─── Entry point ───────────────────────────────────────────────────────────────
 
-export async function triggerIntegrations(payload: IntegrationPayload, deliveryId?: string, client: Pick<Prisma.TransactionClient, "project"> = db): Promise<void> {
+export async function triggerIntegrations(payload: IntegrationPayload, client: Pick<Prisma.TransactionClient, "project"> = db): Promise<void> {
   const project = await client.project.findUnique({
     where: { id: payload.project.id },
     select: {
@@ -38,7 +38,7 @@ export async function triggerIntegrations(payload: IntegrationPayload, deliveryI
   const issueUrl = `${baseUrl}/api/projects/${encodeURIComponent(payload.project.id)}/feedback/${encodeURIComponent(payload.feedback.id)}/open`;
 
   if (payload.event === "ISSUE_SHARED") {
-    await Promise.all(project.integrations.map((integration) => sendGoogleChat(integration.webhookUrl, payload, issueUrl, deliveryId ? googleChatRequestId(deliveryId, integration.id) : undefined)));
+    await Promise.all(project.integrations.map((integration) => sendGoogleChat(integration.webhookUrl, payload, issueUrl)));
     return;
   }
 
@@ -53,7 +53,6 @@ export async function triggerIntegrations(payload: IntegrationPayload, deliveryI
           return sendGoogleChat(
             integration.webhookUrl, payload,
             issueUrl,
-            deliveryId ? googleChatRequestId(deliveryId, integration.id) : undefined,
           );
         case "WEBHOOK":
           return sendWebhook(integration.webhookUrl, payload, dashboardUrl);

@@ -26,7 +26,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
   const [loadingComments, setLoadingComments] = useState(true);
   const [assigning, setAssigning] = useState(false);
   const [assignmentError, setAssignmentError] = useState("");
-  const [chatSpaces, setChatSpaces] = useState<{ id: string; name: string | null; status: string | null }[]>([]);
+  const [chatSpaces, setChatSpaces] = useState<{ id: string; name: string | null; status: string | null; lastError: string | null; availableAt: string | null }[]>([]);
   const [chatSpaceId, setChatSpaceId] = useState("");
   const [sharingChat, setSharingChat] = useState(false);
   const [chatNotice, setChatNotice] = useState("");
@@ -37,6 +37,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const itemLabels = item.labels ?? [];
+  const selectedChatSpace = chatSpaces.find((s) => s.id === chatSpaceId);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -63,7 +64,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
       const res = await fetch(`/api/projects/${projectId}/feedback/${item.id}/google-chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ integrationId: chatSpaceId }) });
       const data = await res.json() as { error?: string; status?: string };
       if (!res.ok) throw new Error(data.error || "Couldn't start this discussion.");
-      setChatSpaces((previous) => previous.map((s) => s.id === chatSpaceId ? { ...s, status: data.status ?? "PENDING" } : s));
+      setChatSpaces((previous) => previous.map((s) => s.id === chatSpaceId ? { ...s, status: data.status ?? "PENDING", lastError: null, availableAt: null } : s));
       setChatNotice(data.status === "COMPLETED" ? "Discussion already started in Google Chat." : "Discussion queued for Google Chat. Selected task updates will join the same thread.");
     } catch (error) { setChatNotice(error instanceof Error ? error.message : "Couldn't start this discussion."); }
     finally { setSharingChat(false); }
@@ -331,11 +332,13 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
           {chatSpaces.length > 0 && <div className="rounded-xl border border-line bg-card p-4 space-y-2">
             <p className="text-xs font-semibold text-ink">Discuss in Google Chat</p>
             {chatSpaces.length > 1 && <select aria-label="Google Chat space" value={chatSpaceId} onChange={(e) => setChatSpaceId(e.target.value)} className={inputCls}>{chatSpaces.map((s, i) => <option key={s.id} value={s.id}>{s.name || `Google Chat space ${i + 1}`}</option>)}</select>}
-            <p className="text-xs text-muted">Start a thread for this task in {chatSpaces.find((s) => s.id === chatSpaceId)?.name || "your connected space"}. Teammates can reply there.</p>
-            <button type="button" disabled={sharingChat || ["PENDING", "PROCESSING", "COMPLETED"].includes(chatSpaces.find((s) => s.id === chatSpaceId)?.status ?? "")} onClick={() => void startChatDiscussion()} className="text-xs font-semibold text-clay hover:underline disabled:text-muted disabled:no-underline">
-              {sharingChat ? "Starting…" : chatSpaces.find((s) => s.id === chatSpaceId)?.status === "COMPLETED" ? "Discussion started" : ["PENDING", "PROCESSING"].includes(chatSpaces.find((s) => s.id === chatSpaceId)?.status ?? "") ? "Discussion queued" : chatSpaces.find((s) => s.id === chatSpaceId)?.status === "FAILED" ? "Retry discussion" : "Start Google Chat discussion"}
+            <p className="text-xs text-muted">Start a thread for this task in {selectedChatSpace?.name || "your connected space"}. Teammates can reply there.</p>
+            <button type="button" disabled={sharingChat || ["PENDING", "PROCESSING", "COMPLETED"].includes(selectedChatSpace?.status ?? "")} onClick={() => void startChatDiscussion()} className="text-xs font-semibold text-clay hover:underline disabled:text-muted disabled:no-underline">
+              {sharingChat ? "Starting…" : selectedChatSpace?.status === "COMPLETED" ? "Discussion started" : selectedChatSpace?.status === "PROCESSING" ? "Sending to Google Chat…" : selectedChatSpace?.status === "PENDING" ? selectedChatSpace.lastError ? "Retry scheduled" : "Discussion queued" : selectedChatSpace?.status === "FAILED" ? "Retry discussion" : "Start Google Chat discussion"}
             </button>
-            {chatNotice && <p role="status" className="text-xs text-muted">{chatNotice}</p>}
+            {selectedChatSpace?.status === "COMPLETED" ? <p role="status" className="text-xs text-muted">Discussion created in Google Chat.</p>
+              : selectedChatSpace?.lastError ? <p role="alert" className="text-xs text-danger">{selectedChatSpace.lastError}{selectedChatSpace.status === "PENDING" && selectedChatSpace.availableAt ? ` Next retry: ${new Date(selectedChatSpace.availableAt).toLocaleTimeString()}.` : " Check the Google Chat connection, then retry."}</p>
+              : chatNotice && <p role="status" className="text-xs text-muted">{chatNotice}</p>}
           </div>}
 
           {/* Comments */}

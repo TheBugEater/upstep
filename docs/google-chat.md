@@ -46,10 +46,13 @@ Google Chat app and separate account authorization.
 ## Delivery and verification
 
 Events use UpStep's persistent notification queue and its scheduled retries.
-Stable thread keys contain the project and issue IDs. Each destination receives
-a stable Google Chat `requestId` based on the queue job ID and integration ID, so
-retrying an identical delivery doesn't create a duplicate message. Google Chat
-rate limits (including its per-space quota) are handled by queue retries.
+Stable thread keys contain the project and issue IDs. Manual discussion starts use
+a durable queue job; repeated manual clicks reuse that job. Incoming webhooks
+reject the `requestId` parameter supported by the authenticated Chat API, so it
+is never sent. Webhook delivery is at least once: an ambiguous network timeout
+can cause a repeated message within the same thread. Google Chat rate limits
+and server errors use queue retries; permanent rejections stop immediately and
+show the provider explanation and a retry action in the task drawer.
 
 Webhook URLs are validated against the Google Chat HTTPS endpoint on creation,
 editing and sending. Requests cannot follow redirects. User content is escaped
@@ -59,7 +62,7 @@ model and are accessible only through owner/admin-authorized settings.
 
 Run `pnpm --filter @upstep/web test` for mocked transport and integration dispatch
 tests. They cover event threading, direct issue links, custom status names,
-untrusted content, credential validation/redaction, plan gating and retry IDs.
+untrusted content, credential validation/redaction, plan gating, rejection details and retry classification.
 They do not post messages to a real space. Verify a live connection by creating
 an issue in the connected project, replying to its Chat thread, then changing its
 status and adding an UpStep comment. No Google Chat connection is created

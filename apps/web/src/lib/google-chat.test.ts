@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, mock, test } from "node:test";
-import { googleChatMessage, googleChatWebhookUrl, googleChatRequestId, sendGoogleChat } from "./google-chat";
+import { googleChatMessage, googleChatWebhookUrl, GoogleChatDeliveryError, sendGoogleChat } from "./google-chat";
 import { triggerIntegrations, type IntegrationPayload } from "./integrations";
 import type { Prisma } from "@prisma/client";
 
@@ -67,12 +67,12 @@ test("escapes issue and comment content, preserves author names, and bounds mess
   assert.ok(JSON.stringify(googleChatMessage(event, issueUrl)).includes("UpStep Team"));
 });
 
-test("sends threaded messages with the same request ID on retries", async () => {
+test("sends threaded webhook messages without the unsupported requestId parameter", async () => {
   let attempts = 0;
   mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     assert.equal(url.searchParams.get("messageReplyOption"), "REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD");
-    assert.equal(url.searchParams.get("requestId"), "job-test-integration-test");
+    assert.equal(url.searchParams.get("requestId"), null);
     assert.equal(url.searchParams.get("key"), "test-key");
     assert.equal(init?.method, "POST");
     assert.equal(init?.redirect, "error");
@@ -80,8 +80,8 @@ test("sends threaded messages with the same request ID on retries", async () => 
     assert.deepEqual(JSON.parse(init?.body as string), googleChatMessage(events[0]!, issueUrl));
     return new Response(null, { status: ++attempts === 1 ? 429 : 200 });
   });
-  await assert.rejects(sendGoogleChat(webhook, events[0]!, issueUrl, "job-test-integration-test"), /HTTP 429/);
-  await sendGoogleChat(webhook, events[0]!, issueUrl, "job-test-integration-test");
+  await assert.rejects(sendGoogleChat(webhook + "&requestId=reject-this", events[0]!, issueUrl), /HTTP 429/);
+  await sendGoogleChat(webhook + "&requestId=reject-this", events[0]!, issueUrl);
   assert.equal(attempts, 2);
 });
 
@@ -90,7 +90,27 @@ test("transport errors cannot expose webhook credentials to queue logs", async (
   await assert.rejects(sendGoogleChat(webhook, events[0]!, issueUrl), { message: "Google Chat request failed or timed out." });
 });
 
-test("integration dispatch uses a stable request ID per destination and respects the plan gate", async () => {
+test("permanent webhook rejections retain Google's explanation and redact credentials", async () => {
+  mock.method(globalThis, "fetch", async () => Response.json({ error: { message: `Request Id is not supported for webhooks. key=test-key token=test-token ${webhook}` } }, { status: 400 }));
+  await assert.rejects(sendGoogleChat(webhook, events[0]!, issueUrl), (error) => {
+    assert.ok(error instanceof GoogleChatDeliveryError);
+    assert.equal(error.retryable, false);
+    assert.match(error.message, /Request Id is not supported for webhooks/);
+    assert.ok(!error.message.includes("test-key"));
+    assert.ok(!error.message.includes("test-token"));
+    assert.ok(!error.message.includes("https://"));
+    return true;
+  });
+});
+
+test("rate limits and server failures remain retryable, while authorization failures stop", async () => {
+  for (const status of [400, 401, 403, 404, 408, 429, 500, 503]) {
+    mock.method(globalThis, "fetch", async () => new Response("not JSON", { status }));
+    await assert.rejects(sendGoogleChat(webhook, events[0]!, issueUrl), (error) => error instanceof GoogleChatDeliveryError && error.retryable === [408, 429, 500, 503].includes(status));
+  }
+});
+
+test("integration dispatch only uses supported webhook parameters and respects the plan gate", async () => {
   let plan = "PRO";
   const client = { project: { findUnique: async (input: unknown) => {
     assert.deepEqual(input, {
@@ -102,18 +122,18 @@ test("integration dispatch uses a stable request ID per destination and respects
       { id: "chat-two", type: "GOOGLE_CHAT", webhookUrl: webhook },
     ] } as never;
   } } } as unknown as Pick<Prisma.TransactionClient, "project">;
-  const ids: string[] = [];
+  const requests: URL[] = [];
   mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
-    ids.push(new URL(String(input)).searchParams.get("requestId")!);
+    const url = new URL(String(input));
+    assert.equal(url.searchParams.has("requestId"), false);
+    requests.push(url);
     assert.ok(JSON.stringify(JSON.parse(init?.body as string)).includes("/api/projects/project-test/feedback/issue-test/open"));
     return new Response(null, { status: 200 });
   });
-  await triggerIntegrations(events[0]!, "job-test", client);
-  await triggerIntegrations(events[0]!, "job-test", client);
-  assert.deepEqual(ids, [googleChatRequestId("job-test", "chat-one"), googleChatRequestId("job-test", "chat-two"), googleChatRequestId("job-test", "chat-one"), googleChatRequestId("job-test", "chat-two")]);
-  assert.notEqual(ids[0], ids[1]);
-  assert.match(ids[0]!, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  await triggerIntegrations(events[0]!, client);
+  await triggerIntegrations(events[0]!, client);
+  assert.equal(requests.length, 4);
   plan = "FREE";
-  await triggerIntegrations(events[0]!, "job-other", client);
-  assert.equal(ids.length, 4);
+  await triggerIntegrations(events[0]!, client);
+  assert.equal(requests.length, 4);
 });

@@ -8,7 +8,7 @@ import { getProjectAccess } from "./project-auth";
 import { addTaskComment } from "./task-comments";
 import { discussionJobId, startGoogleChatDiscussion } from "./google-chat-discussions";
 import { triggerIntegrations, type IntegrationPayload } from "./integrations";
-import { googleChatMessage, googleChatRequestId } from "./google-chat";
+import { googleChatMessage } from "./google-chat";
 
 const databaseUrl = process.env.UPSTEP_INVITATION_TEST_DATABASE_URL;
 test("project task collaboration permissions and lifecycle", { skip: !databaseUrl }, async (t) => {
@@ -103,22 +103,23 @@ test("project task collaboration permissions and lifecycle", { skip: !databaseUr
     const job = await client.notificationJob.findUniqueOrThrow({ where: { id } });
     const payload = job.payload as unknown as IntegrationPayload;
     assert.equal(payload.event, "ISSUE_SHARED");
-    const requests: string[] = [];
+    const requests: URL[] = [];
     const stub = mock.method(globalThis, "fetch", async (url: RequestInfo | URL, init?: RequestInit) => {
-      requests.push(new URL(String(url)).searchParams.get("requestId")!);
+      assert.equal(new URL(String(url)).searchParams.has("requestId"), false);
+      requests.push(new URL(String(url)));
       const body = JSON.parse(init?.body as string);
       assert.equal(body.thread.threadKey, `upstep:${project.id}:${task.id}`);
       return new Response(null, { status: 200 });
     });
     try {
-      await triggerIntegrations(payload, job.id, client);
-      await triggerIntegrations(payload, job.id, client);
-      assert.deepEqual(requests, [googleChatRequestId(id, chat.id), googleChatRequestId(id, chat.id)]);
+      await triggerIntegrations(payload, client);
+      await triggerIntegrations(payload, client);
+      assert.equal(requests.length, 2);
       assert.equal(googleChatMessage({ event: "NEW_FEEDBACK", project: { id: project.id, name: project.name }, feedback: { id: task.id, title: task.title, content: task.content, type: task.type } }, "https://upstep.dev").thread.threadKey,
         googleChatMessage(payload, "https://upstep.dev").thread.threadKey);
       await client.integration.update({ where: { id: chat.id }, data: { enabled: false } });
       await assert.rejects(startGoogleChatDiscussion(input, client));
-      await assert.rejects(triggerIntegrations(payload, job.id, client));
+      await assert.rejects(triggerIntegrations(payload, client));
       assert.equal(requests.length, 2);
     } finally { stub.mock.restore(); }
   });

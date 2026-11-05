@@ -1,16 +1,13 @@
-import { createHash, randomUUID } from "node:crypto";
 import type { IntegrationPayload } from "./integrations";
 
 const INVALID_WEBHOOK = "Use a Google Chat webhook URL from https://chat.googleapis.com/v1/spaces/…/messages with its key and token.";
 
-export function googleChatRequestId(deliveryId: string, integrationId: string): string {
-  // Derive a UUID from the persisted event identity, keeping request IDs bounded
-  // and identical across retries at the same destination.
-  const bytes = createHash("sha256").update(JSON.stringify([deliveryId, integrationId])).digest().subarray(0, 16);
-  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
-  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
-  const hex = bytes.toString("hex");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+export class GoogleChatDeliveryError extends Error {
+  readonly retryable: boolean;
+  constructor(public readonly status: number | undefined, detail?: string) {
+    super(status === undefined ? "Google Chat request failed or timed out." : `Google Chat returned HTTP ${status}${detail ? `: ${detail}` : ""}`);
+    this.retryable = status === undefined || status === 408 || status === 429 || status >= 500;
+  }
 }
 
 export function googleChatWebhookUrl(value: string): URL {
@@ -86,12 +83,11 @@ export function googleChatMessage(payload: IntegrationPayload, issueUrl: string)
   };
 }
 
-export async function sendGoogleChat(webhookUrl: string, payload: IntegrationPayload, issueUrl: string, requestId: string = randomUUID()) {
+export async function sendGoogleChat(webhookUrl: string, payload: IntegrationPayload, issueUrl: string) {
   const url = googleChatWebhookUrl(webhookUrl);
   url.searchParams.set("messageReplyOption", "REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD");
-  // Google Chat deduplicates identical requests, including queue retries after a
-  // timeout or a failure at another integration destination.
-  url.searchParams.set("requestId", requestId);
+  // Incoming webhooks reject requestId even though the authenticated Chat API
+  // supports it. Only send the documented webhook threading parameters.
   let response: Response;
   try {
     response = await fetch(url, {
@@ -103,7 +99,16 @@ export async function sendGoogleChat(webhookUrl: string, payload: IntegrationPay
     });
   } catch {
     // URLs contain credentials; never persist a fetch error that might expose one.
-    throw new Error("Google Chat request failed or timed out.");
+    throw new GoogleChatDeliveryError(undefined);
   }
-  if (!response.ok) throw new Error(`Google Chat returned HTTP ${response.status}`);
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: { message?: unknown } } | null;
+    let detail = typeof body?.error?.message === "string" ? body.error.message : "";
+    for (const key of ["key", "token"]) {
+      const secret = url.searchParams.get(key);
+      if (secret) detail = detail.split(secret).join("[redacted]").split(encodeURIComponent(secret)).join("[redacted]");
+    }
+    detail = detail.replace(/https?:\/\/\S+/g, "[URL redacted]").slice(0, 500);
+    throw new GoogleChatDeliveryError(response.status, detail);
+  }
 }

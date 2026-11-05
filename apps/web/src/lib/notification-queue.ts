@@ -8,6 +8,7 @@ import {
 } from "./email";
 import { triggerIntegrations, type IntegrationPayload } from "./integrations";
 import { hashInvitationToken } from "./invitation-tokens";
+import { GoogleChatDeliveryError } from "./google-chat";
 
 type QueueClient = Pick<Prisma.TransactionClient, "notificationJob">;
 type NotificationClient = Pick<Prisma.TransactionClient, "notificationJob" | "rateLimitBucket" | "projectInvitation" | "project">;
@@ -77,7 +78,7 @@ export async function processNotificationJobs(limit = 25, client: NotificationCl
           });
         }
       }
-      await deliver(job.type, job.payload, client, job.id);
+      await deliver(job.type, job.payload, client);
       await client.notificationJob.update({
         where: { id: job.id },
         data: { status: "COMPLETED", completedAt: new Date(), lockedAt: null, lastError: null },
@@ -85,7 +86,7 @@ export async function processNotificationJobs(limit = 25, client: NotificationCl
       completed++;
     } catch (error) {
       const attempts = job.attempts + 1;
-      const terminal = attempts >= 5;
+      const terminal = attempts >= 5 || (error instanceof GoogleChatDeliveryError && !error.retryable);
       await client.notificationJob.update({
         where: { id: job.id },
         data: {
@@ -110,9 +111,9 @@ export async function processNotificationJobs(limit = 25, client: NotificationCl
   return { found: jobs.length, completed, retried };
 }
 
-async function deliver(type: NotificationJobType, payload: Prisma.JsonValue, client: NotificationClient, deliveryId: string) {
+async function deliver(type: NotificationJobType, payload: Prisma.JsonValue, client: NotificationClient) {
   if (type === "INTEGRATION") {
-    await triggerIntegrations(payload as unknown as IntegrationPayload, deliveryId, client);
+    await triggerIntegrations(payload as unknown as IntegrationPayload, client);
   } else {
     const email = payload as unknown as EmailNotificationPayload;
     if (email.kind === "PROJECT_INVITATION") {

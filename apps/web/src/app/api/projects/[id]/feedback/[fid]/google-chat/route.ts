@@ -15,9 +15,12 @@ export async function GET(_req: NextRequest, { params }: Context) {
   const { id, fid } = await params;
   if (!await getProjectAccess(id, session.user.id) || !await db.feedback.findFirst({ where: { id: fid, projectId: id }, select: { id: true } })) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const spaces = await db.integration.findMany({ where: { projectId: id, type: "GOOGLE_CHAT", enabled: true, project: { owner: { plan: { in: ["PRO", "BUSINESS"] } } } }, select: { id: true, name: true } });
-  const jobs = await db.notificationJob.findMany({ where: { id: { in: spaces.map((s) => discussionJobId(s.id, fid)) } }, select: { id: true, status: true } });
+  const jobs = await db.notificationJob.findMany({ where: { id: { in: spaces.map((s) => discussionJobId(s.id, fid)) } }, select: { id: true, status: true, lastError: true, availableAt: true } });
   // Members see space names and delivery state, never webhook credentials.
-  return NextResponse.json({ spaces: spaces.map((s) => ({ ...s, status: jobs.find((j) => j.id === discussionJobId(s.id, fid))?.status ?? null })) });
+  return NextResponse.json({ spaces: spaces.map((s) => {
+    const job = jobs.find((j) => j.id === discussionJobId(s.id, fid));
+    return { ...s, status: job?.status ?? null, lastError: job?.lastError ?? null, availableAt: job?.availableAt ?? null };
+  }) });
 }
 
 export async function POST(req: NextRequest, { params }: Context) {
