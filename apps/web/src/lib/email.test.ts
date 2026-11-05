@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, mock, test } from "node:test";
 import { sendEmail, sendFeedbackNotification } from "./email";
 import { EMAIL_TEMPLATES, renderEmailTemplate } from "./email-templates";
@@ -89,7 +90,7 @@ test("errors include HTTP status and the complete provider response body", async
 });
 
 test("caller-provided UUID stays the same when retrying a failed request", async () => {
-  const idempotencyKey = "78d2343f-a70a-4d88-a07f-a0bc75275787";
+  const idempotencyKey = randomUUID();
   let attempts = 0;
   mock.method(globalThis, "fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
     assert.equal(new Headers(init?.headers).get("Idempotency-Key"), idempotencyKey);
@@ -108,7 +109,7 @@ test("missing credentials throw for direct sends and keep feedback notifications
 });
 
 test("feedback notifications preserve content and forward their persisted UUID", async () => {
-  const idempotencyKey = "c022bc80-667e-40bd-acb5-aa045b26d547";
+  const idempotencyKey = randomUUID();
   mock.method(globalThis, "fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
     assert.equal(new Headers(init?.headers).get("Idempotency-Key"), idempotencyKey);
     const body = JSON.parse(init?.body as string);
