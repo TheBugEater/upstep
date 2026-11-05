@@ -22,22 +22,31 @@ See [Google's webhook setup guide](https://developers.google.com/workspace/chat/
 
 A new issue posts its title, description and a link to the exact UpStep issue.
 The opening message and card heading use the issue title so Chat's thread preview
-identifies the task. Event labels appear in the card subtitle. Previously posted
+identifies the task. The subtitle identifies the project and issue type; an update
+preview identifies the event and comment author. Previously posted
 messages keep their original headings; incoming webhooks only create messages.
 Teammates reply in that Google Chat thread. Selected status changes, comments and
 votes join the same thread rather than starting unrelated conversations.
 Custom board column names appear in status updates, including moves between two
 unfinished columns. Both dashboard and MCP updates are supported.
 
-Cards display the current status with its configured board color, label names with
-their own colors, the assignee, and the issue type and project. The issue button
-uses the status color; names retain Chat's normal foreground for readability.
-Opening cards include the description, while status, comment, and vote replies
-focus on the update. Status transitions show both the previous and new colors;
+Every card uses the same compact summary: status and assignee side by side, a
+single row of colored labels, and one line previewing the update. Up to two labels
+are shown with a count for any additional labels. Long status names, assignees,
+labels, and previews truncate in the summary instead of adding more lines.
+On narrow screens Google Chat can stack the status and assignee columns.
+
+**Show details** expands the card's native disclosure to reveal the full task
+comment (up to 2000 characters), a bounded description for opening cards, the
+status transition or vote details, additional labels, and full issue context.
+**Hide details** returns it to the compact summary. The issue button stays outside
+the disclosure and uses the status color; names retain Chat's normal foreground
+for readability. Status transitions show both the previous and new colors, and
 comments identify their author. Colors, labels, and assignment are captured when
 the event is queued so retries preserve its context. Older queued jobs without
 that context use lifecycle status colors and omit unavailable labels. These
-layouts use [Google's supported card formatting](https://developers.google.com/workspace/chat/format-messages#format_text_that_appears_in_cards).
+layouts use [Google's supported card formatting](https://developers.google.com/workspace/chat/format-messages#format_text_that_appears_in_cards)
+and [collapsible card sections](https://developers.google.com/workspace/chat/api/reference/rest/v1/Card#Section).
 Previously posted cards keep their original layout; the new layout applies to
 future messages.
 

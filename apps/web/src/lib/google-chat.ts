@@ -49,11 +49,23 @@ function buttonColor(hex: string) {
   return { red: ((value >> 16) & 255) / 255, green: ((value >> 8) & 255) / 255, blue: (value & 255) / 255 };
 }
 
+type DecoratedWidget = { decoratedText: { topLabel: string; text: string; wrapText: boolean } };
 type CardWidget =
   | { textParagraph: { text: string } }
-  | { decoratedText: { topLabel: string; text: string; bottomLabel?: string; wrapText: boolean } }
+  | DecoratedWidget
+  | { columns: { columnItems: { horizontalSizeStyle: "FILL_AVAILABLE_SPACE"; widgets: DecoratedWidget[] }[] } }
   | { buttonList: { buttons: { text: string; color: ReturnType<typeof buttonColor>; onClick: { openLink: { url: string } }; altText: string }[] } };
-type CardSection = { header?: string; widgets: CardWidget[] };
+type CollapseButton = { text: string; type: "BORDERLESS"; icon: { materialIcon: { name: string } } };
+type CardSection = {
+  widgets: CardWidget[];
+  collapsible?: boolean;
+  uncollapsibleWidgetsCount?: number;
+  collapseControl?: { horizontalAlignment: "START"; expandButton: CollapseButton; collapseButton: CollapseButton };
+};
+
+function singleLine(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
 
 // Card paragraphs support HTML. Feedback and names must stay plain text, including
 // strings that resemble Google Chat mentions or links.
@@ -77,48 +89,70 @@ export function googleChatMessage(payload: IntegrationPayload, issueUrl: string)
   const currentColor = payload.event === "STATUS_CHANGED"
     ? safeColor(payload.newStatusColor ?? (feedback.boardStatus?.name === statusName ? feedback.boardStatus.color : undefined), STATUS_COLOR[payload.newStatus])
     : safeColor(lifecycle === "PENDING" ? undefined : feedback.boardStatus?.color, STATUS_COLOR[lifecycle ?? ""]);
+  const assignee = singleLine(feedback.assignee?.name || "") || (feedback.assignee ? "Teammate" : "Unassigned");
   let headline: string;
-  const updates: CardWidget[] = [];
+  let preview: string;
+  let detail: CardWidget;
   switch (payload.event) {
     case "ISSUE_SHARED":
-      headline = "Issue discussion";
-      break;
     case "NEW_FEEDBACK":
-      headline = "New issue";
+      headline = payload.event === "ISSUE_SHARED" ? "Issue discussion" : "New issue";
+      preview = escape(singleLine(feedback.content) || "No description yet.", 160);
+      detail = { decoratedText: { topLabel: "Description", text: escape(feedback.content.trim() || "No description yet.", 2_400), wrapText: true } };
       break;
-    case "STATUS_CHANGED":
+    case "STATUS_CHANGED": {
       headline = "Status changed";
-      updates.push({ textParagraph: { text: `${badge(payload.oldStatusName ?? STATUS_LABEL[payload.oldStatus] ?? payload.oldStatus, safeColor(payload.oldStatusColor, STATUS_COLOR[payload.oldStatus]))} → ${badge(statusName, currentColor)}` } });
+      const previous = payload.oldStatusName ?? STATUS_LABEL[payload.oldStatus] ?? payload.oldStatus;
+      const previousColor = safeColor(payload.oldStatusColor, STATUS_COLOR[payload.oldStatus]);
+      preview = `${badge(singleLine(previous), previousColor, 40)} → ${badge(singleLine(statusName), currentColor, 40)}`;
+      detail = { decoratedText: { topLabel: "Status transition", text: `${badge(previous, previousColor)} → ${badge(statusName, currentColor)}`, wrapText: true } };
       break;
-    case "NEW_COMMENT":
-      headline = "New UpStep comment";
-      updates.push({ decoratedText: { topLabel: "Comment by", text: escape(payload.comment.authorName?.trim() || "UpStep Team", 100), wrapText: true } });
-      updates.push({ textParagraph: { text: escape(payload.comment.content, 1_600) } });
+    }
+    case "NEW_COMMENT": {
+      const author = singleLine(payload.comment.authorName || "") || "UpStep Team";
+      headline = `Comment · ${author.slice(0, 80).replace(/[<>]/g, "")}`;
+      preview = escape(singleLine(payload.comment.content), 160);
+      // Task comments are limited to 2000 characters. Preserve the entire comment
+      // behind the native disclosure, including evidence near the end of a note.
+      detail = { decoratedText: { topLabel: "Full comment", text: `<b>${escape(author, 100)}</b><br>${escape(payload.comment.content, 2_000)}`, wrapText: true } };
       break;
+    }
     case "NEW_VOTE":
       headline = payload.vote.value === "UP" ? "New upvote" : "New downvote";
-      updates.push({ textParagraph: { text: `<b>${payload.feedback.upvotes}</b> upvotes · <b>${payload.feedback.downvotes}</b> downvotes` } });
+      preview = `<b>${payload.feedback.upvotes}</b> upvotes · <b>${payload.feedback.downvotes}</b> downvotes`;
+      detail = { textParagraph: { text: `${preview}<br>Reply in this thread to discuss this issue with your team.` } };
       break;
   }
-  const metadata: CardWidget[] = [{ decoratedText: {
-    topLabel: `${project.name.slice(0, 100).replace(/[<>]/g, "")} · ${TYPE_LABEL[feedback.type] ?? feedback.type.slice(0, 30)}`,
-    text: badge(statusName, currentColor),
-    bottomLabel: `Assigned to ${feedback.assignee?.name?.trim().slice(0, 100) || (feedback.assignee ? "Teammate" : "Unassigned")}${feedback.internal ? " · Internal task" : ""}`.replace(/[<>]/g, ""),
-    wrapText: true,
-  } }];
-  if (feedback.labels?.length) {
-    const labels = feedback.labels.slice(0, 8).map((label) => badge(label.name, label.color, 50));
-    if (feedback.labels.length > 8) labels.push(`+${feedback.labels.length - 8} more`);
-    metadata.push({ decoratedText: { topLabel: "Labels", text: labels.join(" &nbsp; "), wrapText: true } });
+  const labels = feedback.labels ?? [];
+  const visibleLabels = labels.slice(0, 2).map((label) => badge(singleLine(label.name), label.color, 20));
+  if (labels.length > 2) visibleLabels.push(`+${labels.length - 2} more`);
+  const details: CardWidget[] = [detail];
+  if (labels.length) {
+    const allLabels = labels.slice(0, 8).map((label) => badge(label.name, label.color, 50));
+    if (labels.length > 8) allLabels.push(`+${labels.length - 8} more in UpStep`);
+    details.push({ decoratedText: { topLabel: "All labels", text: allLabels.join(" &nbsp; "), wrapText: true } });
   }
-  const sections: CardSection[] = [{ widgets: metadata }];
-  if (payload.event === "NEW_FEEDBACK" || payload.event === "ISSUE_SHARED") {
-    if (feedback.content.trim()) sections.push({ header: "Description", widgets: [{ textParagraph: { text: escape(feedback.content, 1_200) } }] });
-    sections.push({ widgets: [{ textParagraph: { text: "Reply in this thread to discuss this issue with your team." } }] });
-  } else {
-    // Replies focus on what changed instead of repeating the full description.
-    sections.push({ header: headline, widgets: updates });
-  }
+  details.push({ decoratedText: { topLabel: "Issue context", text: `${escape(project.name, 100)} · ${escape(TYPE_LABEL[feedback.type] ?? feedback.type, 30)}${feedback.internal ? " · Internal task" : ""}<br>${badge(statusName, currentColor)}<br>Assigned to ${escape(assignee, 100)}`, wrapText: true } });
+  // Every event shares three single-line summary widgets. All variable-length
+  // content lives after this boundary so comment size cannot grow a closed card.
+  const sections: CardSection[] = [{
+    collapsible: true,
+    uncollapsibleWidgetsCount: 3,
+    collapseControl: {
+      horizontalAlignment: "START",
+      expandButton: { text: "Show details", type: "BORDERLESS", icon: { materialIcon: { name: "expand_more" } } },
+      collapseButton: { text: "Hide details", type: "BORDERLESS", icon: { materialIcon: { name: "expand_less" } } },
+    },
+    widgets: [
+      { columns: { columnItems: [
+        { horizontalSizeStyle: "FILL_AVAILABLE_SPACE", widgets: [{ decoratedText: { topLabel: "Status", text: badge(singleLine(statusName), currentColor), wrapText: false } }] },
+        { horizontalSizeStyle: "FILL_AVAILABLE_SPACE", widgets: [{ decoratedText: { topLabel: "Assigned to", text: escape(assignee, 100), wrapText: false } }] },
+      ] } },
+      { decoratedText: { topLabel: "Labels", text: visibleLabels.join(" &nbsp; ") || "No labels", wrapText: false } },
+      { decoratedText: { topLabel: headline, text: preview, wrapText: false } },
+      ...details,
+    ],
+  }];
   sections.push({ widgets: [{ buttonList: { buttons: [{
     text: "Open issue in UpStep", color: buttonColor(currentColor),
     onClick: { openLink: { url: issueUrl } }, altText: "Open this issue in UpStep",
@@ -130,7 +164,7 @@ export function googleChatMessage(payload: IntegrationPayload, issueUrl: string)
     cardsV2: [{
       cardId: "upstep-issue",
       card: {
-        header: { title: topic, subtitle: `UpStep · ${headline}` },
+        header: { title: topic, subtitle: `${singleLine(project.name).slice(0, 80).replace(/[<>]/g, "")} · ${TYPE_LABEL[feedback.type] ?? singleLine(feedback.type).slice(0, 30)}${feedback.internal ? " · Internal task" : ""}` },
         sections,
       },
     }],

@@ -70,10 +70,49 @@ test("cards use actual status and label colors, show assignees, and tint the act
   assert.ok(body.includes('color=\\"#06b6d4\\"'));
   assert.ok(body.includes("Review &amp; QA"));
   assert.ok(body.includes("Billing &lt;urgent&gt;"));
-  assert.ok(body.includes("Assigned to Jane Smith · Internal task"));
+  assert.ok(body.includes("Assigned to Jane Smith"));
+  assert.ok(body.includes("Internal task"));
   const action = message.cardsV2[0]!.card.sections.at(-1)!.widgets[0]!;
   assert.ok("buttonList" in action);
   assert.deepEqual(action.buttonList.buttons[0]!.color, { red: 168 / 255, green: 85 / 255, blue: 247 / 255 });
+});
+
+test("all event cards keep the same three compact widgets visible and hide details by default", () => {
+  for (const event of events) {
+    const card = googleChatMessage(event, issueUrl).cardsV2[0]!.card;
+    const section = card.sections[0]!;
+    assert.equal(section.collapsible, true);
+    assert.equal(section.uncollapsibleWidgetsCount, 3);
+    assert.equal(section.collapseControl?.expandButton.text, "Show details");
+    assert.equal(section.collapseControl?.collapseButton.text, "Hide details");
+    const visible = section.widgets.slice(0, section.uncollapsibleWidgetsCount);
+    assert.ok("columns" in visible[0]!);
+    for (const column of visible[0].columns.columnItems) {
+      assert.equal(column.widgets[0]!.decoratedText.wrapText, false);
+      assert.ok(!column.widgets[0]!.decoratedText.text.includes("<br>"));
+    }
+    for (const widget of visible.slice(1)) {
+      assert.ok("decoratedText" in widget);
+      assert.equal(widget.decoratedText.wrapText, false);
+      assert.ok(!widget.decoratedText.text.includes("<br>"));
+    }
+    assert.ok(section.widgets.length > section.uncollapsibleWidgetsCount);
+    assert.equal(card.sections.length, 2);
+    assert.ok("buttonList" in card.sections[1]!.widgets[0]!);
+  }
+});
+
+test("long comments keep their final commit evidence in hidden details instead of growing the summary", () => {
+  const content = "Completion note\n".repeat(110).slice(0, 1900) + "\nCommit: abc1234";
+  const message = googleChatMessage({ ...base, event: "NEW_COMMENT", comment: { authorName: "Sam\nPatel", content } }, issueUrl);
+  const section = message.cardsV2[0]!.card.sections[0]!;
+  const visible = JSON.stringify(section.widgets.slice(0, section.uncollapsibleWidgetsCount));
+  const hidden = JSON.stringify(section.widgets.slice(section.uncollapsibleWidgetsCount));
+  assert.ok(!visible.includes("Commit: abc1234"));
+  assert.ok(hidden.includes("Commit: abc1234"));
+  assert.ok(visible.includes("Comment · Sam Patel"));
+  assert.ok(!visible.includes("<br>"));
+  assert.ok(Buffer.byteLength(JSON.stringify(message)) < 32_000);
 });
 
 test("status replies retain both event colors and comments focus on the named author's update", () => {
