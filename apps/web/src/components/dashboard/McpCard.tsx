@@ -7,7 +7,7 @@ const TOOL_LIST = [
   ["list_feedback", "browse & search by votes"],
   ["get_feedback", "full item + comments"],
   ["create_feedback", "Dev-only tasks, hidden from users"],
-  ["update_feedback", "move columns, edit"],
+  ["update_feedback", "start work, complete tasks, edit"],
   ["add_comment", "reply as the team"],
   ["list_boards", "see every board"],
   ["create_board", "separate agent workspace"],
@@ -106,6 +106,10 @@ codex mcp add upstep --url ${mcpUrl} --bearer-token-env-var UPSTEP_MCP_KEY`,
           </div>
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-clay/10 text-base text-clay">✦</span>
         </div>
+
+        <p className="mt-3 text-xs leading-relaxed text-muted">
+          Agents are instructed to mark tasks In Progress before working and Done after completing and validating them. Blocked work stays open. Reconnect an existing MCP session to refresh these instructions.
+        </p>
 
         {!isOwner ? (
           <div className="mt-5 rounded-xl border border-line bg-surface/60 p-4 text-xs text-muted">

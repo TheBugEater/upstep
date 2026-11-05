@@ -266,6 +266,11 @@ codex mcp add upstep --url https://upstep.dev/api/mcp \\
         details: ["create_feedback defaults to internal: true.", "update_feedback can move work by board-column name.", "add_comment posts a customer-visible team comment, so reserve it for reviewed responses."],
       },
       {
+        title: "Keep implementation status current",
+        body: "The server instructs agents to mark a task In Progress before implementation and move it to a done column after completing the requested work and validation, including deployment when requested. Agents must verify the status update succeeded. Browsing and triage do not change task status; blocked or incomplete work must stay open.",
+        details: ["Use list_statuses to find actual column names; completion columns have is_done: true.", "Call update_feedback with status_name and lifecycle_status: IN_PROGRESS when starting, then lifecycle_status: DONE when finished. Custom active-work columns are supported.", "Reconnect existing MCP clients to refresh server instructions and tool descriptions. Status changes require the agent to call the tool; the server cannot observe implementation work outside UpStep."],
+      },
+      {
         title: "Build a weekly feedback ritual",
         body: "MCP is most useful as a repeatable review step, not a replacement for product judgment. Use the agent to reduce reading and grouping work, then let a product owner decide what becomes public roadmap work.",
         checklist: ["Weekly: summarize new open feedback and report vote movement.", "Weekly: surface duplicate clusters for human review.", "Monthly: compare completed work with the most requested themes.", "Before shipping: draft, then review, any customer-facing comments."] },

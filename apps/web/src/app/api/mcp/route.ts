@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { enforceProjectAndClientLimits, rateLimitResponse } from "@/lib/rate-limit";
 import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
 import { hashMcpKey, isMcpKey } from "@/lib/mcp-credentials";
+import { feedbackLifecycle, type TaskLifecycle } from "@/lib/feedback-lifecycle";
+import { MCP_TASK_WORKFLOW, mcpInstructions } from "@/lib/mcp-workflow";
 
 /**
  * Upstep MCP server - Streamable HTTP transport (JSON responses).
@@ -98,7 +100,8 @@ const createFeedbackArgs = z.object({
 
 const updateFeedbackArgs = z.object({
   id: z.string(),
-  status_name: z.string().optional(),
+  status_name: z.string().trim().min(1).optional(),
+  lifecycle_status: z.enum(["OPEN", "IN_PROGRESS", "DONE"]).optional(),
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
   title: z.string().min(1).max(200).optional(),
   content: z.string().min(1).max(5000).optional(),
@@ -142,7 +145,7 @@ const TOOLS = [
   {
     name: "get_project_overview",
     description:
-      "Snapshot of the project: feedback counts by status and type, board columns, and the top-voted open items.",
+      "Snapshot of the project: feedback counts, board columns, top-voted open items, and the task workflow. Read this first; implementation work must move to In Progress at the start and a done column after completion.",
     inputSchema: { type: "object", properties: {} },
   },
   {
@@ -162,7 +165,7 @@ const TOOLS = [
   },
   {
     name: "get_feedback",
-    description: "Fetch one feedback item with its full content, labels, board status, and comment thread.",
+    description: "Fetch one feedback item with its full content, labels, board status, comment thread, and task workflow. Read before implementing; call update_feedback to mark In Progress before work and Done after validation.",
     inputSchema: {
       type: "object",
       properties: { id: { type: "string", description: "Feedback id" } },
@@ -193,12 +196,13 @@ const TOOLS = [
   {
     name: "update_feedback",
     description:
-      "Update a feedback item: move it to a board column by status_name (e.g. \"In progress\", \"Done\"), change its title, content, or type, or add/remove labels.",
+      "Update a task or feedback item. REQUIRED when implementing work: before starting, set status_name to the existing active-work column and lifecycle_status to IN_PROGRESS; after completing and validating the requested work, set status_name to an is_done=true column and lifecycle_status to DONE. Verify the returned updated state. Never mark blocked or incomplete work done. Also supports editing title, content, type, and labels.",
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "string", description: "Feedback id" },
-        status_name: { type: "string", description: "Target board column name" },
+        status_name: { type: "string", description: "Existing target board column name from list_statuses; required when setting lifecycle_status" },
+        lifecycle_status: { type: "string", enum: ["OPEN", "IN_PROGRESS", "DONE"], description: "Use IN_PROGRESS when starting work (including custom active-work columns), DONE only after completion and validation, or OPEN when returning to the backlog. Must agree with the target column done flag." },
         type: { type: "string", enum: ["BUG", "FEATURE", "GENERAL"] },
         title: { type: "string" },
         content: { type: "string" },
@@ -224,14 +228,14 @@ const TOOLS = [
       properties: {
         feedback_id: { type: "string", description: "Feedback id" },
         content: { type: "string", description: "Comment body" },
-        author_name: { type: "string", description: "Display name (default \"Team\")" },
+        author_name: { type: "string", description: "Display name (default \"UpStep Team\")" },
       },
       required: ["feedback_id", "content"],
     },
   },
   {
     name: "list_statuses",
-    description: "List the project's board columns (statuses) with their colors and done-flags.",
+    description: "List actual project columns and their done-flags. Use the existing active-work column when starting a task, and a column with is_done=true only when the work is complete. Do not invent column names.",
     inputSchema: { type: "object", properties: {} },
   },
   {
@@ -389,6 +393,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
       ]);
       return toolText({
         project: project.name,
+        task_workflow: MCP_TASK_WORKFLOW,
         moderation_enabled: project.moderationEnabled,
         counts_by_status: Object.fromEntries(byStatus.map((r) => [r.status, r._count.id])),
         counts_by_type: Object.fromEntries(byType.map((r) => [r.type, r._count.id])),
@@ -438,6 +443,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
       if (!item) return toolError("Feedback not found in this project.");
       return toolText({
         ...serialize(item),
+        task_workflow: MCP_TASK_WORKFLOW,
         comments: item.comments.map((c) => ({
           author: c.authorName ?? (c.isOwner ? "Team" : "User"),
           from_team: c.isOwner,
@@ -474,7 +480,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
           content: content || title,
           type,
           internal,
-          status: boardStatus?.isDone ? "DONE" : "OPEN",
+          status: boardStatus ? feedbackLifecycle(boardStatus) : "OPEN",
           statusId: boardStatus?.id ?? null,
           ...(labelIds.length ? { labels: { connect: labelIds.map((id) => ({ id })) } } : {}),
         },
@@ -494,12 +500,15 @@ async function callTool(project: Project, name: string, args: Record<string, unk
     case "update_feedback": {
       const parsed = updateFeedbackArgs.safeParse(args);
       if (!parsed.success) return toolError(`Invalid arguments: ${parsed.error.message}`);
-      const { id, status_name, type, title, content, add_labels, remove_labels } = parsed.data;
+      const { id, status_name, lifecycle_status, type, title, content, add_labels, remove_labels } = parsed.data;
+      if (lifecycle_status && !status_name) {
+        return toolError("status_name is required with lifecycle_status. Use list_statuses to choose an existing column.");
+      }
 
       const existing = await db.feedback.findFirst({ where: { id, projectId: project.id }, include: { boardStatus: { select: { name: true } } } });
       if (!existing) return toolError("Feedback not found in this project.");
 
-      let statusPatch: { statusId: string; status: "DONE" | "OPEN" } | null = null;
+      let statusPatch: { statusId: string; status: TaskLifecycle } | null = null;
       if (status_name) {
         const target = await resolveStatus(project.id, status_name);
         if (!target) {
@@ -507,7 +516,11 @@ async function callTool(project: Project, name: string, args: Record<string, unk
             `No board column named "${status_name}". Use list_statuses to see available columns.`
           );
         }
-        statusPatch = { statusId: target.id, status: target.isDone ? "DONE" : "OPEN" };
+        try {
+          statusPatch = { statusId: target.id, status: feedbackLifecycle(target, lifecycle_status) };
+        } catch (error) {
+          return toolError(error instanceof Error ? error.message : "Invalid lifecycle status.");
+        }
       }
 
       const addLabelIds = await resolveOrCreateLabels(project.id, add_labels ?? []);
@@ -761,17 +774,9 @@ export async function POST(req: NextRequest) {
         serverInfo: {
           name: "upstep",
           title: `Upstep | ${project.name}`,
-          version: "1.0.0",
+          version: "1.1.0",
         },
-        instructions:
-          `Feedback inbox and task board for the project "${project.name}". ` +
-          "Use get_project_overview first to see what's inside, list_feedback to browse by votes, " +
-          "and update_feedback with a status_name to move items across the board. " +
-          "Keep agent work internal: create_feedback defaults to internal=true (Dev-only, hidden from the public widget), " +
-          "and create_board gives you a separate workspace without touching the main board. " +
-          "Attach labels with create_feedback/update_feedback (they're created automatically from a name), " +
-          "and give create_board a filters object (labels, type, or a creation-date range) for a board that only shows a slice of the inbox. " +
-          "The main board never takes filters, it always shows everything.",
+        instructions: mcpInstructions(project.name),
       });
 
     case "ping":

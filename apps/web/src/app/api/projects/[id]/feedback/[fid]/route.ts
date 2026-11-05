@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { feedbackLifecycle } from "@/lib/feedback-lifecycle";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
@@ -53,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
         where: { id: parsed.data.statusId, projectId: id },
       });
       if (!customStatus) return NextResponse.json({ error: "Invalid statusId" }, { status: 400 });
-      resolvedStatusEnum = customStatus.isDone ? "DONE" : "OPEN";
+      resolvedStatusEnum = feedbackLifecycle(customStatus);
     }
   } else if (
     (parsed.data.status === "OPEN" || parsed.data.status === "IN_PROGRESS") &&
