@@ -26,7 +26,7 @@ const config: Config = {
           tint: v("c-clay-tint"),
           tint2: v("c-clay-tint2"),
         },
-        // High-contrast action color: near-black in light mode, cream in dark.
+        // High-contrast action color: black in light mode, white in dark.
         primary: {
           DEFAULT: v("c-primary"),
           fg: v("c-primary-fg"),
