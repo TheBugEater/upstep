@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
   const anonymousId = searchParams.get("anonymousId") ?? undefined;
 
   const items = await db.feedback.findMany({
+    omit: { assigneeId: true },
     where: {
       projectId: project.id,
       ...(type ? { type: type as never } : {}),
@@ -154,6 +155,7 @@ export async function POST(req: NextRequest) {
   // Creator gets an automatic upvote.
   const feedback = await db.$transaction(async (tx) => {
     const created = await tx.feedback.create({
+      omit: { assigneeId: true },
       data: {
         projectId: project.id,
         ...(title ? { title } : {}),

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { requireOwner } from "@/lib/project-auth";
+import { getProjectAccess, requireAdmin } from "@/lib/project-auth";
 import { createProjectInvitation } from "@/lib/project-invitations";
 import { kickNotificationProcessor } from "@/lib/notification-queue";
 
@@ -17,8 +17,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
   }
 
   const { id } = await params;
-  const isOwner = await requireOwner(id, session.user.id);
-  if (!isOwner) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!await getProjectAccess(id, session.user.id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const members = await db.projectMember.findMany({
     where: { projectId: id },
@@ -40,8 +39,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   }
 
   const { id } = await params;
+  if (!await requireAdmin(id, session.user.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const project = await db.project.findFirst({
-    where: { id, ownerId: session.user.id },
+    where: { id },
     select: { name: true, owner: { select: { name: true, email: true } } },
   });
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const result = await db.$transaction((tx) => createProjectInvitation({
     projectId: id,
     projectName: project.name,
-    inviterName: project.owner.name,
+    inviterName: session.user?.name ?? null,
     email,
   }, tx));
   if (result.emailQueued) kickNotificationProcessor();

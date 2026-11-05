@@ -35,6 +35,7 @@ export interface ProjectBoard {
 
 /** A feedback item as the dashboard workspace sees it - with board placement. */
 export interface WorkspaceItem extends Feedback {
+  assigneeId?: string | null;
   statusId?: string | null;
   boardStatus?: ProjectStatus | null;
   labels?: Label[];

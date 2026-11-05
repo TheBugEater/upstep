@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, mock, test } from "node:test";
-import { googleChatMessage, googleChatWebhookUrl, sendGoogleChat } from "./google-chat";
+import { googleChatMessage, googleChatWebhookUrl, googleChatRequestId, sendGoogleChat } from "./google-chat";
 import { triggerIntegrations, type IntegrationPayload } from "./integrations";
 import type { Prisma } from "@prisma/client";
 
@@ -110,7 +110,9 @@ test("integration dispatch uses a stable request ID per destination and respects
   });
   await triggerIntegrations(events[0]!, "job-test", client);
   await triggerIntegrations(events[0]!, "job-test", client);
-  assert.deepEqual(ids, ["job-test-chat-one", "job-test-chat-two", "job-test-chat-one", "job-test-chat-two"]);
+  assert.deepEqual(ids, [googleChatRequestId("job-test", "chat-one"), googleChatRequestId("job-test", "chat-two"), googleChatRequestId("job-test", "chat-one"), googleChatRequestId("job-test", "chat-two")]);
+  assert.notEqual(ids[0], ids[1]);
+  assert.match(ids[0]!, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   plan = "FREE";
   await triggerIntegrations(events[0]!, "job-other", client);
   assert.equal(ids.length, 4);

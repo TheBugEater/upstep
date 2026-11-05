@@ -565,7 +565,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         data: {
           feedbackId: feedback_id,
           content,
-          authorName: author_name ?? "Team",
+          authorName: author_name?.trim() || "UpStep Team",
           isOwner: true,
         },
       });

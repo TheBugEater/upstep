@@ -8,7 +8,10 @@ interface Props {
   apiKey: string;
   moderationEnabled: boolean;
   isOwner: boolean;
+  canManage: boolean;
+  currentUserId: string;
   teamMembers: TeamMember[];
+  onTeamChange: (members: TeamMember[]) => void;
 }
 
 type PendingInvitation = { id: string; email: string; expiresAt: string; lastSentAt: string; createdAt: string };
@@ -19,6 +22,9 @@ export function SettingsTab({
   apiKey: initialKey,
   moderationEnabled,
   isOwner,
+  canManage,
+  currentUserId,
+  onTeamChange,
   teamMembers: initialMembers,
 }: Props) {
   // ── API key ──────────────────────────────────────────────────────────────────
@@ -40,13 +46,14 @@ export function SettingsTab({
   const [inviteError, setInviteError] = useState("");
   const [inviteNotice, setInviteNotice] = useState("");
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
-  const [loadingInvitations, setLoadingInvitations] = useState(isOwner);
+  const [loadingInvitations, setLoadingInvitations] = useState(canManage);
   const [invitationAction, setInvitationAction] = useState<string | null>(null);
   const [pendingError, setPendingError] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
+  const [changingRole, setChangingRole] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOwner) return;
+    if (!canManage) return;
     const controller = new AbortController();
     void fetch(`/api/projects/${projectId}/invitations`, { signal: controller.signal })
       .then(async (res) => {
@@ -58,7 +65,7 @@ export function SettingsTab({
       })
       .finally(() => { if (!controller.signal.aborted) setLoadingInvitations(false); });
     return () => controller.abort();
-  }, [isOwner, projectId]);
+  }, [canManage, projectId]);
 
   function updateInvitation(invitation: PendingInvitation) {
     setInvitations((previous) => [...previous.filter((item) => item.id !== invitation.id), invitation]);
@@ -153,12 +160,32 @@ export function SettingsTab({
 
   async function removeMember(userId: string) {
     setRemoving(userId);
+    setInviteError("");
     try {
-      await fetch(`/api/projects/${projectId}/members/${userId}`, { method: "DELETE" });
-      setMembers((prev) => prev.filter((m) => m.id !== userId));
+      const res = await fetch(`/api/projects/${projectId}/members/${userId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Couldn't remove this teammate.");
+      const next = members.filter((m) => m.id !== userId);
+      setMembers(next);
+      onTeamChange(next);
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : "Couldn't remove this teammate.");
     } finally {
       setRemoving(null);
     }
+  }
+
+  async function changeRole(userId: string, role: "ADMIN" | "MEMBER") {
+    setChangingRole(userId);
+    setInviteError("");
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members/${userId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+      if (!res.ok) throw new Error("Couldn't change this teammate's role.");
+      const next = members.map((m) => m.id === userId ? { ...m, role } : m);
+      setMembers(next);
+      onTeamChange(next);
+      setInviteNotice(`Role changed to ${role === "ADMIN" ? "Admin" : "Member"}.`);
+    } catch (error) { setInviteError(error instanceof Error ? error.message : "Couldn't change this teammate's role."); }
+    finally { setChangingRole(null); }
   }
 
   const maskedKey = key.slice(0, 12) + "•".repeat(Math.max(0, key.length - 12));
@@ -170,7 +197,7 @@ export function SettingsTab({
       <div className="rounded-2xl border border-line bg-card shadow-soft p-6">
         <h3 className="text-sm font-semibold text-ink mb-1">Team</h3>
         <p className="text-xs text-muted mb-5">
-          Members can view and triage all feedback. Only the owner can change project settings.
+          Members can view, comment on and assign tasks. Admins also manage project settings, integrations and invitations. Only the owner can change roles or rotate keys.
         </p>
 
         <div className="space-y-2 mb-5">
@@ -183,14 +210,14 @@ export function SettingsTab({
                 {m.name && <p className="text-sm font-medium text-ink truncate">{m.name}</p>}
                 <p className={`text-xs truncate ${m.name ? "text-muted" : "text-ink font-medium"}`}>{m.email}</p>
               </div>
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
+              {isOwner && m.role !== "OWNER" ? <select aria-label={`Role for ${m.name || m.email}`} value={m.role} disabled={!!changingRole} onChange={(e) => void changeRole(m.id, e.target.value as "ADMIN" | "MEMBER")} className="rounded-lg border border-line bg-surface px-2 py-1 text-xs text-ink disabled:opacity-40"><option value="MEMBER">Member</option><option value="ADMIN">Admin</option></select> : <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
                 m.role === "OWNER"
                   ? "text-clay bg-clay/5 border-clay/20"
                   : "text-muted bg-surface border-line"
               }`}>
-                {m.role === "OWNER" ? "Owner" : "Member"}
-              </span>
-              {isOwner && m.role !== "OWNER" && (
+                {m.role === "OWNER" ? "Owner" : m.role === "ADMIN" ? "Admin" : "Member"}
+              </span>}
+              {canManage && m.role !== "OWNER" && (isOwner || m.role === "MEMBER") && m.id !== currentUserId && (
                 <button
                   onClick={() => void removeMember(m.id)}
                   disabled={removing === m.id}
@@ -204,7 +231,7 @@ export function SettingsTab({
           ))}
         </div>
 
-        {isOwner && (
+        {canManage && (
           <form onSubmit={(e) => void inviteMember(e)} className="flex gap-2">
             <input
               type="email"
@@ -224,8 +251,8 @@ export function SettingsTab({
         )}
         {inviteError && <p className="text-xs text-danger mt-2">{inviteError}</p>}
         {inviteNotice && <p className="text-xs text-muted mt-2" role="status">{inviteNotice}</p>}
-        {isOwner && <p className="text-xs text-faint mt-3">Invite any email address. They can create an account when accepting. Invitations expire after seven days.</p>}
-        {isOwner && <div className="mt-6 border-t border-line pt-5">
+        {canManage && <p className="text-xs text-faint mt-3">Invite any email address. They can create an account when accepting. Invitations expire after seven days.</p>}
+        {canManage && <div className="mt-6 border-t border-line pt-5">
           <h4 className="text-xs font-semibold text-ink mb-3">Pending invitations</h4>
           {loadingInvitations && <p className="text-xs text-muted">Loading invitations…</p>}
           {pendingError && <p className="text-xs text-danger" role="alert">{pendingError}</p>}
@@ -320,7 +347,7 @@ export function SettingsTab({
       )}
 
       {/* ── Moderation (owner only) ──────────────────────────────────────────── */}
-      {isOwner && (
+      {canManage && (
         <div className="rounded-2xl border border-line bg-card shadow-soft p-6">
           <div className="flex items-start justify-between gap-6">
             <div>
@@ -350,10 +377,10 @@ export function SettingsTab({
       )}
 
       {/* Non-owner info */}
-      {!isOwner && (
+      {!canManage && (
         <div className="rounded-2xl border border-dashed border-line bg-surface/50 p-5 text-center">
           <p className="text-sm text-muted">
-            Project settings are managed by the owner.
+            Project settings are managed by the owner and admins.
           </p>
         </div>
       )}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ProjectBoard, ProjectStatus, WorkspaceItem } from "@/types/dashboard";
-import type { WorkspaceActions } from "./ProjectWorkspace";
+import type { WorkspaceActions, TeamMember } from "./ProjectWorkspace";
 import { TypePill, relativeDate } from "./ui";
 
 interface Props {
@@ -12,9 +12,10 @@ interface Props {
   isOwner: boolean;
   actions: WorkspaceActions;
   onEditBoard: () => void;
+  teamMembers: TeamMember[];
 }
 
-export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props) {
+export function BoardView({ board, items, isOwner, actions, onEditBoard, teamMembers }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overColId, setOverColId] = useState<string | null>(null);
   const [justDroppedId, setJustDroppedId] = useState<string | null>(null);
@@ -124,6 +125,7 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard }: Props
                   <BoardCard
                     key={f.id}
                     item={f}
+                    assigneeName={teamMembers.find((m) => m.id === f.assigneeId)?.name || teamMembers.find((m) => m.id === f.assigneeId)?.email || null}
                     isDragging={dragId === f.id}
                     justDropped={justDroppedId === f.id}
                     onPointerDown={() => {
@@ -232,6 +234,7 @@ function ColumnComposer({
 
 function BoardCard({
   item,
+  assigneeName,
   isDragging,
   justDropped,
   onPointerDown,
@@ -240,6 +243,7 @@ function BoardCard({
   onClick,
 }: {
   item: WorkspaceItem;
+  assigneeName: string | null;
   isDragging: boolean;
   justDropped: boolean;
   onPointerDown: () => void;
@@ -300,6 +304,7 @@ function BoardCard({
         )}
         <span className="ml-auto text-[10px] text-faint">{relativeDate(item.createdAt)}</span>
       </div>
+      {assigneeName && <p className="mt-2 text-[11px] text-muted truncate" title={`Assigned to ${assigneeName}`}>Assigned to {assigneeName}</p>}
     </article>
   );
 }

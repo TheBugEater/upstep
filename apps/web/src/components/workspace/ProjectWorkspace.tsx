@@ -28,7 +28,7 @@ export interface TeamMember {
   id: string;
   name: string | null;
   email: string;
-  role: "OWNER" | "MEMBER";
+  role: "OWNER" | "ADMIN" | "MEMBER";
 }
 
 export interface NewTaskInput {
@@ -38,12 +38,13 @@ export interface NewTaskInput {
   statusId: string | null;
   labelIds: string[];
   internal: boolean;
+  assigneeId?: string | null;
 }
 
 /** Everything child views need to mutate workspace state. */
 export interface WorkspaceActions {
   moveItem: (id: string, statusId: string) => void;
-  updateItem: (id: string, patch: Record<string, unknown>) => Promise<void>;
+  updateItem: (id: string, patch: Record<string, unknown>) => Promise<boolean>;
   deleteItem: (id: string) => Promise<void>;
   toggleItemLabel: (id: string, label: Label, has: boolean) => Promise<void>;
   createLabel: (name: string, color: string) => Promise<Label | null>;
@@ -60,6 +61,8 @@ interface Props {
   mcpConfigured: boolean;
   moderationEnabled: boolean;
   isOwner: boolean;
+  canManage: boolean;
+  currentUserId: string;
   ownerPlan: string;
   teamMembers: TeamMember[];
   initialItems: WorkspaceItem[];
@@ -77,8 +80,10 @@ export function ProjectWorkspace({
   mcpConfigured,
   moderationEnabled,
   isOwner,
+  canManage,
+  currentUserId,
   ownerPlan,
-  teamMembers,
+  teamMembers: initialTeamMembers,
   initialItems,
   initialPending,
   initialBoards,
@@ -93,6 +98,8 @@ export function ProjectWorkspace({
   const [boards, setBoards] = useState<ProjectBoard[]>(initialBoards);
   const [statuses, setStatuses] = useState<ProjectStatus[]>(initialStatuses);
   const [labels, setLabels] = useState<Label[]>(initialLabels);
+  const [teamMembers, setTeamMembers] = useState(initialTeamMembers);
+  const [assigneeFilter, setAssigneeFilter] = useState(isOwner ? "all" : "mine");
 
   // ── UI state ───────────────────────────────────────────────────────────────
   const [tab, setTab] = useState<Tab>("feedback");
@@ -169,13 +176,16 @@ export function ProjectWorkspace({
       );
     }
     if (typeFilter !== "ALL") result = result.filter((f) => f.type === typeFilter);
+    if (assigneeFilter === "mine") result = result.filter((f) => f.assigneeId === currentUserId);
+    else if (assigneeFilter === "unassigned") result = result.filter((f) => !f.assigneeId);
+    else if (assigneeFilter !== "all") result = result.filter((f) => f.assigneeId === assigneeFilter);
     if (labelFilter) result = result.filter((f) => f.labels?.some((l) => l.id === labelFilter));
     return [...result].sort((a, b) =>
       sortBy === "votes"
         ? b.upvotes - a.upvotes
         : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [items, search, typeFilter, labelFilter, sortBy]);
+  }, [items, search, typeFilter, labelFilter, sortBy, assigneeFilter, currentUserId]);
 
   // The main board always shows everything; other boards additionally apply
   // their own saved filters (labels, type, date range) on top of the
@@ -208,7 +218,7 @@ export function ProjectWorkspace({
     if (Date.now() - lastMutation.current < 5_000) return;
     try {
       const res = await fetch(
-        `/api/projects/${projectId}/feedback?status=OPEN,IN_PROGRESS,DONE,PENDING&take=300`
+        `/api/projects/${projectId}/feedback?status=OPEN,IN_PROGRESS,DONE,PENDING&take=300&includeMine=1`
       );
       if (!res.ok) return;
       const data = (await res.json()) as WorkspaceItem[];
@@ -285,7 +295,9 @@ export function ProjectWorkspace({
       if (res.ok) {
         const updated = (await res.json()) as WorkspaceItem;
         setItems((prev) => prev.map((f) => (f.id === id ? { ...f, ...updated } : f)));
+        setPending((prev) => prev.map((f) => (f.id === id ? { ...f, ...updated } : f)));
       }
+      return res.ok;
     },
     [projectId]
   );
@@ -352,6 +364,7 @@ export function ProjectWorkspace({
           content: input.content || input.title,
           type: input.type,
           internal: input.internal,
+          assigneeId: input.assigneeId === undefined ? (assigneeFilter === "mine" ? currentUserId : null) : input.assigneeId,
           ...(input.statusId ? { statusId: input.statusId } : {}),
           ...(input.labelIds.length ? { labelIds: input.labelIds } : {}),
         }),
@@ -361,7 +374,7 @@ export function ProjectWorkspace({
       setItems((prev) => [created, ...prev]);
       return true;
     },
-    [projectId]
+    [projectId, assigneeFilter, currentUserId]
   );
 
   // ── Pending moderation ─────────────────────────────────────────────────────
@@ -468,14 +481,14 @@ export function ProjectWorkspace({
       {tab === "feedback" && (
         <div>
           <div className="mb-5 flex items-center justify-between gap-4">
-            <div><h1 className="text-xl font-semibold tracking-[-0.02em] text-ink">Feedback</h1><p className="mt-0.5 text-xs text-faint">{activeCount} active · {completedCount} completed</p></div>
+            <div><h1 className="text-xl font-semibold tracking-[-0.02em] text-ink">{assigneeFilter === "mine" ? "My tasks" : assigneeFilter === "unassigned" ? "Unassigned tasks" : assigneeFilter === "all" ? "All tasks" : `${teamMembers.find((m) => m.id === assigneeFilter)?.name || "Teammate"}’s tasks`}</h1><p className="mt-0.5 text-xs text-faint">{activeItems.length} active · {completedItems.length} completed</p></div>
             <button onClick={() => setQuickAdd({ open: true, statusId: null })} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-clay px-3.5 text-xs font-semibold text-white transition hover:bg-clay-hover" title="New task (n)"><span className="text-base leading-none">+</span> New task</button>
           </div>
 
           <BoardNavigation
             boards={boards}
             activeBoardId={activeBoard?.id ?? ""}
-            isOwner={isOwner}
+            isOwner={canManage}
             onSelect={(boardId) => {
               setActiveBoardId(boardId);
               if (view !== "board") switchView("board");
@@ -493,6 +506,14 @@ export function ProjectWorkspace({
                 <ListIcon />
               </ViewBtn>
             </div>
+
+            <label className="sr-only" htmlFor="task-assignee-filter">Show tasks</label>
+            <select id="task-assignee-filter" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} className="h-8 rounded-lg border border-line bg-card px-2 text-xs text-ink">
+              <option value="mine">My tasks</option>
+              <option value="all">All tasks</option>
+              <option value="unassigned">Unassigned</option>
+              {teamMembers.filter((m) => m.id !== currentUserId).map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
+            </select>
 
             <div className="relative min-w-[180px] flex-1 max-w-sm">
               <input
@@ -543,6 +564,8 @@ export function ProjectWorkspace({
 
           </div>
 
+          {filtered.length === 0 && assigneeFilter !== "all" && <div className="mb-4 rounded-xl border border-line bg-surface p-4 text-sm text-muted">No tasks match this view. <button type="button" onClick={() => setAssigneeFilter("all")} className="text-clay hover:underline">View all tasks</button></div>}
+
           {view === "board" && activeBoard && !activeBoard.isDefault && activeBoard.filters && (
             <BoardFilterChips
               filters={activeBoard.filters}
@@ -556,12 +579,13 @@ export function ProjectWorkspace({
               board={activeBoard}
               items={boardFiltered}
               statuses={statuses}
-              isOwner={isOwner}
+              isOwner={canManage}
+              teamMembers={teamMembers}
               actions={actions}
               onEditBoard={() => setBoardModal("edit")}
             />
           ) : (
-            <ListView items={activeItems} statuses={statuses} actions={actions} />
+            <ListView items={activeItems} statuses={statuses} actions={actions} teamMembers={teamMembers} />
           )}
         </div>
       )}
@@ -576,7 +600,7 @@ export function ProjectWorkspace({
               <p className="text-xs text-muted mt-1">Items moved to a done column will appear here.</p>
             </div>
           ) : (
-            <ListView items={completedItems} statuses={statuses} actions={actions} />
+            <ListView items={completedItems} statuses={statuses} actions={actions} teamMembers={teamMembers} />
           )}
         </div>
       )}
@@ -592,7 +616,7 @@ export function ProjectWorkspace({
       {tab === "integrations" && (
         <div><SectionHeader title="Integrations" description="Send feedback events into the tools your team already uses" /><IntegrationsTab
           projectId={projectId}
-          isOwner={isOwner}
+          isOwner={canManage}
           isPro={ownerPlan === "PRO" || ownerPlan === "BUSINESS"}
           onOpenMcpTab={() => switchTab("mcp")}
         /></div>
@@ -604,7 +628,14 @@ export function ProjectWorkspace({
           apiKey={apiKey}
           moderationEnabled={moderationEnabled}
           isOwner={isOwner}
+          canManage={canManage}
+          currentUserId={currentUserId}
           teamMembers={teamMembers}
+          onTeamChange={(next) => {
+            setTeamMembers(next);
+            const ids = new Set(next.map((m) => m.id));
+            setItems((prev) => prev.map((f) => f.assigneeId && !ids.has(f.assigneeId) ? { ...f, assigneeId: null } : f));
+          }}
         /></div>
       )}
 
@@ -617,6 +648,8 @@ export function ProjectWorkspace({
           statuses={statuses}
           projectLabels={labels}
           actions={actions}
+          teamMembers={teamMembers}
+          currentUserId={currentUserId}
           onClose={() => {
             setSelectedId(null);
             if (searchParams.has("issue")) {
@@ -631,6 +664,8 @@ export function ProjectWorkspace({
       {/* New task modal */}
       {quickAdd.open && (
         <NewTaskModal
+          teamMembers={teamMembers}
+          defaultAssigneeId={assigneeFilter === "mine" ? currentUserId : null}
           statuses={statuses}
           labels={labels}
           presetStatusId={quickAdd.statusId}

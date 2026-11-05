@@ -71,6 +71,8 @@ model User {
   sessions    Session[]
   projects    Project[]
   memberships ProjectMember[]
+  assignedFeedback Feedback[] @relation("FeedbackAssignee")
+  comments Comment[] @relation("CommentAuthor")
 }
 
 model Project {
@@ -110,6 +112,7 @@ model Feedback {
   type        FeedbackType   @default(GENERAL)
   status      FeedbackStatus @default(OPEN)
   statusId    String?
+  assigneeId  String?
   endUserId   String?
   anonymousId String?
   upvotes     Int            @default(0)
@@ -125,11 +128,13 @@ model Feedback {
   votes       Vote[]
   comments    Comment[]
   labels      Label[]
+  assignee    User? @relation("FeedbackAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
 
   @@index([projectId, createdAt])
   @@index([projectId, status, createdAt])
   @@index([projectId, statusId])
   @@index([projectId, upvotes])
+  @@index([projectId, assigneeId, status])
 }
 
 model Comment {
@@ -137,12 +142,19 @@ model Comment {
   feedbackId String
   content    String   @db.Text
   authorName String? // display name shown in the SDK
+  authorId   String?
+  parentId   String?
   isOwner    Boolean  @default(true)
   createdAt  DateTime @default(now())
 
   feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  author User? @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  parent Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies Comment[] @relation("CommentReplies")
 
   @@index([feedbackId, createdAt])
+  @@index([authorId])
+  @@index([parentId])
 }
 
 model Vote {
@@ -192,6 +204,7 @@ enum Plan {
 
 enum MemberRole {
   OWNER
+  ADMIN
   MEMBER
 }
 

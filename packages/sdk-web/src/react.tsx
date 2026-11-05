@@ -473,7 +473,7 @@ function FeedDetail({ feedbackId, accent, p, font }: { feedbackId: string; accen
       {item.comments.length > 0 && (
         <div style={{ marginTop: 28, borderTop: `1px solid ${p.border}`, paddingTop: 20 }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", color: p.textFaint, marginBottom: 12, textTransform: "uppercase" }}>
-            Developer response
+            Comments
           </div>
           {item.comments.map((c: Comment) => (
             <CommentBubble key={c.id} comment={c} p={p} accent={accent} />
@@ -488,7 +488,7 @@ function CommentBubble({ comment, p, accent }: { comment: Comment; p: Palette; a
   return (
     <div style={{ background: p.bgSoft, border: `1px solid ${p.border}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ background: `${accent}20`, color: accent, fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "2px 8px" }}>Developer</span>
+        <span style={{ background: `${accent}20`, color: accent, fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "2px 8px" }}>{comment.authorName?.trim() || "UpStep Team"}</span>
         <span style={{ fontSize: 11, color: p.textFaint }}>{fmtDate(comment.createdAt)}</span>
       </div>
       <p style={{ fontSize: 14, lineHeight: 1.5, color: p.textSoft, margin: 0 }}>{comment.content}</p>

@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   const { id } = await params;
   const access = await getProjectAccess(id, session.user.id);
-  if (!access || !access.isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!access || !access.canManage) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(body);

@@ -33,13 +33,14 @@ export default async function ProjectPage({
   const isOwner = project.ownerId === session.user.id;
   const isMember = project.members.some((m) => m.userId === session.user!.id);
   if (!isOwner && !isMember) notFound();
+  const canManage = isOwner || project.members.some((m) => m.userId === session.user!.id && m.role === "ADMIN");
 
   const include = {
     labels: { select: { id: true, name: true, color: true } },
     boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } },
   };
 
-  const [boardFeedback, pendingFeedback, boards, statuses, projectLabels] = await Promise.all([
+  const [boardFeedback, pendingFeedback, boards, statuses, projectLabels, assignedFeedback] = await Promise.all([
     db.feedback.findMany({
       where: { projectId: id, status: { in: ["OPEN", "IN_PROGRESS", "DONE"] } },
       orderBy: { upvotes: "desc" },
@@ -70,7 +71,10 @@ export default async function ProjectPage({
       where: { projectId: id },
       orderBy: { name: "asc" },
     }),
+    db.feedback.findMany({ where: { projectId: id, assigneeId: session.user.id, status: { in: ["OPEN", "IN_PROGRESS", "DONE"] } }, orderBy: { updatedAt: "desc" }, take: 300, include }),
   ]);
+  const loaded = new Set(boardFeedback.map((f) => f.id));
+  boardFeedback.push(...assignedFeedback.filter((f) => !loaded.has(f.id)));
 
   // Chat links must open the exact issue, even if it falls outside the board's
   // initial result limit. Keep the lookup scoped to the authorized project.
@@ -86,7 +90,7 @@ export default async function ProjectPage({
 
   const teamMembers = [
     ...(project.owner ? [{ ...ownerRest, role: "OWNER" as const }] : []),
-    ...project.members.map((m) => ({ ...m.user, role: "MEMBER" as const })),
+    ...project.members.map((m) => ({ ...m.user, role: m.role === "ADMIN" ? "ADMIN" as const : "MEMBER" as const })),
   ];
 
   return (
@@ -98,6 +102,8 @@ export default async function ProjectPage({
           mcpConfigured={!!project.mcpKeyHash}
           moderationEnabled={project.moderationEnabled}
           isOwner={isOwner}
+          canManage={canManage}
+          currentUserId={session.user.id}
           ownerPlan={ownerPlan}
           teamMembers={teamMembers}
           initialItems={boardFeedback as never}

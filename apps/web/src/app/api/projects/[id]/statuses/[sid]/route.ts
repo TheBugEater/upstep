@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
   const { id, sid } = await params;
   const access = await getProjectAccess(id, session.user.id);
-  if (!access || !access.isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!access || !access.canManage) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const status = await db.status.findFirst({ where: { id: sid, projectId: id } });
   if (!status) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -51,7 +51,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteContext) {
 
   const { id, sid } = await params;
   const access = await getProjectAccess(id, session.user.id);
-  if (!access || !access.isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!access || !access.canManage) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const status = await db.status.findFirst({ where: { id: sid, projectId: id } });
   if (!status) return NextResponse.json({ error: "Not found" }, { status: 404 });

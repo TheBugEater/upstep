@@ -10,7 +10,7 @@ import { triggerIntegrations, type IntegrationPayload } from "./integrations";
 import { hashInvitationToken } from "./invitation-tokens";
 
 type QueueClient = Pick<Prisma.TransactionClient, "notificationJob">;
-type NotificationClient = Pick<Prisma.TransactionClient, "notificationJob" | "rateLimitBucket" | "projectInvitation">;
+type NotificationClient = Pick<Prisma.TransactionClient, "notificationJob" | "rateLimitBucket" | "projectInvitation" | "project">;
 let retryTimer: NodeJS.Timeout | null = null;
 
 export async function queueIntegration(payload: IntegrationPayload, client: QueueClient = db) {
@@ -112,7 +112,7 @@ export async function processNotificationJobs(limit = 25, client: NotificationCl
 
 async function deliver(type: NotificationJobType, payload: Prisma.JsonValue, client: NotificationClient, deliveryId: string) {
   if (type === "INTEGRATION") {
-    await triggerIntegrations(payload as unknown as IntegrationPayload, deliveryId);
+    await triggerIntegrations(payload as unknown as IntegrationPayload, deliveryId, client);
   } else {
     const email = payload as unknown as EmailNotificationPayload;
     if (email.kind === "PROJECT_INVITATION") {

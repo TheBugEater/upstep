@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FeedbackType, Label } from "@upstep/types";
 import type { ProjectBoard, ProjectStatus } from "@/types/dashboard";
-import type { NewTaskInput } from "./ProjectWorkspace";
+import type { NewTaskInput, TeamMember } from "./ProjectWorkspace";
 import {
   ModalShell,
   inputCls,
@@ -23,12 +23,16 @@ export function NewTaskModal({
   statuses,
   labels,
   presetStatusId,
+  teamMembers,
+  defaultAssigneeId,
   onCreate,
   onClose,
 }: {
   statuses: ProjectStatus[];
   labels: Label[];
   presetStatusId: string | null;
+  teamMembers: TeamMember[];
+  defaultAssigneeId: string | null;
   onCreate: (input: NewTaskInput) => Promise<boolean>;
   onClose: () => void;
 }) {
@@ -41,6 +45,7 @@ export function NewTaskModal({
   const [statusId, setStatusId] = useState<string | null>(defaultStatusId);
   const [labelIds, setLabelIds] = useState<string[]>([]);
   const [internal, setInternal] = useState(false);
+  const [assigneeId, setAssigneeId] = useState(defaultAssigneeId ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +61,7 @@ export function NewTaskModal({
       statusId,
       labelIds,
       internal,
+      assigneeId: assigneeId || null,
     });
     setSaving(false);
     if (ok) onClose();
@@ -120,6 +126,13 @@ export function NewTaskModal({
             </button>
           </div>
         </div>
+
+        <label className="block text-xs font-medium text-muted">Assignee
+          <select aria-label="Task assignee" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className={`${inputCls} mt-1.5`}>
+            <option value="">Unassigned</option>
+            {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
+          </select>
+        </label>
 
         {statuses.length > 0 && (
           <div>

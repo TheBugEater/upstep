@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { getSiteUrl } from "./site-url";
-import { sendGoogleChat } from "./google-chat";
+import { googleChatRequestId, sendGoogleChat } from "./google-chat";
 import type { Prisma } from "@prisma/client";
 
 // ─── Payload shapes ────────────────────────────────────────────────────────────
@@ -9,6 +9,7 @@ type ProjectInfo = { id: string; name: string };
 type FeedbackInfo = { id: string; title: string | null; content: string; type: string; status?: string; flagged?: boolean };
 
 export type IntegrationPayload =
+  | { event: "ISSUE_SHARED"; project: ProjectInfo; feedback: FeedbackInfo; integrationId: string }
   | { event: "NEW_FEEDBACK";   project: ProjectInfo; feedback: FeedbackInfo }
   | { event: "STATUS_CHANGED"; project: ProjectInfo; feedback: FeedbackInfo; oldStatus: string; newStatus: string; oldStatusName?: string; newStatusName?: string }
   | { event: "NEW_VOTE";       project: ProjectInfo; feedback: FeedbackInfo & { upvotes: number; downvotes: number }; vote: { value: string } }
@@ -22,16 +23,24 @@ export async function triggerIntegrations(payload: IntegrationPayload, deliveryI
     select: {
       owner: { select: { plan: true } },
       integrations: {
-        where: { enabled: true, events: { has: payload.event } },
+        where: { enabled: true, ...(payload.event === "ISSUE_SHARED" ? { id: payload.integrationId, type: "GOOGLE_CHAT" as const } : { events: { has: payload.event } }) },
       },
     },
   });
 
-  if (!project || !["PRO", "BUSINESS"].includes(project.owner.plan)) return;
-  if (!project.integrations.length) return;
+  if (!project || !["PRO", "BUSINESS"].includes(project.owner.plan) || !project.integrations.length) {
+    if (payload.event === "ISSUE_SHARED") throw new Error("Google Chat discussion requires an enabled connection on a Pro or Business project.");
+    return;
+  }
 
   const baseUrl = getSiteUrl();
   const dashboardUrl = `${baseUrl}/dashboard/projects/${payload.project.id}`;
+  const issueUrl = `${baseUrl}/api/projects/${encodeURIComponent(payload.project.id)}/feedback/${encodeURIComponent(payload.feedback.id)}/open`;
+
+  if (payload.event === "ISSUE_SHARED") {
+    await Promise.all(project.integrations.map((integration) => sendGoogleChat(integration.webhookUrl, payload, issueUrl, deliveryId ? googleChatRequestId(deliveryId, integration.id) : undefined)));
+    return;
+  }
 
   await Promise.all(
     project.integrations.map((integration) => {
@@ -43,8 +52,8 @@ export async function triggerIntegrations(payload: IntegrationPayload, deliveryI
         case "GOOGLE_CHAT":
           return sendGoogleChat(
             integration.webhookUrl, payload,
-            `${baseUrl}/api/projects/${encodeURIComponent(payload.project.id)}/feedback/${encodeURIComponent(payload.feedback.id)}/open`,
-            deliveryId ? `${deliveryId}-${integration.id}` : undefined,
+            issueUrl,
+            deliveryId ? googleChatRequestId(deliveryId, integration.id) : undefined,
           );
         case "WEBHOOK":
           return sendWebhook(integration.webhookUrl, payload, dashboardUrl);
@@ -65,7 +74,7 @@ function feedbackTitle(f: FeedbackInfo): string {
   return f.title ?? (f.content.length > 80 ? f.content.slice(0, 80) + "…" : f.content);
 }
 
-async function sendSlack(url: string, payload: IntegrationPayload, dashboardUrl: string) {
+async function sendSlack(url: string, payload: Exclude<IntegrationPayload, { event: "ISSUE_SHARED" }>, dashboardUrl: string) {
   let text: string;
   let blocks: unknown[];
 
@@ -147,7 +156,7 @@ const TYPE_COLOR: Record<string, number> = {
   GENERAL: 0x6b7280,
 };
 
-async function sendDiscord(url: string, payload: IntegrationPayload, dashboardUrl: string) {
+async function sendDiscord(url: string, payload: Exclude<IntegrationPayload, { event: "ISSUE_SHARED" }>, dashboardUrl: string) {
   let title: string;
   let description: string;
   let color: number;

@@ -3,10 +3,14 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
-import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
+import { kickNotificationProcessor } from "@/lib/notification-queue";
+
+import { addTaskComment } from "@/lib/task-comments";
+import { CollaborationError } from "@/lib/project-collaboration";
 
 const commentSchema = z.object({
-  content: z.string().min(1).max(2000),
+  content: z.string().trim().min(1).max(2000),
+  parentId: z.string().optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string; fid: string }> };
@@ -26,6 +30,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
   const comments = await db.comment.findMany({
     where: { feedbackId: fid, feedback: { projectId: id } },
     orderBy: { createdAt: "asc" },
+    include: { author: { select: { id: true, name: true, image: true } } },
   });
 
   return NextResponse.json(comments);
@@ -40,37 +45,14 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   }
 
   const { id, fid } = await params;
-  const access = await getProjectAccess(id, session.user.id);
-  if (!access) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const feedback = await db.feedback.findFirst({
-    where: { id: fid, projectId: id },
-    include: { project: { select: { name: true } } },
-  });
-  if (!feedback) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const body = await req.json().catch(() => null);
-  const parsed = commentSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  const parsed = commentSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  try {
+    const comment = await addTaskComment({ projectId: id, feedbackId: fid, actorId: session.user.id, content: parsed.data.content, ...(parsed.data.parentId ? { parentId: parsed.data.parentId } : {}) });
+    kickNotificationProcessor();
+    return NextResponse.json(comment, { status: 201 });
+  } catch (error) {
+    if (error instanceof CollaborationError) return NextResponse.json({ error: error.message }, { status: error.status });
+    throw error;
   }
-
-  const comment = await db.comment.create({
-    data: {
-      feedbackId: fid,
-      content: parsed.data.content,
-      authorName: session.user.name ?? session.user.email ?? "Team",
-      isOwner: true,
-    },
-  });
-
-  await queueIntegration({
-    event: "NEW_COMMENT",
-    project: { id, name: feedback.project.name },
-    feedback: { id: fid, title: feedback.title, content: feedback.content, type: feedback.type },
-    comment: { content: comment.content, authorName: comment.authorName },
-  });
-  kickNotificationProcessor();
-
-  return NextResponse.json(comment, { status: 201 });
 }

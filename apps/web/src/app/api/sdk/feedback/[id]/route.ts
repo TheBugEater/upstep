@@ -35,9 +35,10 @@ export async function GET(
   const anonymousId = req.nextUrl.searchParams.get("anonymousId") ?? undefined;
 
   const item = await db.feedback.findFirst({
-    where: { id, projectId: project.id },
+    where: { id, projectId: project.id, internal: false },
+    omit: { assigneeId: true },
     include: {
-      comments: { orderBy: { createdAt: "asc" } },
+      comments: { orderBy: { createdAt: "asc" }, omit: { authorId: true } },
       labels: { select: { id: true, name: true, color: true } },
       boardStatus: { select: { id: true, name: true, color: true, isDone: true } },
     },

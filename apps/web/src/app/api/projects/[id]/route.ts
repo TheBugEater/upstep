@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/project-auth";
 
 const updateSchema = z.object({
   moderationEnabled: z.boolean().optional(),
@@ -19,8 +20,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 
   const { id } = await params;
+  if (!await requireAdmin(id, session.user.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const project = await db.project.findFirst({
-    where: { id, ownerId: session.user.id },
+    where: { id },
   });
   if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

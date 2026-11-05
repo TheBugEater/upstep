@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Comment, Label } from "@upstep/types";
 import type { ProjectStatus, WorkspaceItem } from "@/types/dashboard";
-import type { WorkspaceActions } from "./ProjectWorkspace";
+import type { WorkspaceActions, TeamMember } from "./ProjectWorkspace";
 import { TYPES, TYPE_COLORS, TYPE_LABELS, LABEL_PALETTE, inputCls } from "./ui";
 
 interface Props {
@@ -13,12 +13,23 @@ interface Props {
   projectLabels: Label[];
   actions: WorkspaceActions;
   onClose: () => void;
+  teamMembers: TeamMember[];
+  currentUserId: string;
 }
 
-export function DetailDrawer({ item, projectId, statuses, projectLabels, actions, onClose }: Props) {
+export function DetailDrawer({ item, projectId, statuses, projectLabels, actions, onClose, teamMembers, currentUserId }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [input, setInput] = useState("");
   const [posting, setPosting] = useState(false);
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const [commentError, setCommentError] = useState("");
+  const [loadingComments, setLoadingComments] = useState(true);
+  const [assigning, setAssigning] = useState(false);
+  const [assignmentError, setAssignmentError] = useState("");
+  const [chatSpaces, setChatSpaces] = useState<{ id: string; name: string | null; status: string | null }[]>([]);
+  const [chatSpaceId, setChatSpaceId] = useState("");
+  const [sharingChat, setSharingChat] = useState(false);
+  const [chatNotice, setChatNotice] = useState("");
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState(LABEL_PALETTE[0]!);
   const [showNewLabel, setShowNewLabel] = useState(false);
@@ -28,10 +39,56 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
   const itemLabels = item.labels ?? [];
 
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/feedback/${item.id}/comments`)
-      .then((r) => r.json())
-      .then((data: unknown) => setComments(Array.isArray(data) ? (data as Comment[]) : []))
-      .catch(() => {});
+    const controller = new AbortController();
+    async function refreshSpaces() {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/feedback/${item.id}/google-chat`, { signal: controller.signal });
+        if (!res.ok) return;
+        const data = await res.json() as { spaces: typeof chatSpaces };
+        if (controller.signal.aborted) return;
+        setChatSpaces(data.spaces);
+        setChatSpaceId((previous) => data.spaces.some((s) => s.id === previous) ? previous : data.spaces[0]?.id ?? "");
+      } catch { /* The next poll can recover a transient error. */ }
+    }
+    void refreshSpaces();
+    const interval = setInterval(() => void refreshSpaces(), 15_000);
+    return () => { controller.abort(); clearInterval(interval); };
+  }, [projectId, item.id]);
+
+  async function startChatDiscussion() {
+    if (!chatSpaceId || sharingChat) return;
+    setSharingChat(true);
+    setChatNotice("");
+    try {
+      const res = await fetch(`/api/projects/${projectId}/feedback/${item.id}/google-chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ integrationId: chatSpaceId }) });
+      const data = await res.json() as { error?: string; status?: string };
+      if (!res.ok) throw new Error(data.error || "Couldn't start this discussion.");
+      setChatSpaces((previous) => previous.map((s) => s.id === chatSpaceId ? { ...s, status: data.status ?? "PENDING" } : s));
+      setChatNotice(data.status === "COMPLETED" ? "Discussion already started in Google Chat." : "Discussion queued for Google Chat. Selected task updates will join the same thread.");
+    } catch (error) { setChatNotice(error instanceof Error ? error.message : "Couldn't start this discussion."); }
+    finally { setSharingChat(false); }
+  }
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function refreshComments() {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/feedback/${item.id}/comments`, { signal: controller.signal });
+        if (!res.ok) throw new Error("Couldn't load comments.");
+        const incoming = await res.json() as Comment[];
+        if (controller.signal.aborted) return;
+        setComments((previous) => [...new Map([...previous, ...incoming].map((c) => [c.id, c])).values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
+        setCommentError("");
+      } catch {
+        if (!controller.signal.aborted) setCommentError("Couldn't load comments. Retrying shortly.");
+      } finally {
+        if (!controller.signal.aborted) setLoadingComments(false);
+      }
+    }
+    void refreshComments();
+    const interval = setInterval(() => void refreshComments(), 15_000);
+    window.addEventListener("focus", refreshComments);
+    return () => { controller.abort(); clearInterval(interval); window.removeEventListener("focus", refreshComments); };
   }, [item.id, projectId]);
 
   useEffect(() => {
@@ -45,20 +102,33 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
   async function postComment() {
     if (!input.trim() || posting) return;
     setPosting(true);
+    setCommentError("");
     try {
       const res = await fetch(`/api/projects/${projectId}/feedback/${item.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: input }),
+        body: JSON.stringify({ content: input.trim(), ...(replyTo ? { parentId: replyTo.id } : {}) }),
       });
       if (res.ok) {
         const c = (await res.json()) as Comment;
-        setComments((prev) => [...prev, c]);
+        setComments((prev) => [...prev.filter((existing) => existing.id !== c.id), c]);
         setInput("");
-      }
+        setReplyTo(null);
+      } else setCommentError("Couldn't post this comment. Please try again.");
+    } catch {
+      setCommentError("Couldn't post this comment. Please try again.");
     } finally {
       setPosting(false);
     }
+  }
+
+  async function assignTask(assigneeId: string | null) {
+    setAssigning(true);
+    setAssignmentError("");
+    try {
+      if (!await actions.updateItem(item.id, { assigneeId })) setAssignmentError("Couldn't assign this task. Check that the teammate still has access.");
+    } catch { setAssignmentError("Couldn't assign this task. Please try again."); }
+    finally { setAssigning(false); }
   }
 
   async function addNewLabel() {
@@ -125,6 +195,18 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
                 {item.downvotes}
               </span>
             )}
+          </div>
+
+          <div>
+            <label htmlFor="task-assignee" className="block text-xs font-semibold text-muted uppercase tracking-wide mb-2">Assignee</label>
+            <div className="flex items-center gap-2">
+              <select id="task-assignee" value={item.assigneeId ?? ""} disabled={assigning} onChange={(e) => void assignTask(e.target.value || null)} className={inputCls}>
+                <option value="">Unassigned</option>
+                {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}{m.id === currentUserId ? " (you)" : ""}</option>)}
+              </select>
+              {item.assigneeId !== currentUserId && <button type="button" disabled={assigning} onClick={() => void assignTask(currentUserId)} className="shrink-0 text-xs text-clay hover:underline disabled:opacity-40">Assign to me</button>}
+            </div>
+            {assignmentError && <p role="alert" className="mt-2 text-xs text-danger">{assignmentError}</p>}
           </div>
 
           {/* Status */}
@@ -246,39 +328,57 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
             </button>
           </div>
 
+          {chatSpaces.length > 0 && <div className="rounded-xl border border-line bg-card p-4 space-y-2">
+            <p className="text-xs font-semibold text-ink">Discuss in Google Chat</p>
+            {chatSpaces.length > 1 && <select aria-label="Google Chat space" value={chatSpaceId} onChange={(e) => setChatSpaceId(e.target.value)} className={inputCls}>{chatSpaces.map((s, i) => <option key={s.id} value={s.id}>{s.name || `Google Chat space ${i + 1}`}</option>)}</select>}
+            <p className="text-xs text-muted">Start a thread for this task in {chatSpaces.find((s) => s.id === chatSpaceId)?.name || "your connected space"}. Teammates can reply there.</p>
+            <button type="button" disabled={sharingChat || ["PENDING", "PROCESSING", "COMPLETED"].includes(chatSpaces.find((s) => s.id === chatSpaceId)?.status ?? "")} onClick={() => void startChatDiscussion()} className="text-xs font-semibold text-clay hover:underline disabled:text-muted disabled:no-underline">
+              {sharingChat ? "Starting…" : chatSpaces.find((s) => s.id === chatSpaceId)?.status === "COMPLETED" ? "Discussion started" : ["PENDING", "PROCESSING"].includes(chatSpaces.find((s) => s.id === chatSpaceId)?.status ?? "") ? "Discussion queued" : chatSpaces.find((s) => s.id === chatSpaceId)?.status === "FAILED" ? "Retry discussion" : "Start Google Chat discussion"}
+            </button>
+            {chatNotice && <p role="status" className="text-xs text-muted">{chatNotice}</p>}
+          </div>}
+
           {/* Comments */}
           <div>
             <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">
-              Developer response
+              Comments · {comments.length}
             </p>
             {comments.length === 0 ? (
-              <p className="text-xs text-faint mb-3">No responses yet.</p>
+              <p className="text-xs text-faint mb-3">{loadingComments ? "Loading comments…" : "Start a conversation about this task."}</p>
             ) : (
               <div className="space-y-2 mb-3">
-                {comments.map((c) => (
-                  <div key={c.id} className="bg-surface rounded-xl border border-line p-3">
+                {comments.map((c) => {
+                  const parent = comments.find((p) => p.id === c.parentId);
+                  const authorName = c.author?.name?.trim() || c.authorName?.trim() || "UpStep Team";
+                  return <div key={c.id} className={`bg-surface rounded-xl border border-line p-3 ${c.parentId ? "ml-4 border-l-2" : ""}`}>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-semibold text-clay">{c.authorName ?? "You"}</span>
-                      <span className="text-xs text-faint">
-                        {new Date(c.createdAt).toLocaleDateString()}
-                      </span>
+                      <span aria-hidden="true" className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay/10 text-clay text-[10px] font-semibold">{authorName[0]?.toUpperCase()}</span>
+                      <span className="text-xs font-semibold text-ink">{authorName}</span>
+                      <time dateTime={c.createdAt} title={new Date(c.createdAt).toLocaleString()} className="ml-auto text-[10px] text-faint">{new Date(c.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time>
                     </div>
-                    <p className="text-sm text-ink-soft">{c.content}</p>
+                    {parent && <p className="mb-2 border-l-2 border-line-strong pl-2 text-[11px] text-muted line-clamp-2">Reply to {parent.author?.name || parent.authorName || "UpStep Team"}: {parent.content}</p>}
+                    <p className="text-sm text-ink-soft whitespace-pre-wrap break-words">{c.content}</p>
+                    <button type="button" onClick={() => setReplyTo(c)} className="mt-2 text-[11px] text-muted hover:text-ink" aria-label={`Reply to ${authorName}`}>Reply</button>
                   </div>
-                ))}
+                })}
               </div>
             )}
-            <div className="flex gap-2">
-              <input
+            {replyTo && <div className="mb-2 flex items-center gap-2 text-xs text-muted"><span className="flex-1 truncate">Replying to {replyTo.author?.name || replyTo.authorName || "UpStep Team"}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Cancel reply">✕</button></div>}
+            {commentError && <p role="alert" className="mb-2 text-xs text-danger">{commentError}</p>}
+            <div className="flex items-end gap-2">
+              <textarea
                 value={input}
+                rows={3}
+                maxLength={2000}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                     e.preventDefault();
                     void postComment();
                   }
                 }}
-                placeholder="Reply as developer…"
+                placeholder="Write a comment…"
+                aria-label="Comment"
                 className={inputCls}
               />
               <button

@@ -1,8 +1,11 @@
 import { db } from "./db";
+import type { Prisma } from "@prisma/client";
 
 export type ProjectAccess = {
   projectId: string;
   isOwner: boolean;
+  canManage: boolean;
+  role: "OWNER" | "ADMIN" | "MEMBER";
 };
 
 /**
@@ -11,9 +14,10 @@ export type ProjectAccess = {
  */
 export async function getProjectAccess(
   projectId: string,
-  userId: string
+  userId: string,
+  client: Pick<Prisma.TransactionClient, "project"> = db,
 ): Promise<ProjectAccess | null> {
-  const project = await db.project.findUnique({
+  const project = await client.project.findUnique({
     where: { id: projectId },
     select: {
       id: true,
@@ -27,7 +31,13 @@ export async function getProjectAccess(
   const isMember = project.members.length > 0;
   if (!isOwner && !isMember) return null;
 
-  return { projectId, isOwner };
+  const role = isOwner ? "OWNER" : project.members[0]?.role === "ADMIN" ? "ADMIN" : "MEMBER";
+  return { projectId, isOwner, role, canManage: role === "OWNER" || role === "ADMIN" };
+}
+
+/** Project admins can manage setup and invitations, but not ownership or keys. */
+export async function requireAdmin(projectId: string, userId: string): Promise<boolean> {
+  return (await getProjectAccess(projectId, userId))?.canManage ?? false;
 }
 
 /** Shorthand for routes that require owner-level access. */

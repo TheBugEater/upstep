@@ -371,7 +371,7 @@ function FeedDetailBody({
 
       {item.comments.length > 0 && (
         <View style={[styles.commentsSection, { borderTopColor: p.border }]}>
-          <Text style={[styles.commentsLabel, { color: p.textFaint }]}>DEVELOPER RESPONSE</Text>
+          <Text style={[styles.commentsLabel, { color: p.textFaint }]}>COMMENTS</Text>
           {item.comments.map((c) => (
             <CommentBubble key={c.id} comment={c} p={p} accent={accent} />
           ))}
@@ -387,7 +387,7 @@ function CommentBubble({ comment, p, accent }: { comment: Comment; p: Palette; a
       <View style={styles.commentMeta}>
         <View style={[styles.ownerBadge, { backgroundColor: accent + "20" }]}>
           <Text style={[styles.ownerBadgeText, { color: accent }]}>
-            Developer
+            {comment.authorName?.trim() || "UpStep Team"}
           </Text>
         </View>
         <Text style={[styles.commentDate, { color: p.textFaint }]}>{fmtDate(comment.createdAt)}</Text>

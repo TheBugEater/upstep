@@ -1,7 +1,7 @@
 # Google Chat issue discussions
 
 Google Chat is a project integration on Pro and Business, alongside Slack, Discord
-and webhooks. Only the project owner can manage connections. Each connection
+and webhooks. The project owner and admins can manage connections. Each connection
 targets one Google Chat space; multiple connections are supported.
 
 ## Connect a space
@@ -15,7 +15,7 @@ targets one Google Chat space; multiple connections are supported.
 
 A Business or Enterprise Google Workspace account and an administrator policy
 allowing incoming webhooks are required. The URL contains credentials: enter it
-in UpStep's owner-only settings, rather than sharing it in issues or chat.
+in UpStep's owner/admin settings, rather than sharing it in issues or chat.
 See [Google's webhook setup guide](https://developers.google.com/workspace/chat/quickstart/webhooks).
 
 ## Team workflow
@@ -26,8 +26,14 @@ votes join the same thread rather than starting unrelated conversations.
 Custom board column names appear in status updates, including moves between two
 unfinished columns. Both dashboard and MCP updates are supported.
 
-Connecting a space does not post or backfill existing issues. An existing issue
-starts a thread on its next selected event. Disabling a connection stops future
+Connecting a space does not automatically post or backfill existing issues. Open
+an existing task and choose **Start Google Chat discussion** to share its context
+and start or continue its thread immediately. Any project teammate can do this;
+only the owner and admins can configure webhook credentials. With multiple
+connections, choose the space first. Repeated clicks reuse one durable delivery
+job, and failed manual deliveries can be retried in the task drawer. This action
+works even when the connection isn't subscribed to new-feedback notifications.
+An existing issue also starts a thread on its next selected event. Disabling a connection stops future
 posts. Replacing its webhook can start a fresh thread because Google scopes
 thread keys to the sending webhook. Google Chat space membership controls who can
 read the posted issue content; UpStep project membership is still required to
@@ -49,7 +55,7 @@ Webhook URLs are validated against the Google Chat HTTPS endpoint on creation,
 editing and sending. Requests cannot follow redirects. User content is escaped
 and bounded for Chat cards; transport errors do not log the credential-bearing
 URL. Webhook credentials follow the existing server-side integration storage
-model and are accessible only through owner-authorized settings.
+model and are accessible only through owner/admin-authorized settings.
 
 Run `pnpm --filter @upstep/web test` for mocked transport and integration dispatch
 tests. They cover event threading, direct issue links, custom status names,

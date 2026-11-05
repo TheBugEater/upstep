@@ -227,7 +227,7 @@ export function IntegrationsTab({ projectId, isOwner, isPro, onOpenMcpTab }: Pro
       <div className="max-w-xl space-y-5">
         <McpPointer onOpenMcpTab={onOpenMcpTab} />
         <div className="rounded-2xl border border-dashed border-line bg-surface/50 p-5 text-center">
-          <p className="text-sm text-muted">Integrations are managed by the project owner.</p>
+          <p className="text-sm text-muted">Integrations are managed by the project owner and admins.</p>
         </div>
       </div>
     );

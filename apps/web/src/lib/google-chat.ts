@@ -1,7 +1,17 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { IntegrationPayload } from "./integrations";
 
 const INVALID_WEBHOOK = "Use a Google Chat webhook URL from https://chat.googleapis.com/v1/spaces/…/messages with its key and token.";
+
+export function googleChatRequestId(deliveryId: string, integrationId: string): string {
+  // Derive a UUID from the persisted event identity, keeping request IDs bounded
+  // and identical across retries at the same destination.
+  const bytes = createHash("sha256").update(JSON.stringify([deliveryId, integrationId])).digest().subarray(0, 16);
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 export function googleChatWebhookUrl(value: string): URL {
   let url: URL;
@@ -36,6 +46,10 @@ export function googleChatMessage(payload: IntegrationPayload, issueUrl: string)
   let headline: string;
   let update: string;
   switch (payload.event) {
+    case "ISSUE_SHARED":
+      headline = "Issue discussion";
+      update = "Reply in this thread to discuss this issue with your team.";
+      break;
     case "NEW_FEEDBACK":
       headline = "New issue";
       update = "Reply in this thread to discuss this issue with your team.";

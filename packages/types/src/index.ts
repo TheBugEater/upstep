@@ -53,13 +53,16 @@ export interface Feedback {
   userVote?: VoteValue | null;
 }
 
-/** A developer comment left on a feedback item. */
+/** A team comment left on a feedback item. */
 export interface Comment {
   id: string;
   feedbackId: string;
   content: string;
-  /** Display name of the commenter (project owner). */
+  /** Display name of the commenter. */
   authorName: string | null;
+  authorId?: string | null;
+  parentId?: string | null;
+  author?: { id: string; name: string | null; image: string | null } | null;
   isOwner: boolean;
   createdAt: string;
 }

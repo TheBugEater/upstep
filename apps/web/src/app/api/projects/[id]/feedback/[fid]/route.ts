@@ -4,12 +4,15 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
 import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
+import { assertProjectAssignee } from "@/lib/task-assignment";
+import { CollaborationError, collaborationTransaction } from "@/lib/project-collaboration";
 
 const updateSchema = z.object({
   status: z.enum(["PENDING", "OPEN", "IN_PROGRESS", "DONE", "CLOSED"]).optional(),
   statusId: z.string().optional(),
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
   internal: z.boolean().optional(),
+  assigneeId: z.string().min(1).nullable().optional(),
   addLabelId: z.string().optional(),
   removeLabelId: z.string().optional(),
 });
@@ -36,6 +39,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
+
 
   // When moving via statusId, resolve the Status record to sync the enum field
   let resolvedStatusEnum = parsed.data.status;
@@ -65,22 +69,31 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     if (firstStatus) resolvedStatusId = firstStatus.id;
   }
 
-  const updated = await db.feedback.update({
-    where: { id: fid },
-    data: {
-      ...(parsed.data.type ? { type: parsed.data.type } : {}),
-      ...(resolvedStatusEnum ? { status: resolvedStatusEnum } : {}),
-      ...(resolvedStatusId !== undefined ? { statusId: resolvedStatusId } : {}),
-      ...(parsed.data.internal !== undefined ? { internal: parsed.data.internal } : {}),
-      ...(parsed.data.addLabelId ? { labels: { connect: { id: parsed.data.addLabelId } } } : {}),
-      ...(parsed.data.removeLabelId ? { labels: { disconnect: { id: parsed.data.removeLabelId } } } : {}),
-    },
-    include: {
-      project: { select: { name: true } },
-      labels: { select: { id: true, name: true, color: true } },
-      boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } },
-    },
+  const result = await collaborationTransaction(async (tx) => {
+    await assertProjectAssignee(id, parsed.data.assigneeId, tx);
+    return tx.feedback.update({
+      where: { id: fid },
+      data: {
+        ...(parsed.data.type ? { type: parsed.data.type } : {}),
+        ...(resolvedStatusEnum ? { status: resolvedStatusEnum } : {}),
+        ...(resolvedStatusId !== undefined ? { statusId: resolvedStatusId } : {}),
+        ...(parsed.data.internal !== undefined ? { internal: parsed.data.internal } : {}),
+        ...(parsed.data.assigneeId !== undefined ? { assigneeId: parsed.data.assigneeId } : {}),
+        ...(parsed.data.addLabelId ? { labels: { connect: { id: parsed.data.addLabelId } } } : {}),
+        ...(parsed.data.removeLabelId ? { labels: { disconnect: { id: parsed.data.removeLabelId } } } : {}),
+      },
+      include: {
+        project: { select: { name: true } },
+        labels: { select: { id: true, name: true, color: true } },
+        boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } },
+      },
+    });
+  }).then((value) => ({ value, error: null })).catch((error: unknown) => {
+    if (error instanceof CollaborationError) return { value: null, error };
+    throw error;
   });
+  if (result.error) return NextResponse.json({ error: result.error.message }, { status: result.error.status });
+  const updated = result.value!;
 
   const effectiveNewStatus = resolvedStatusEnum ?? parsed.data.status;
   if (effectiveNewStatus && (effectiveNewStatus !== feedback.status || updated.statusId !== feedback.statusId)) {

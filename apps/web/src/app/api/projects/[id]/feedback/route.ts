@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
 import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
+import { assertProjectAssignee } from "@/lib/task-assignment";
+import { CollaborationError, collaborationTransaction } from "@/lib/project-collaboration";
 
 export async function GET(
   req: NextRequest,
@@ -42,6 +44,15 @@ export async function GET(
     },
   });
 
+  if (searchParams.get("includeMine") === "1") {
+    const mine = await db.feedback.findMany({
+      where: { projectId: id, assigneeId: session.user.id, ...(type ? { type: type as never } : {}), ...(status ? { status: { in: status.split(",") as never } } : {}) },
+      orderBy: { [sort]: "desc" }, take,
+      include: { labels: { select: { id: true, name: true, color: true } }, boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } } },
+    });
+    const loaded = new Set(feedback.map((f) => f.id));
+    feedback.push(...mine.filter((f) => !loaded.has(f.id)));
+  }
   return NextResponse.json(feedback);
 }
 
@@ -56,6 +67,7 @@ const createSchema = z.object({
   internal: z.boolean().default(false),
   statusId: z.string().optional(),
   labelIds: z.array(z.string()).optional(),
+  assigneeId: z.string().min(1).nullable().optional(),
 });
 
 export async function POST(
@@ -113,26 +125,35 @@ export async function POST(
     }
   }
 
-  const feedback = await db.feedback.create({
-    data: {
-      projectId: id,
-      ...(parsed.data.title ? { title: parsed.data.title } : {}),
-      content: parsed.data.content,
-      type: parsed.data.type,
-      status: boardStatus?.isDone ? "DONE" : parsed.data.status,
-      ...(boardStatus ? { statusId: boardStatus.id } : {}),
-      internal: parsed.data.internal,
-      flagged: false,
-      upvotes: 0,
-      ...(parsed.data.labelIds?.length
-        ? { labels: { connect: parsed.data.labelIds.map((lid) => ({ id: lid })) } }
-        : {}),
-    },
-    include: {
-      labels: { select: { id: true, name: true, color: true } },
-      boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } },
-    },
+  const result = await collaborationTransaction(async (tx) => {
+    await assertProjectAssignee(id, parsed.data.assigneeId, tx);
+    return tx.feedback.create({
+      data: {
+        projectId: id,
+        ...(parsed.data.title ? { title: parsed.data.title } : {}),
+        content: parsed.data.content,
+        type: parsed.data.type,
+        status: boardStatus?.isDone ? "DONE" : parsed.data.status,
+        ...(boardStatus ? { statusId: boardStatus.id } : {}),
+        internal: parsed.data.internal,
+        assigneeId: parsed.data.assigneeId ?? null,
+        flagged: false,
+        upvotes: 0,
+        ...(parsed.data.labelIds?.length
+          ? { labels: { connect: parsed.data.labelIds.map((lid) => ({ id: lid })) } }
+          : {}),
+      },
+      include: {
+        labels: { select: { id: true, name: true, color: true } },
+        boardStatus: { select: { id: true, name: true, color: true, order: true, isDone: true } },
+      },
+    });
+  }).then((value) => ({ value, error: null })).catch((error: unknown) => {
+    if (error instanceof CollaborationError) return { value: null, error };
+    throw error;
   });
+  if (result.error) return NextResponse.json({ error: result.error.message }, { status: result.error.status });
+  const feedback = result.value!;
 
   await queueIntegration({
     event: "NEW_FEEDBACK",
