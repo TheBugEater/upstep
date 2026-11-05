@@ -139,10 +139,6 @@ codex mcp add ${serverName} --url ${mcpUrl} --bearer-token-env-var ${envName}`,
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-clay/10 text-base text-clay">✦</span>
         </div>
 
-        <p className="mt-3 text-xs leading-relaxed text-muted">
-          Agents are instructed to mark tasks In Progress before working, then Done after completing and validating them, and leave a completion comment with validation results and a commit ID or links when available. Blocked work stays open. Reconnect an existing MCP session to refresh these instructions.
-        </p>
-
         {legacyConfigured && <div className="mt-4 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs leading-relaxed text-ink">
           A legacy shared key is still active. It cannot identify individual teammates. Generate personal keys and reconnect your clients; remove the old shared connection from each client.
           {isOwner && <button onClick={() => void revoke("legacy")} disabled={working || loading} className="mt-2 block font-semibold underline disabled:opacity-50">Revoke legacy shared key</button>}
