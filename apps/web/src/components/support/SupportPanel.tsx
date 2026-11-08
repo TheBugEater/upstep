@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { SupportSetup, type SupportSetupConfig } from "./SupportSetup";
+import { SupportIcon } from "./SupportIcons";
 import { useSearchParams } from "next/navigation";
 import type { TeamMember } from "../workspace/ProjectWorkspace";
 
@@ -12,21 +14,15 @@ type Message = {
   createdAt: string;
   metadata?: { citations?: { url: string; title: string }[] };
 };
-type Config = {
-  enabled: boolean;
-  domain: string;
-  businessName: string;
-  mode: string;
-  welcomeMessage: string;
-  crawlState?: string;
-  crawlError?: string;
-  crawledAt?: string;
-};
+type Config = SupportSetupConfig;
+
 type Conversation = {
   id: string;
   state: string;
   assignedToId: string | null;
   ticketId: string | null;
+  ticketReference?: string | null;
+  ticketError?: string | null;
   aiPending: boolean;
   customer: { name: string | null; email: string | null; verified: boolean };
   messages: Message[];
@@ -77,14 +73,9 @@ export function SupportPanel({
 }) {
   const params = useSearchParams();
   const [data, setData] = useState<Summary | null>(null);
-  const [view, setView] = useState("inbox");
-  const [draft, setDraft] = useState<Config>({
-    enabled: true,
-    domain: "",
-    businessName: "",
-    mode: "AI_FIRST",
-    welcomeMessage: "Hi! How can we help you today?",
-  });
+  const [view, setView] = useState(
+    params.get("setup") === "1" ? "settings" : "inbox",
+  );
   const initialized = useRef(false);
   const pendingReply = useRef<{
     id: string;
@@ -127,8 +118,11 @@ export function SupportPanel({
       if (!initialized.current) {
         initialized.current = true;
         setAvailable(result.available || false);
-        if (result.config) setDraft(result.config);
-        else if (result.paid) setView("settings");
+        if (
+          result.paid &&
+          (!result.config || result.config.learningState !== "READY")
+        )
+          setView("settings");
       }
     } catch (e) {
       setError((e as Error).message);
@@ -292,7 +286,7 @@ export function SupportPanel({
         </p>
       )}
       {view === "inbox" && (
-        <div className="grid min-h-[580px] overflow-hidden rounded-2xl border border-line bg-card md:grid-cols-[290px_1fr]">
+        <div className="grid min-h-[580px] overflow-hidden rounded-2xl border border-line bg-card md:grid-cols-[310px_1fr]">
           <aside className="border-b border-line md:border-b-0 md:border-r">
             <div className="p-3">
               <select
@@ -319,7 +313,7 @@ export function SupportPanel({
                 <button
                   key={c.id}
                   onClick={() => setSelected(c.id)}
-                  className={`w-full border-t border-line p-4 text-left transition hover:bg-surface ${selected === c.id ? "bg-surface" : ""}`}
+                  className={`w-full border-l-2 border-t border-t-line px-4 py-4 text-left transition hover:bg-surface/60 ${selected === c.id ? "border-l-clay bg-clay/5" : "border-l-transparent"}`}
                 >
                   <div className="flex items-center gap-2">
                     <span
@@ -411,7 +405,7 @@ export function SupportPanel({
                       className="ml-auto text-xs font-semibold text-clay"
                       href={`/dashboard/projects/${projectId}?issue=${conversation.ticketId}`}
                     >
-                      Open ticket ↗
+                      {conversation.ticketReference || "Open ticket"} ↗
                     </Link>
                   ) : (
                     <button
@@ -522,9 +516,11 @@ export function SupportPanel({
           ) : (
             <div className="grid min-h-[380px] place-items-center p-8 text-center">
               <div>
-                <span className="text-3xl text-faint">◌</span>
+                <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-line bg-card text-faint shadow-soft">
+                  <SupportIcon name="message" className="h-5 w-5" />
+                </span>
                 <h2 className="mt-3 text-sm font-semibold text-ink">
-                  A little help goes a long way.
+                  Every conversation starts here.
                 </h2>
                 <p className="mt-2 text-xs text-muted">
                   Select a conversation to reply or let AI handle the first
@@ -597,149 +593,15 @@ export function SupportPanel({
         </div>
       )}
       {view === "settings" && data.canManage && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <form
-            className="rounded-2xl border border-line bg-card p-6"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void mutate(() => request(endpoint, "PUT", draft)).then((ok) => {
-                if (ok)
-                  setNotice(
-                    "Support saved. Your public website will be indexed automatically.",
-                  );
-              });
-            }}
-          >
-            <h2 className="text-base font-semibold text-ink">
-              Start with your website.
-            </h2>
-            <p className="mt-2 text-xs leading-6 text-muted">
-              We'll find your public pages and use them to answer customer
-              questions.
-            </p>
-            <div className="mt-5 space-y-4">
-              <label className="block text-xs text-muted">
-                Business domain
-                <input
-                  required
-                  placeholder="yourbusiness.com"
-                  value={draft.domain}
-                  onChange={(e) =>
-                    setDraft({ ...draft, domain: e.target.value })
-                  }
-                  className={`${field} mt-2`}
-                />
-              </label>
-              <label className="block text-xs text-muted">
-                Business name (optional)
-                <input
-                  maxLength={80}
-                  placeholder="Detected from your website"
-                  value={draft.businessName}
-                  onChange={(e) =>
-                    setDraft({ ...draft, businessName: e.target.value })
-                  }
-                  className={`${field} mt-2`}
-                />
-              </label>
-              <label className="block text-xs text-muted">
-                Who replies first?
-                <select
-                  className={`${field} mt-2`}
-                  value={draft.mode}
-                  onChange={(e) => setDraft({ ...draft, mode: e.target.value })}
-                >
-                  <option value="AI_FIRST">AI first, with human handoff</option>
-                  <option value="HUMAN_FIRST">
-                    Team when available, otherwise AI
-                  </option>
-                  <option value="HUMAN_ONLY">Team only</option>
-                </select>
-              </label>
-              <label className="block text-xs text-muted">
-                Welcome message
-                <textarea
-                  required
-                  maxLength={500}
-                  value={draft.welcomeMessage}
-                  onChange={(e) =>
-                    setDraft({ ...draft, welcomeMessage: e.target.value })
-                  }
-                  className={`${field} mt-2`}
-                  rows={3}
-                />
-              </label>
-              <label className="flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={draft.enabled}
-                  onChange={(e) =>
-                    setDraft({ ...draft, enabled: e.target.checked })
-                  }
-                />
-                Enable customer support
-              </label>
-            </div>
-            <button
-              disabled={busy}
-              className={`${button} mt-6 bg-primary text-primary-fg`}
-            >
-              {busy ? "Saving…" : "Save and learn my website"}
-            </button>
-          </form>
-          <div className="rounded-2xl border border-line bg-card p-6">
-            <h2 className="text-base font-semibold text-ink">
-              One embed. Ready to help.
-            </h2>
-            <p className="mt-2 text-xs leading-6 text-muted">
-              Already using the latest UpStep widget? Support appears
-              automatically after you enable it. For a new website, paste this
-              before the closing body tag.
-            </p>
-            <pre className="mt-4 overflow-auto rounded-xl bg-surface p-4 text-xs leading-6 text-ink">{`<script defer\n  src="${baseUrl}/sdk/upstep.js"\n  data-api-key="${apiKey}">\n</script>`}</pre>
-            <button
-              className={`${button} mt-3`}
-              onClick={() =>
-                void navigator.clipboard
-                  .writeText(
-                    `<script defer src="${baseUrl}/sdk/upstep.js" data-api-key="${apiKey}"></script>`,
-                  )
-                  .then(() => setNotice("Embed copied."))
-              }
-            >
-              Copy embed
-            </button>
-            <p className="mt-6 text-xs leading-6 text-muted">
-              Customer email is optional. Signed-in apps can pass a verified
-              identity token to securely restore the customer's conversations
-              across devices.
-            </p>
-            <Link
-              className="mt-3 block text-xs font-semibold text-clay"
-              href="/guides/customer-support"
-            >
-              Read integration guide →
-            </Link>
-            {isOwner && (
-              <button
-                className={`${button} mt-4`}
-                onClick={() =>
-                  void mutate(async () => {
-                    const value = await request(endpoint, "POST", {
-                      action: "identity",
-                    });
-                    await navigator.clipboard.writeText(value.secret);
-                    setNotice(
-                      "Identity signing secret copied. Store it only on your backend.",
-                    );
-                  })
-                }
-              >
-                Copy identity signing secret
-              </button>
-            )}
-          </div>
-        </div>
+        <SupportSetup
+          projectId={projectId}
+          apiKey={apiKey}
+          baseUrl={baseUrl}
+          config={data.config}
+          pageCount={data.pages.length}
+          isOwner={isOwner}
+          onSaved={refresh}
+        />
       )}
     </div>
   );

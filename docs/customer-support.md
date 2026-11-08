@@ -1,7 +1,7 @@
 # AI and live customer support
 
 Pro and Business projects have a **Customer support** section. Enter a public
-HTTPS domain (the business name is detected when available), choose routing, and enable support. Add the embed
+HTTPS domain (the business name is detected when available), choose routing, and review the learned business details before enabling support. Add the embed
 from its Settings tab (`https://upstep.dev/sdk/upstep.js`). The hosted script is
 built from the repository SDK during deployment; no npm publish is required.
 Existing installed npm SDK versions must be updated separately. The business
@@ -13,8 +13,10 @@ business domain or its www alias.
 - Anonymous browser chat; optional contact name/email; signed-in customer sessions.
 - AI-first, human-first (60-second fallback), or human-only routing.
 - Shared inbox, assignment, availability heartbeats, private notes, resolve/reopen.
-- Customer-confirmed private tickets linked to the existing task board. Creation
-  is idempotent; transcripts are not exposed by the public feedback/roadmap APIs.
+- AI creates private tickets for unresolved issues when the team is offline and
+  continues helping. Tickets have stable UP- references and show the confirmed
+  business support email. Repeated requests reuse the same ticket. Transcripts
+  are not exposed by public feedback/roadmap APIs.
 - Read-only website knowledge with source links, sitemap/link discovery,
   robots.txt, weekly indexing, manual refresh (five-minute cooldown).
 - No automatic customer email delivery, inbound email, uploads, account actions,
@@ -64,8 +66,43 @@ Full-text retrieval uses PostgreSQL and relevant passages; changing AI provider
 never requires re-embedding content. Old generations are retained, not searched.
 Conversation and knowledge retention/deletion controls are future work.
 
-AI can propose a ticket, but only a customer confirmation or authenticated teammate
-creates it. Private notes stay out of customer responses and model context. Human
+AI can queue a ticket automatically when an unresolved issue requires follow-up
+and no teammate is available. Customers and teammates can also create one directly. Private notes stay out of customer responses and model context. Human
 replies/takeover increment a revision so in-flight AI replies cannot land afterward.
 
 The public integration guide lives at `/guides/customer-support`.
+
+## Guided business setup
+
+New projects can start with a website instead of a project name. Paid accounts
+begin crawling immediately in draft: support stays disabled until an admin reviews
+and confirms the information. The AI analysis suggests a summary, up to six facts
+with sources, and at most three questions about business-specific gaps. The form
+confirms the support email and assistant scope separately. Unsupported source URLs
+and invented contact emails are removed from the draft analysis. Confirmed summaries,
+facts and answers are separate from automatically crawled pages and are included in
+support responses. Domain changes invalidate the old profile and disable support
+until the new business is reviewed. Failed analysis can be retried using existing
+pages; manual review remains available. Account-level website-learning allowances
+are 20 runs/month on Pro and 100 on Business, separate from customer AI replies.
+
+`@upstep/js@0.6.0` and `@upstep/types@0.6.0` ship chat in the existing JavaScript and
+React widget. `chat` defaults to true; `chat:false` hides it without a discovery
+request. React FeedbackWidget also accepts `chat={false}`. Script embeds accept
+`data-chat="false"`. Every case still requires paid, enabled project access on the
+server. The npm CDN bundle is `dist/upstep.global.js`; the hosted equivalent is
+`https://upstep.dev/sdk/upstep.js`.
+
+## Scope controls
+
+Before generating a customer answer, the default provider checks the latest request
+against the confirmed business description and support responsibilities. Unrelated
+requests and role/prompt extraction attempts get a brief business-support redirect.
+The structured answer also requires `inScope`; the server replaces off-topic output
+and discards its ticket, handoff and citation flags. If the scope check fails, the
+system does not create a ticket as an error fallback. New providers should implement
+`checkScope` and the required `inScope` answer field. Private notes remain excluded.
+
+The polished existing widget frame is published in `@upstep/js@0.6.1`; shared types
+remain `@upstep/types@0.6.0`. Both vanilla and React widgets use one compact navigation
+bar and the same hosted support experience, including the white/black themes.

@@ -35,12 +35,14 @@ export class UpstepApiClient {
   readonly apiKey: string;
   userId: string | undefined;
   supportIdentityToken: string | undefined;
+  chat: boolean;
   readonly anonymousId: string | undefined;
 
   constructor(config: UpstepConfig) {
     this.baseUrl = (config.baseUrl ?? "https://upstep.dev").replace(/\/$/, "");
     this.apiKey = config.apiKey;
     this.supportIdentityToken = config.supportIdentityToken;
+    this.chat = config.chat !== false;
     if (config.userId !== undefined) this.userId = config.userId;
     this.anonymousId = getOrCreateAnonymousId();
   }
@@ -58,6 +60,7 @@ export class UpstepApiClient {
   }
 
   async supportEnabled(): Promise<boolean> {
+    if (!this.chat) return false;
     try { const response = await fetch(`${this.baseUrl}/api/sdk/support`, {headers: this.headers()}); return response.ok && (await response.json()).enabled === true; } catch { return false; }
   }
 

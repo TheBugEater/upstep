@@ -47,6 +47,7 @@ test(
             enabled: true,
             domain: "example.com",
             businessName: "Acme",
+            supportEmail: "support@example.com",
             crawlState: "READY",
           },
         },
@@ -67,6 +68,7 @@ test(
           handoff: false,
           ticketTitle: "Return request",
           ticketType: "GENERAL",
+          inScope: true,
         };
       },
     };
@@ -145,7 +147,7 @@ test(
               db,
             ),
           );
-          await processAIConversation(db, provider);
+          await processAIConversation(db, provider, project.id);
           const reply = await db.supportMessage.findFirstOrThrow({
             where: { conversationId: c.id, role: "ASSISTANT" },
           });
@@ -154,7 +156,7 @@ test(
         },
       );
       await t.test(
-        "ticket confirmation creates one private assigned board issue",
+        "automatic escalation reuses one private ticket and follows the support assignee",
         async () => {
           await teamConversationAction(
             {
@@ -204,7 +206,7 @@ test(
               return provider.reply(input);
             },
           };
-          await processAIConversation(db, delayed);
+          await processAIConversation(db, delayed, project.id);
           assert.equal(
             await db.supportMessage.count({
               where: { conversationId: otherC.id, role: "ASSISTANT" },
@@ -314,11 +316,15 @@ test(
             },
             db,
           );
-          await processAIConversation(db, {
-            async reply() {
-              throw new Error("Must never call provider over allowance");
+          await processAIConversation(
+            db,
+            {
+              async reply() {
+                throw new Error("Must never call provider over allowance");
+              },
             },
-          });
+            project.id,
+          );
           assert.match(
             (
               await db.supportConversation.findUniqueOrThrow({

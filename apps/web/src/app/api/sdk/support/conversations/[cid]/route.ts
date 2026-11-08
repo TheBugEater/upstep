@@ -34,6 +34,8 @@ export async function GET(req: NextRequest, { params }: Context) {
         id: c.id,
         state: c.state,
         ticketId: c.ticketId,
+        ticketReference: c.ticketReference,
+        supportEmail: project.supportConfig?.supportEmail || null,
         aiPending: c.aiPending,
         messages,
         customer: {

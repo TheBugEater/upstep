@@ -228,6 +228,12 @@ export async function customerMessage(
         content: input.content,
       },
     });
+    const email = extractCustomerEmail(input.content);
+    if (email && !c.customer.verified)
+      await tx.supportCustomer.update({
+        where: { id: c.customerId },
+        data: { email },
+      });
     await tx.supportConversation.update({
       where: { id: c.id },
       data: {
@@ -254,12 +260,29 @@ export async function createSupportTicket(
           orderBy: { createdAt: "desc" },
           take: 30,
         },
-        project: { include: { owner: { select: { plan: true } } } },
+        project: {
+          include: { owner: { select: { plan: true } }, supportConfig: true },
+        },
       },
     });
     if (!c) throw new SupportError("Conversation not found.", 404);
     requireSupportPlan(c.project.owner.plan);
-    if (c.ticketId) return { ticketId: c.ticketId };
+    if (c.ticketId) {
+      if (c.ticketPending)
+        await tx.supportConversation.update({
+          where: { id: c.id },
+          data: { ticketPending: false },
+        });
+      return {
+        ticketId: c.ticketId,
+        reference: c.ticketReference,
+        supportEmail: c.project.supportConfig?.supportEmail || null,
+      };
+    }
+    const reference =
+      c.ticketReference ||
+      `UP-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+    const contactEmail = c.project.supportConfig?.supportEmail || null;
     const customerMessages = c.messages.filter((m) => m.role === "CUSTOMER");
     if (!customerMessages.length)
       throw new SupportError("Describe the issue before creating a ticket.");
@@ -300,31 +323,46 @@ export async function createSupportTicket(
     const ticket = await tx.feedback.create({
       data: {
         projectId,
-        title,
-        content: `${transcript}\n\nSupport conversation: /dashboard/projects/${projectId}?tab=support&conversation=${c.id}`,
+        title: `[${reference}] ${title}`,
+        content: `Reference: ${reference}\n\n${transcript}\n\nSupport conversation: /dashboard/projects/${projectId}?tab=support&conversation=${c.id}`,
         type,
         status: "OPEN",
         statusId: status?.id ?? null,
         internal: true,
         assigneeId: c.assignedToId,
         labels: { connect: { id: label.id } },
-        metadata: { supportConversationId: c.id },
+        metadata: { supportConversationId: c.id, ticketReference: reference },
       },
     });
     await tx.supportConversation.update({
       where: { id: c.id },
-      data: { ticketId: ticket.id },
-    });
-    await tx.supportMessage.create({
       data: {
+        ticketId: ticket.id,
+        ticketReference: reference,
+        ticketPending: false,
+        ticketError: null,
+      },
+    });
+    await tx.supportMessage.upsert({
+      where: {
+        conversationId_clientMessageId: {
+          conversationId: c.id,
+          clientMessageId: "ticket-created",
+        },
+      },
+      create: {
         conversationId: c.id,
         clientMessageId: "ticket-created",
         role: "SYSTEM",
-        authorName: `${c.project.name} Team`,
-        content:
-          "Your support ticket has been created. The team can follow up here.",
-        metadata: { ticketId: ticket.id },
+        authorName: `${c.project.supportConfig?.businessName || c.project.name} Team`,
+        content: `Your ticket ${reference} has been created.${contactEmail ? ` You can email ${contactEmail} and quote this reference.` : ""} The team can follow up here. You can optionally add your email for the team; AI can keep helping in this chat.`,
+        metadata: {
+          ticketId: ticket.id,
+          ticketReference: reference,
+          supportEmail: contactEmail,
+        },
       },
+      update: {},
     });
     await queueIntegration(
       {
@@ -340,8 +378,20 @@ export async function createSupportTicket(
       },
       tx,
     );
-    return { ticketId: ticket.id };
+    return { ticketId: ticket.id, reference, supportEmail: contactEmail };
   }, client);
+}
+export function extractCustomerEmail(content: string): string | null {
+  const emails = content.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || [];
+  if (emails.length !== 1) return null;
+  const email = emails[0]!.toLowerCase();
+  const rest = content.replace(emails[0]!, "").trim();
+  return !rest ||
+    /(?:my (?:contact )?email|email me|reach me|contact me|you can (?:email|reach|contact) me)/i.test(
+      content,
+    )
+    ? email
+    : null;
 }
 export async function requestHuman(
   projectId: string,
@@ -352,30 +402,43 @@ export async function requestHuman(
   return collaborationTransaction(async (tx) => {
     const c = await tx.supportConversation.findFirst({
       where: { id: conversationId, projectId, customerId },
+      include: {
+        project: { include: { supportConfig: true } },
+        messages: {
+          where: { role: "CUSTOMER" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
     });
     if (!c) throw new SupportError("Conversation not found.", 404);
     if (c.state === "HUMAN" || c.humanRequested) return;
+    const online = await availableAgents(projectId, tx);
+    const useAI =
+      !online.length && c.project.supportConfig?.mode !== "HUMAN_ONLY";
     await tx.supportConversation.update({
       where: { id: c.id },
       data: {
-        state: "WAITING",
+        state: useAI ? "AI" : "WAITING",
         humanRequested: true,
         revision: { increment: 1 },
-        aiPending: false,
+        aiPending: useAI && c.messages.length > 0,
+        ticketPending: !online.length && c.messages.length > 0 && !c.ticketId,
         aiLock: null,
         aiLockedAt: null,
       },
     });
-    const online = await availableAgents(projectId, tx);
     await tx.supportMessage.create({
       data: {
         conversationId: c.id,
         clientMessageId: `handoff:${randomUUID()}`,
         role: "SYSTEM",
-        authorName: "Support",
+        authorName: `${c.project.supportConfig?.businessName || c.project.name} Team`,
         content: online.length
           ? "You've been added to the team's queue. A teammate will join when they can."
-          : "The team is away right now. Leave your message here, and optionally add an email for follow-up.",
+          : useAI
+            ? "The team is away right now. AI can keep helping, and we'll create a ticket for the team if you've described an issue. You can optionally share your email for follow-up."
+            : "The team is away. Leave your issue here and optionally add your email for follow-up.",
       },
     });
   }, client);
@@ -487,6 +550,14 @@ export async function teamConversationAction(
       data.aiPending = last?.role === "CUSTOMER";
     }
     await tx.supportConversation.update({ where: { id: c.id }, data });
+    if (c.ticketId && data.assignedToId !== undefined)
+      await tx.feedback.updateMany({
+        where: { id: c.ticketId, projectId: input.projectId },
+        data: {
+          assigneeId:
+            typeof data.assignedToId === "string" ? data.assignedToId : null,
+        },
+      });
     if (input.action !== "reply")
       await tx.supportMessage.create({
         data: {

@@ -498,7 +498,7 @@ Upstep.init({
 });`,
   script: (apiKey, baseUrl) => `<script
   type="module"
-  src="https://unpkg.com/@upstep/js/dist/index.js"
+  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"
   data-api-key="${apiKey}"
   data-base-url="${baseUrl}"
 ></script>`,

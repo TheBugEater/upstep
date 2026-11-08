@@ -408,6 +408,16 @@ model SupportConfig {
   businessName String
   mode String @default("AI_FIRST")
   welcomeMessage String @default("Hi! How can we help you today?")
+  supportEmail String?
+  businessSummary String? @db.Text
+  agentInstructions String? @db.Text
+  businessProfile Json?
+  learningState String @default("NEW")
+  learningAnalysis Json?
+  learningGeneration Int @default(0)
+  learningLock String?
+  learningLockedAt DateTime?
+  learningError String?
   crawlState String @default("QUEUED")
   crawlQueue Json @default("[]")
   crawlVisited Json @default("[]")
@@ -466,6 +476,9 @@ model SupportConversation {
   humanRequested Boolean @default(false)
   assignedToId String?
   ticketId String? @unique
+  ticketReference String? @unique
+  ticketPending Boolean @default(false)
+  ticketError String?
   revision Int @default(0)
   aiPending Boolean @default(false)
   aiLock String?
@@ -514,6 +527,7 @@ model SupportUsage {
   ownerId String
   month String
   aiReplies Int @default(0)
+  learningCalls Int @default(0)
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   @@unique([ownerId, month])
 }

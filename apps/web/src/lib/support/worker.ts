@@ -5,7 +5,12 @@ import {
   getSupportAIProvider,
   supportAIConfiguration,
   type SupportAIProvider,
+  type SupportAIInput,
+  type SupportReply,
 } from "./ai";
+import { processBusinessLearning } from "./learning";
+import { availableAgents, createSupportTicket } from "./service";
+import { SupportError } from "./policy";
 import { processCrawlPage } from "./crawler";
 import { supportLimits, usageMonth } from "./policy";
 
@@ -80,10 +85,12 @@ export async function knowledgeSources(
 export async function processAIConversation(
   client: PrismaClient = db,
   provider?: SupportAIProvider,
+  projectId?: string,
 ) {
   const stale = new Date(Date.now() - 2 * 60_000);
   const candidate = await client.supportConversation.findFirst({
     where: {
+      ...(projectId ? { projectId } : {}),
       aiPending: true,
       state: "AI",
       project: {
@@ -131,6 +138,7 @@ export async function processAIConversation(
   const config = c.project.supportConfig!;
   const month = usageMonth();
   const lastCustomer = c.messages.find((m) => m.role === "CUSTOMER");
+  let scopeApproved = false;
   try {
     if (!lastCustomer) {
       await client.supportConversation.updateMany({
@@ -165,14 +173,38 @@ export async function processAIConversation(
       lastCustomer.content,
       client,
     );
-    const result = await (provider || getSupportAIProvider()).reply({
+    const online = await availableAgents(c.projectId, client);
+    const aiInput: SupportAIInput = {
       businessName: config.businessName,
       welcomeMessage: config.welcomeMessage,
+      humanAvailable: online.length > 0,
+      humanRequested: c.humanRequested,
+      ticketReference: c.ticketReference,
+      supportEmail: config.supportEmail,
+      businessSummary: config.businessSummary,
+      agentInstructions: config.agentInstructions,
+      businessProfile: config.businessProfile,
       sources,
       messages: [...c.messages]
         .reverse()
         .map((m) => ({ role: m.role, content: m.content })),
-    });
+    };
+    const ai = provider || getSupportAIProvider();
+    const allowed = ai.checkScope ? await ai.checkScope(aiInput) : true;
+    scopeApproved = allowed;
+    const proposed = allowed ? await ai.reply(aiInput) : null;
+    const result: SupportReply =
+      proposed?.inScope === true
+        ? proposed
+        : {
+            inScope: false,
+            reply: `I'm here to help with ${config.businessName}'s products and services. Ask me about the business or a support issue, and I'll help you from there.`,
+            sources: [],
+            offerTicket: false,
+            handoff: false,
+            ticketTitle: "",
+            ticketType: "GENERAL",
+          };
     await client.$transaction(async (tx) => {
       // Fence against customer messages, human takeover, disable, and configuration changes during generation.
       const current = await tx.supportConversation.updateMany({
@@ -195,7 +227,14 @@ export async function processAIConversation(
           aiLock: null,
           aiLockedAt: null,
           aiError: null,
-          ...(result.handoff ? { state: "WAITING", humanRequested: true } : {}),
+          ...(result.handoff && online.length > 0
+            ? { state: "WAITING", humanRequested: true }
+            : {}),
+          ...(!online.length &&
+          (result.offerTicket || result.handoff) &&
+          !c.ticketId
+            ? { ticketPending: true }
+            : {}),
         },
       });
       if (!current.count) return;
@@ -217,6 +256,7 @@ export async function processAIConversation(
           content: result.reply,
           metadata: {
             citations,
+            inScope: result.inScope,
             offerTicket: result.offerTicket,
             ticketTitle: result.ticketTitle,
             ticketType: result.ticketType,
@@ -243,6 +283,7 @@ export async function processAIConversation(
         data: {
           aiPending: false,
           state: "WAITING",
+          ticketPending: scopeApproved && !c.ticketId && !!lastCustomer,
           aiError: message,
           aiLock: null,
           aiLockedAt: null,
@@ -273,6 +314,7 @@ export async function processAIConversation(
       data: { aiLock: null, aiLockedAt: null },
     });
   }
+  await processPendingSupportTicket(client, c.id);
   return true;
 }
 let running = false;
@@ -283,20 +325,7 @@ export async function processSupportJobs(budgetMs = 25_000) {
     pages = 0;
   const deadline = Date.now() + budgetMs;
   try {
-    await db.supportConversation.updateMany({
-      where: {
-        state: "WAITING",
-        humanRequested: false,
-        assignedToId: null,
-        updatedAt: { lt: new Date(Date.now() - 60_000) },
-        messages: { some: { role: "CUSTOMER" } },
-        project: {
-          supportConfig: { enabled: true, mode: "HUMAN_FIRST" },
-          owner: { plan: { in: ["PRO", "BUSINESS"] } },
-        },
-      },
-      data: { state: "AI", aiPending: true, revision: { increment: 1 } },
-    });
+    await resumeOfflineConversations();
     const refresh = await db.supportConfig.findFirst({
       where: {
         enabled: true,
@@ -321,15 +350,116 @@ export async function processSupportJobs(budgetMs = 25_000) {
         },
       });
     while (Date.now() < deadline) {
+      if (await processPendingSupportTicket()) continue;
       if (await processAIConversation()) {
         ai++;
         continue;
       }
+      if (await processBusinessLearning()) continue;
       if (Date.now() + 8000 > deadline || !(await processCrawlPage())) break;
       pages++;
     }
     return { ai, pages };
   } finally {
     running = false;
+  }
+}
+
+export async function processPendingSupportTicket(
+  client: PrismaClient = db,
+  conversationId?: string,
+) {
+  const c = await client.supportConversation.findFirst({
+    where: {
+      ticketPending: true,
+      ...(conversationId ? { id: conversationId } : {}),
+      project: {
+        supportConfig: { enabled: true },
+        owner: { plan: { in: ["PRO", "BUSINESS"] } },
+      },
+    },
+    include: {
+      project: {
+        select: {
+          supportConfig: { select: { supportEmail: true, businessName: true } },
+        },
+      },
+    },
+  });
+  if (!c) return false;
+  try {
+    await createSupportTicket(c.projectId, c.id, client);
+  } catch (error) {
+    if (!(error instanceof SupportError)) throw error;
+    await client.$transaction(async (tx) => {
+      if (
+        !(
+          await tx.supportConversation.updateMany({
+            where: { id: c.id, ticketPending: true, ticketId: null },
+            data: { ticketPending: false, ticketError: error.message },
+          })
+        ).count
+      )
+        return;
+      const email = c.project.supportConfig?.supportEmail;
+      await tx.supportMessage.upsert({
+        where: {
+          conversationId_clientMessageId: {
+            conversationId: c.id,
+            clientMessageId: "ticket-error",
+          },
+        },
+        create: {
+          conversationId: c.id,
+          clientMessageId: "ticket-error",
+          role: "SYSTEM",
+          authorName: `${c.project.supportConfig?.businessName || "Support"} Team`,
+          content: `Your messages are saved, but we couldn't create a ticket yet.${email ? ` Please email ${email} for help.` : " The team can follow up in this chat."}`,
+        },
+        update: {},
+      });
+    });
+  }
+  return true;
+}
+export async function resumeOfflineConversations(client: PrismaClient = db) {
+  const waiting = await client.supportConversation.findMany({
+    where: {
+      state: "WAITING",
+      assignedToId: null,
+      aiError: null,
+      updatedAt: { lt: new Date(Date.now() - 60_000) },
+      messages: { some: { role: "CUSTOMER" } },
+      project: {
+        supportConfig: { enabled: true, mode: { not: "HUMAN_ONLY" } },
+        owner: { plan: { in: ["PRO", "BUSINESS"] } },
+      },
+    },
+    take: 30,
+  });
+  const availability = new Map<string, boolean>();
+  for (const c of waiting) {
+    if (!availability.has(c.projectId))
+      availability.set(
+        c.projectId,
+        (await availableAgents(c.projectId, client)).length > 0,
+      );
+    if (availability.get(c.projectId) && c.humanRequested) continue;
+    await client.supportConversation.updateMany({
+      where: {
+        id: c.id,
+        revision: c.revision,
+        state: "WAITING",
+        assignedToId: null,
+      },
+      data: {
+        state: "AI",
+        aiPending: true,
+        ...(!availability.get(c.projectId) && c.humanRequested && !c.ticketId
+          ? { ticketPending: true }
+          : {}),
+        revision: { increment: 1 },
+      },
+    });
   }
 }

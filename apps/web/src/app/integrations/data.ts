@@ -215,7 +215,7 @@ export default defineNuxtPlugin(() => {
     codeLang: "astro",
     code: `<script
   type="module"
-  src="https://unpkg.com/@upstep/js/dist/index.js"
+  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"
   data-api-key="upstep_xxx"
 ></script>`,
   },
@@ -258,7 +258,7 @@ export class AppComponent implements OnInit {
     codeLang: "html",
     code: `<script
   type="module"
-  src="https://unpkg.com/@upstep/js/dist/index.js"
+  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"
   data-api-key="upstep_xxx"
 ></script>`,
   },
@@ -278,7 +278,7 @@ export class AppComponent implements OnInit {
     codeLang: "html",
     code: `<script
   type="module"
-  src="https://unpkg.com/@upstep/js/dist/index.js"
+  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"
   data-api-key="upstep_xxx"
 ></script>`,
   },
@@ -298,7 +298,7 @@ export class AppComponent implements OnInit {
     codeLang: "liquid",
     code: `<script
   type="module"
-  src="https://unpkg.com/@upstep/js/dist/index.js"
+  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"
   data-api-key="upstep_xxx"
 ></script>`,
   },
@@ -317,7 +317,7 @@ export class AppComponent implements OnInit {
     codeLang: "html",
     code: `<script
   type="module"
-  src="https://unpkg.com/@upstep/js/dist/index.js"
+  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"
   data-api-key="upstep_xxx"
 ></script>`,
   },

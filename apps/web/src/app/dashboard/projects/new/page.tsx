@@ -3,16 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { SupportIcon } from "@/components/support/SupportIcons";
 import { useOnRamp } from "@onramp-sdk/react";
 
 export default function NewProjectPage() {
   const router = useRouter();
   const { step } = useOnRamp();
+  const [website, setWebsite] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [limitHit, setLimitHit] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [created, setCreated] = useState<{ id: string; apiKey: string } | null>(null);
+  const [created, setCreated] = useState<{ id: string; apiKey: string } | null>(
+    null,
+  );
   const [copied, setCopied] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -23,23 +27,39 @@ export default function NewProjectPage() {
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, website }),
     });
 
     if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+      };
       if (data.code === "PROJECT_LIMIT") {
         step("project_limit_hit");
         setLimitHit(true);
         setError(data.error ?? "You've reached your project limit.");
       } else {
-        setError(typeof data.error === "string" ? data.error : "Failed to create project.");
+        setError(
+          typeof data.error === "string"
+            ? data.error
+            : "Failed to create project.",
+        );
       }
       setLoading(false);
       return;
     }
 
-    const project = (await res.json()) as { id: string; apiKey: string };
+    const project = (await res.json()) as {
+      id: string;
+      apiKey: string;
+      supportSetupQueued?: boolean;
+    };
+    if (project.supportSetupQueued) {
+      router.push(`/dashboard/projects/${project.id}?tab=support&setup=1`);
+      router.refresh();
+      return;
+    }
     step("project_created");
     setCreated(project);
     setLoading(false);
@@ -60,28 +80,34 @@ export default function NewProjectPage() {
           <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-success/15 text-lg text-success">
             ✓
           </div>
-          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Project created</div>
-          <h1 className="font-serif text-3xl tracking-tight text-ink sm:text-4xl">Add your publishable key</h1>
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">
+            Project created
+          </div>
+          <h1 className="text-3xl font-semibold tracking-[-0.035em] text-ink sm:text-4xl">
+            Add your publishable key
+          </h1>
           <p className="text-sm text-muted mt-2">
-            Put this key in your browser or mobile SDK configuration. It identifies the project and is safe to ship in a client application; it does not grant dashboard or MCP access.
+            Put this key in your browser or mobile SDK configuration. It
+            identifies the project and is safe to ship in a client application;
+            it does not grant dashboard or MCP access.
           </p>
 
-          <div className="mt-8 rounded-2xl border border-warning/30 bg-warning/10 p-5 shadow-soft">
-            <p className="text-xs font-semibold text-warning uppercase tracking-wide mb-3">
+          <div className="mt-8 rounded-2xl border border-line bg-card p-5 shadow-soft">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">
               Publishable SDK key
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-sm font-mono bg-white border border-warning/30 rounded-xl px-4 py-3 text-ink break-all">
+              <code className="flex-1 text-sm font-mono bg-surface border border-line rounded-xl px-4 py-3 text-ink break-all">
                 {created.apiKey}
               </code>
               <button
                 onClick={copyKey}
-                className="text-sm px-4 py-3 rounded-xl bg-warning text-white font-medium hover:bg-warning/85 transition shrink-0"
+                className="text-sm px-4 py-3 rounded-xl bg-primary text-primary-fg font-medium hover:opacity-85 transition shrink-0"
               >
                 {copied ? "Copied ✓" : "Copy"}
               </button>
             </div>
-            <p className="text-xs text-warning mt-3">
+            <p className="text-xs text-muted mt-3">
               You can copy or rotate this key later from Project settings.
             </p>
           </div>
@@ -113,24 +139,54 @@ export default function NewProjectPage() {
         <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-clay/10 text-lg text-clay">
           ✦
         </div>
-        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Workspace setup</div>
-        <h1 className="font-serif text-3xl tracking-tight text-ink sm:text-4xl">Create a project</h1>
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">
+          Workspace setup
+        </div>
+        <h1 className="text-3xl font-semibold tracking-[-0.035em] text-ink sm:text-4xl">
+          Create a project
+        </h1>
         <p className="text-sm text-muted mt-2">
-          Name your app and you&apos;ll get a unique API key to drop into your SDK.
+          Start with your website. We’ll learn about the business and help you
+          set up your AI support team.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5 rounded-2xl border border-line bg-card p-5 shadow-soft sm:p-6">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-8 space-y-5 rounded-2xl border border-line bg-card p-5 shadow-soft sm:p-6"
+        >
+          <div>
+            <label
+              htmlFor="project-website"
+              className="block text-sm font-medium text-ink-soft mb-2"
+            >
+              Business website
+            </label>
+            <input
+              id="project-website"
+              type="text"
+              placeholder="yourbusiness.com"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              maxLength={253}
+              autoFocus
+              className="w-full px-4 py-3 bg-card border border-line rounded-xl text-sm text-ink placeholder-faint focus:outline-none focus:border-clay"
+            />
+            <p className="mt-2 text-xs leading-5 text-muted">
+              On paid plans, we’ll read the public website, show what we
+              learned, and ask a few useful questions before going live. You can
+              also create a feedback-only project below.
+            </p>
+          </div>
           <div>
             <label className="block text-sm font-medium text-ink-soft mb-2">
-              Project name
+              Project name (optional with a website)
             </label>
             <input
               type="text"
               placeholder="e.g. My iOS App"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              required
-              autoFocus
+              required={!website.trim()}
               maxLength={80}
               className="w-full px-4 py-3 bg-card border border-line rounded-xl text-sm text-ink placeholder-faint focus:outline-none focus:border-clay focus:ring-4 focus:ring-clay/10 transition"
             />
@@ -151,10 +207,14 @@ export default function NewProjectPage() {
           ) : (
             <button
               type="submit"
-              disabled={loading || !name.trim()}
+              disabled={loading || (!name.trim() && !website.trim())}
               className="w-full py-3 bg-clay text-white rounded-xl font-medium text-sm hover:bg-clay-hover transition disabled:opacity-40 disabled:cursor-not-allowed shadow-soft"
             >
-              {loading ? "Creating…" : "Create project"}
+              {loading
+                ? "Setting up…"
+                : website.trim()
+                  ? "Create and learn my website"
+                  : "Create project"}
             </button>
           )}
         </form>

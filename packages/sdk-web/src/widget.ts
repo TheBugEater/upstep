@@ -80,6 +80,7 @@ function buildStyles(accent: string, position: "left" | "right", p: Palette): st
 #upstep-close:hover{background:${p.bgHover};color:${p.text}}
 #upstep-tabs{display:flex;gap:4px;margin:16px 20px 0;padding:4px;background:${p.bgSoft};border-radius:11px}
 .upstep-tab{flex:1;padding:8px;background:none;border:none;border-radius:8px;font-size:13px;font-weight:600;color:${p.textSoft};cursor:pointer;transition:all .15s}
+.upstep-mode .upstep-tab.active{background:${p.bgSoft};box-shadow:none}
 .upstep-tab.active{background:${p.bg};color:${p.text};box-shadow:0 1px 3px rgba(0,0,0,.08)}
 #upstep-body{flex:1;overflow-y:auto;padding:18px 20px 22px}
 .upstep-form textarea{width:100%;min-height:104px;border:1px solid ${p.border};border-radius:12px;padding:12px;font-size:14px;line-height:1.5;resize:vertical;outline:none;background:${p.bgSoft};color:${p.text};transition:border-color .15s}
@@ -300,21 +301,10 @@ export class UpstepWidget {
     });
 
     backdrop.innerHTML = `
-      <div id="upstep-modal">
-        <div id="upstep-header">
-          <div>
-            <h2>${this.tab === "support" ? "Customer support" : "Share your feedback"}</h2>
-            <p>${this.tab === "support" ? "Ask AI, or talk with the team." : "Tell us what to build next, or vote on ideas."}</p>
-          </div>
-          <button id="upstep-close" aria-label="Close">✕</button>
-        </div>
-        <div id="upstep-tabs">
-          ${this.hasSupport ? `<button class="upstep-tab ${this.tab === "support" ? "active" : ""}" data-tab="support">Support</button>` : ""}
-          <button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Give feedback</button>
-          <button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Vote on ideas</button>
-        </div>
-        <div id="upstep-body">
-          ${this.tab === "support" ? `<iframe id="upstep-support-frame" title="Customer support" src="${this.client.supportFrameUrl(this.palette.bg === "#000000" ? "dark" : "light")}" style="width:100%;height:480px;border:0;display:block;border-radius:12px"></iframe>` : this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
+      <div id="upstep-modal" style="max-width:${this.hasSupport ? "460px" : "440px"}">
+        ${this.hasSupport ? `<div class="upstep-mode" style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid ${this.palette.border}"><div id="upstep-tabs" style="margin:0;padding:0;background:transparent;flex:1"><button class="upstep-tab ${this.tab === "support" ? "active" : ""}" data-tab="support">Support</button><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Ideas</button></div><button id="upstep-close" aria-label="Close" style="flex-shrink:0;background:transparent">✕</button></div>` : `<div id="upstep-header"><div><h2>Share your feedback</h2><p>Tell us what to build next, or vote on ideas.</p></div><button id="upstep-close" aria-label="Close">✕</button></div><div id="upstep-tabs"><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Give feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Vote on ideas</button></div>`}
+        <div id="upstep-body" style="${this.tab === "support" ? "padding:0;overflow:hidden" : ""}">
+          ${this.tab === "support" ? `<iframe id="upstep-support-frame" title="Customer support" src="${this.client.supportFrameUrl(this.palette.bg === "#000000" ? "dark" : "light")}" style="width:100%;height:min(560px,calc(88dvh - 56px));min-height:300px;border:0;display:block"></iframe>` : this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
         </div>
       </div>
     `;

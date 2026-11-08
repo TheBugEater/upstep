@@ -62,7 +62,7 @@ onMounted(() => {
     lang: "html",
     code: `<script
   type="module"
-  src="https://unpkg.com/@upstep/js/dist/index.js"
+  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"
   data-api-key="upstep_xxx"
 ></script>`,
   },

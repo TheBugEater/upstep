@@ -298,7 +298,7 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
       {
         type: "code",
         lang: "html",
-        code: `<script\n  type="module"\n  src="https://unpkg.com/@upstep/js/dist/index.js"\n  data-api-key="upstep_xxx"\n></script>`,
+        code: `<script\n  type="module"\n  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"\n  data-api-key="upstep_xxx"\n></script>`,
       },
       {
         type: "p",

@@ -79,6 +79,18 @@ export async function GET(req: NextRequest, { params }: Context) {
               crawlState: config.crawlState,
               crawlError: config.crawlError,
               crawledAt: config.crawledAt,
+              crawlGeneration: config.crawlGeneration,
+              crawlVisitedCount: Array.isArray(config.crawlVisited)
+                ? config.crawlVisited.length
+                : 0,
+              supportEmail: config.supportEmail,
+              businessSummary: config.businessSummary,
+              agentInstructions: config.agentInstructions,
+              businessProfile: config.businessProfile,
+              learningState: config.learningState,
+              learningAnalysis: config.learningAnalysis,
+              learningGeneration: config.learningGeneration,
+              learningError: config.learningError,
             }
           : null,
         limits,
@@ -113,6 +125,19 @@ export async function PUT(req: NextRequest, { params }: Context) {
         "Enter a domain, business name and welcome message.",
       );
     const domain = normalizeDomain(parsed.data.domain);
+    const existing = await db.supportConfig.findUnique({
+      where: { projectId: id },
+    });
+    if (
+      parsed.data.enabled &&
+      (!existing?.supportEmail ||
+        existing.domain !== domain ||
+        existing.learningState !== "READY")
+    )
+      throw new SupportError(
+        "Review the website findings and confirm your support contact before going live.",
+        409,
+      );
     const settings = {
       ...parsed.data,
       businessName: parsed.data.businessName || domain,

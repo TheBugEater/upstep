@@ -159,6 +159,14 @@ export function extractKnowledge(html: string, url: string, domain: string) {
     $('meta[property="og:site_name"]').attr("content")?.trim().slice(0, 80) ||
     null;
   const title = $("title").first().text().trim().slice(0, 200) || domain;
+  const emails = [
+    ...new Set(
+      $('a[href^="mailto:"]')
+        .map((_, e) => ($(e).attr("href") || "").slice(7).split("?")[0] || "")
+        .get()
+        .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)),
+    ),
+  ].slice(0, 5);
   const links = $("a[href]")
     .map((_, e) => crawlUrl($(e).attr("href") || "", domain, url))
     .get()
@@ -174,7 +182,12 @@ export function extractKnowledge(html: string, url: string, domain: string) {
     .replace(/\n\s*\n+/g, "\n\n")
     .trim()
     .slice(0, 40_000);
-  return { title, siteName, content, links: [...new Set(links)] };
+  return {
+    title,
+    siteName,
+    content: `${content}${emails.length ? "\n\nPublished contact emails: " + emails.join(", ") : ""}`,
+    links: [...new Set(links)],
+  };
 }
 async function crawlRules(domain: string) {
   const robots = await fetchBusinessPage(
@@ -192,7 +205,7 @@ export async function processCrawlPage() {
   const stale = new Date(Date.now() - 2 * 60_000);
   const config = await db.supportConfig.findFirst({
     where: {
-      enabled: true,
+      AND: [{ OR: [{ enabled: true }, { learningState: "LEARNING" }] }],
       project: { owner: { plan: { in: ["PRO", "BUSINESS"] } } },
       crawlState: { in: ["QUEUED", "CRAWLING"] },
       OR: [{ crawlLockedAt: null }, { crawlLockedAt: { lt: stale } }],
@@ -291,7 +304,7 @@ export async function processCrawlPage() {
                     projectId: config.projectId,
                     crawlGeneration: config.crawlGeneration,
                     crawlLock: lock,
-                    enabled: true,
+                    OR: [{ enabled: true }, { learningState: "LEARNING" }],
                   },
                 }))
               )
@@ -335,8 +348,21 @@ export async function processCrawlPage() {
         }
       }
     }
+    const priority = (url: string) => {
+      const path = new URL(url).pathname;
+      if (path === "/") return -3;
+      if (
+        /^\/(?:docs|help|support|guides|faq|contact|about|pricing)(?:\/|$)/i.test(
+          path,
+        )
+      )
+        return -2;
+      if (/^\/(?:blog|alternatives)(?:\/|$)/i.test(path)) return 2;
+      return 0;
+    };
     const remaining = [...new Set(queue)]
       .filter((u) => !visited.includes(u))
+      .sort((a, b) => priority(a) - priority(b))
       .slice(0, limits.pages * 3);
     const done = !remaining.length || visited.length >= limits.pages;
     const count = await db.supportKnowledgePage.count({

@@ -1,6 +1,6 @@
 {
   "name": "@upstep/js",
-  "version": "0.5.12",
+  "version": "0.6.1",
   "description": "Upstep feedback widget for web apps",
   "license": "MIT",
   "homepage": "https://upstep.dev",
@@ -10,7 +10,13 @@
     "directory": "packages/sdk-web"
   },
   "bugs": "https://github.com/TheBugEater/upstep/issues",
-  "keywords": ["feedback", "widget", "roadmap", "upstep", "react"],
+  "keywords": [
+    "feedback",
+    "widget",
+    "roadmap",
+    "upstep",
+    "react"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -24,7 +30,8 @@
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js",
       "require": "./dist/react.cjs"
-    }
+    },
+    "./embed": "./dist/upstep.global.js"
   },
   "files": [
     "dist"
@@ -55,5 +62,7 @@
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
     "vite-plugin-dts": "^4.4.0"
-  }
+  },
+  "unpkg": "./dist/upstep.global.js",
+  "jsdelivr": "./dist/upstep.global.js"
 }

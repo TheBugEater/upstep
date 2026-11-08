@@ -98,6 +98,7 @@ interface UpstepContextValue {
   accentColor: string;
   theme: ThemeMode;
   showBranding: boolean;
+  chat: boolean;
 }
 
 const UpstepContext = createContext<UpstepContextValue | null>(null);
@@ -166,6 +167,7 @@ export function UpstepProvider({
         accentColor: config.accentColor ?? DEFAULT_ACCENT,
         theme: config.theme ?? "auto",
         showBranding,
+        chat: config.chat !== false,
       }}
     >
       {children}
@@ -186,6 +188,8 @@ interface FeedbackWidgetProps {
   accentColor?: string;
   theme?: ThemeMode;
   hideLauncher?: boolean;
+  /** Override chat visibility for this widget. Project/plan access still applies. */
+  chat?: boolean;
 }
 
 type Screen = "list" | "detail" | "create" | "support";
@@ -195,6 +199,7 @@ export function FeedbackWidget({
   accentColor,
   theme,
   hideLauncher = false,
+  chat = true,
 }: FeedbackWidgetProps) {
   const ctx = useUpstep();
   const accent = accentColor ?? ctx.accentColor;
@@ -202,7 +207,8 @@ export function FeedbackWidget({
   const { isOpen: open, open: openWidget, close: closeWidget, showBranding } = ctx;
   const [screen, setScreen] = useState<Screen>("list");
   const [hasSupport, setHasSupport] = useState(false);
-  useEffect(() => { let active = true; void ctx.client.supportEnabled().then(value => {if(active) setHasSupport(value);}); return () => {active = false;}; }, [ctx.client]);
+  useEffect(() => { let active = true; ctx.client.chat = ctx.chat; if (!ctx.chat || !chat) {setHasSupport(false);return;} void ctx.client.supportEnabled().then(value => {if(active) setHasSupport(value);}); return () => {active = false;}; }, [ctx.client, ctx.chat, chat]);
+  useEffect(() => {if ((!ctx.chat || !chat) && screen === "support") setScreen("list");}, [ctx.chat, chat, screen]);
   const [detailId, setDetailId] = useState<string | null>(null);
   // Same SSR-safe rule as usePalette above: start deterministic (false) so
   // hydration never mismatches, and let the effect below drive the real
@@ -247,7 +253,7 @@ export function FeedbackWidget({
           }}
         >
           <ChatIcon size={16} />
-          {!isMobile && "Feedback"}
+          {!isMobile && (hasSupport && chat && ctx.chat ? "Help & feedback" : "Feedback")}
         </button>
       )}
 
@@ -263,12 +269,12 @@ export function FeedbackWidget({
           <div
             style={{
               background: p.bg, border: `1px solid ${p.border}`, borderRadius: 20,
-              width: "100%", maxWidth: 440, maxHeight: "88vh", display: "flex",
+              width: "100%", maxWidth: hasSupport && chat && ctx.chat ? 460 : 440, maxHeight: "88vh", display: "flex",
               flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,.28)",
             }}
           >
             {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${p.border}`, flexShrink: 0 }}>
+            {hasSupport && chat && ctx.chat ? <div style={{display:"flex",alignItems:"center",gap:14,padding:"10px 14px",borderBottom:`1px solid ${p.border}`,flexShrink:0}}><div style={{display:"flex",flex:1,gap:4}}>{[["support","Support"],["list","Feedback"]].map(([value,label])=><button key={value} onClick={()=>setScreen(value as Screen)} style={{flex:1,border:0,borderRadius:8,padding:"9px 12px",background:(screen === "support" ? value === "support" : value === "list") ? p.bgSoft : "transparent",color:(screen === "support" ? value === "support" : value === "list") ? p.text : p.textSoft,fontSize:12,fontWeight:600,cursor:"pointer"}}>{label}</button>)}</div><button aria-label="Close" onClick={handleClose} style={{border:0,background:"transparent",color:p.textSoft,padding:6,cursor:"pointer",fontSize:14}}>✕</button></div> : <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${p.border}`, flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {screen !== "list" && (
                   <button
@@ -301,12 +307,12 @@ export function FeedbackWidget({
                   ✕
                 </button>
               </div>
-            </div>
+            </div>}
 
-            {hasSupport && <div style={{display: "flex", gap: 4, padding: "12px 20px 0"}}>{[["list", "Feedback"], ["support", "Support"]].map(([value, label]) => <button key={value} onClick={() => setScreen(value as Screen)} style={{flex: 1, padding: 8, border: `1px solid ${p.border}`, borderRadius: 9, background: screen === value ? p.bgSoft : p.bg, color: p.text, cursor: "pointer", fontSize: 12}}>{label}</button>)}</div>}
             {/* Body */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 24px" }}>
-              {screen === "support" && <SupportFrame client={ctx.client} theme={p.bg === "#000000" ? "dark" : "light"} />}
+            <div style={{ flex: 1, overflowY: "auto", padding: screen === "support" ? 0 : "16px 20px 24px" }}>
+              {screen === "support" && chat && ctx.chat && <SupportFrame client={ctx.client} theme={p.bg === "#000000" ? "dark" : "light"} />}
+              {hasSupport && chat && ctx.chat && screen !== "support" && <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>{screen === "list" ? <><span style={{fontSize:14,fontWeight:600,color:p.text}}>Feedback & ideas</span><button onClick={()=>setScreen("create")} style={{border:0,borderRadius:8,background:accent,color:"white",fontSize:12,padding:"7px 10px",cursor:"pointer"}}>+ New</button></> : <button onClick={()=>setScreen("list")} style={{border:0,background:"none",padding:0,color:p.textSoft,fontSize:12,cursor:"pointer"}}>← Back to feedback</button>}</div>}
               {screen === "list" && (
                 <FeedList
                   onSelect={goToDetail}
@@ -328,7 +334,7 @@ export function FeedbackWidget({
             </div>
 
             {/* Branding footer — hidden for Business plan */}
-            {showBranding && (
+            {showBranding && screen !== "support" && (
               <a
                 href="https://upstep.dev"
                 target="_blank"
@@ -352,7 +358,7 @@ export function FeedbackWidget({
 function SupportFrame({client, theme}: {client: UpstepApiClient; theme: string}) {
   const ref = useRef<HTMLIFrameElement>(null);
   useEffect(() => { if(ref.current) return client.connectSupportFrame(ref.current); }, [client]);
-  return <iframe ref={ref} data-upstep-support title="Customer support" src={client.supportFrameUrl(theme)} style={{width: "100%", height: 480, border: 0, display: "block", borderRadius: 12}} />;
+  return <iframe ref={ref} data-upstep-support title="Customer support" src={client.supportFrameUrl(theme)} style={{width: "100%", height: "min(560px, calc(88dvh - 56px))", minHeight: 300, border: 0, display: "block"}} />;
 }
 
 // ─── FeedList ─────────────────────────────────────────────────────────────────

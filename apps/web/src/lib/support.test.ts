@@ -9,6 +9,7 @@ import {
   fetchBusinessPage,
 } from "./support/crawler";
 import { identitySecret, verifyIdentity } from "./support/identity";
+import { extractCustomerEmail } from "./support/service";
 import { supportLimits } from "./support/policy";
 import { OpenAIProvider } from "./support/ai";
 
@@ -130,6 +131,7 @@ test("OpenAI adapter uses Luna Responses with strict output, validates citations
                   handoff: false,
                   ticketTitle: "",
                   ticketType: "GENERAL",
+                  inScope: true,
                 }),
               },
             ],
@@ -168,4 +170,65 @@ test("crawler blocks local-network fetches and off-domain destinations before HT
     fetchBusinessPage("https://evil.example/", "example.com"),
     /outside the business domain/,
   );
+});
+
+test("contact capture accepts only a customer's own explicit email, not business emails in questions", () => {
+  assert.equal(
+    extractCustomerEmail("My email is businesscodepulse@gmail.com"),
+    "businesscodepulse@gmail.com",
+  );
+  assert.equal(
+    extractCustomerEmail("businesscodepulse@gmail.com"),
+    "businesscodepulse@gmail.com",
+  );
+  assert.equal(
+    extractCustomerEmail("Is your support email support@example.com?"),
+    null,
+  );
+  assert.equal(
+    extractCustomerEmail("Reach me at first@example.com or second@example.com"),
+    null,
+  );
+});
+
+test("website learning sends a concrete input and keeps analysis separate from customer replies", async () => {
+  const original = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = "test-key-not-real";
+  try {
+    const ai = new OpenAIProvider(false, async (_url, options) => {
+      const body = JSON.parse(options!.body as string);
+      assert.ok(body.input.length > 0);
+      assert.equal(body.text.format.name, "business_learning");
+      assert.match(body.instructions, /business-specific support boundaries/);
+      return Response.json({
+        status: "completed",
+        output: [
+          {
+            type: "message",
+            content: [
+              {
+                type: "output_text",
+                text: JSON.stringify({
+                  businessName: "Acme",
+                  summary: "Acme repairs bicycles.",
+                  supportEmail: null,
+                  suggestedInstructions:
+                    "Help with repairs and escalate unresolved issues.",
+                  facts: [],
+                  questions: [],
+                }),
+              },
+            ],
+          },
+        ],
+      });
+    });
+    assert.equal(
+      (await ai.learn({ domain: "example.com", sources: [] })).businessName,
+      "Acme",
+    );
+  } finally {
+    if (original === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = original;
+  }
 });

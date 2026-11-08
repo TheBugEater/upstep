@@ -73,6 +73,7 @@ if (typeof document !== "undefined") {
   if (apiKey) {
     const config: UpstepConfig = { apiKey };
     if (userId) config.userId = userId;
+    if (currentScript?.dataset["chat"] !== undefined) config.chat = currentScript.dataset["chat"] !== "false";
     if (baseUrl) config.baseUrl = baseUrl;
     if (accentColor) config.accentColor = accentColor;
     if (position === "left" || position === "right") config.position = position;

@@ -9,9 +9,10 @@ export class SupportError extends Error {
 
 export function supportLimits(plan: string) {
   if (plan === "BUSINESS")
-    return { enabled: true, aiReplies: 1500, pages: 150 };
-  if (plan === "PRO") return { enabled: true, aiReplies: 300, pages: 40 };
-  return { enabled: false, aiReplies: 0, pages: 0 };
+    return { enabled: true, aiReplies: 1500, pages: 150, learningRuns: 100 };
+  if (plan === "PRO")
+    return { enabled: true, aiReplies: 300, pages: 40, learningRuns: 20 };
+  return { enabled: false, aiReplies: 0, pages: 0, learningRuns: 0 };
 }
 export function requireSupportPlan(plan: string) {
   if (!supportLimits(plan).enabled)

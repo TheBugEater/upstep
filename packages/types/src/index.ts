@@ -94,6 +94,8 @@ export interface UpstepConfig {
   userId?: string;
   /** Server-signed customer identity JWT for private support conversations. */
   supportIdentityToken?: string;
+  /** Show chat inside the existing widget when enabled for the project. Defaults to true. */
+  chat?: boolean;
   /** Base URL of your Upstep backend. Defaults to https://upstep.dev */
   baseUrl?: string;
   /**

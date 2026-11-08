@@ -54,7 +54,7 @@ Mount that once from the client-side root for your framework:
 ```html
 <script
   type="module"
-  src="https://unpkg.com/@upstep/js/dist/index.js"
+  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"
   data-api-key="upstep_xxx"
 ></script>
 ```
@@ -97,3 +97,38 @@ Every entry point (`Upstep.init`, `<UpstepProvider>`, and the script tag's `data
 - [Dashboard / sign up](https://upstep.dev/login)
 - [@upstep/react-native](https://www.npmjs.com/package/@upstep/react-native) for React Native apps
 - [upstep_flutter](https://pub.dev/packages/upstep_flutter) for Flutter apps
+
+### AI and live chat in the existing widget
+
+Version 0.6.0 adds a **Support** tab to the same widget that handles feedback and
+voting. Enable customer support for your paid project in the UpStep dashboard,
+learn the business website, and confirm the business details and contact email.
+The project must be enabled on the server; `chat: true` never bypasses plan access.
+Chat is shown automatically by default when the project has enabled support.
+
+```ts
+import Upstep from '@upstep/js';
+Upstep.init({ apiKey: 'YOUR_PROJECT_KEY', chat: true });
+// Use chat: false to keep this embed focused on feedback and voting.
+```
+
+```tsx
+import { UpstepProvider, FeedbackWidget } from '@upstep/js/react';
+<UpstepProvider apiKey="YOUR_PROJECT_KEY" chat={true}>
+  <FeedbackWidget />
+</UpstepProvider>
+// FeedbackWidget also accepts chat={false} to hide chat in that widget.
+```
+
+```html
+<script defer src="https://unpkg.com/@upstep/js@0.6.1/dist/upstep.global.js"
+  data-api-key="YOUR_PROJECT_KEY" data-chat="true"></script>
+```
+
+When no teammate is available, AI continues helping from the business's website
+and confirmed answers. Unresolved issues can become private tickets with stable
+references and the business's confirmed support email. Customer email is optional.
+For private cross-device customer history, pass a backend-signed JWT as
+`supportIdentityToken`, or call `Upstep.identifySupport(token)` after login and
+`Upstep.identifySupport(undefined)` on logout. Never put the identity signing
+secret in browser code. [Integration guide](https://upstep.dev/guides/customer-support).
