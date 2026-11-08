@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.2
+
+- Show the business icon selected during website-based support setup.
+
 ## 0.7.1
 
 - Restore the original accent and use the configured accent for all chat actions.

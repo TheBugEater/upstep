@@ -1,6 +1,8 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { teamRequest, supportResponseError } from "@/lib/support/http";
+import { discoverBusinessLogo } from "@/lib/support/branding";
+import { supportProject } from "@/lib/support/service";
 import { SupportError } from "@/lib/support/policy";
 import {
   beginBusinessLearning,
@@ -14,6 +16,7 @@ const schema = z.discriminatedUnion("action", [
     domain: z.string().trim().min(3).max(253),
   }),
   z.object({ action: z.literal("confirm"), review: reviewSchema }),
+  z.object({ action: z.literal("logo") }),
 ]);
 export async function POST(
   req: NextRequest,
@@ -27,6 +30,14 @@ export async function POST(
       throw new SupportError(
         "Check the website, contact email, business details and review answers.",
       );
+    if (parsed.data.action === "logo") {
+      const project = await supportProject(id);
+      if (!project.supportConfig?.domain)
+        throw new SupportError("Add your business website first.");
+      return NextResponse.json({
+        logoUrl: await discoverBusinessLogo(project.supportConfig.domain),
+      });
+    }
     if (parsed.data.action === "learn")
       await beginBusinessLearning(id, parsed.data.domain);
     else await confirmBusinessLearning(id, parsed.data.review);

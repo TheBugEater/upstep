@@ -6,6 +6,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { BusinessAvatar } from "./BusinessAvatar";
 import { SupportWidgets } from "./SupportWidgets";
 import type { SupportWidget } from "@upstep/types";
 import { SupportIcon } from "./SupportIcons";
@@ -37,6 +38,7 @@ type Chat = {
 };
 type Config = {
   businessName: string;
+  logoUrl?: string | null;
   welcomeMessage: string;
   mode: string;
   showBranding?: boolean;
@@ -346,8 +348,8 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
     >
       <header className="relative shrink-0 border-b border-neutral-100 px-5 py-4 dark:border-neutral-900">
         <div className="flex items-center gap-3">
-          <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-neutral-200 bg-white text-base font-semibold shadow-sm dark:border-neutral-800 dark:bg-black">
-            {business.charAt(0).toUpperCase()}
+          <div className="relative h-10 w-10 shrink-0">
+            <BusinessAvatar name={business} logoUrl={config?.logoUrl ?? null} />
             <span
               className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-black ${config?.online.length || isHuman ? "bg-emerald-500" : "bg-[var(--support-accent)]"}`}
             />

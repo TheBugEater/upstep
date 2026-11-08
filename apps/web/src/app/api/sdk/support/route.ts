@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { businessLogo } from "@/lib/support/branding";
 import { getPlan } from "@/lib/plans";
 import { z } from "zod";
 import { sdkRequest, supportResponseError } from "@/lib/support/http";
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
         showBranding: getPlan(project.owner.plan).branding,
         domain: config.domain,
         businessName: config.businessName,
+        logoUrl: businessLogo(config.businessProfile),
         welcomeMessage: config.welcomeMessage,
         mode: config.mode,
         online: online.map((a) => ({ name: a.user.name || "Teammate" })),

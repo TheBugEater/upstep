@@ -164,4 +164,4 @@ export interface SupportConversation {
  canEscalate:boolean;escalationSummary:string|null;activeWidgetMessageId:string|null;humanRequested:boolean;
  messages:SupportMessage[];customer:{name:string|null;email:string|null;verified:boolean};
 }
-export interface SupportConfiguration {enabled:boolean;businessName:string;welcomeMessage:string;mode:string;showBranding?:boolean;online:{name:string}[]}
+export interface SupportConfiguration {enabled:boolean;businessName:string;logoUrl?:string|null;welcomeMessage:string;mode:string;showBranding?:boolean;online:{name:string}[]}

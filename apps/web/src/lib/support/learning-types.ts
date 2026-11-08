@@ -1,6 +1,7 @@
 import { z } from "zod";
 export const learningSchema = z.object({
   businessName: z.string().trim().min(1).max(80),
+  logoUrl: z.string().max(180000).nullable().optional(),
   summary: z.string().trim().min(1).max(3000),
   supportEmail: z.string().email().max(254).nullable(),
   suggestedInstructions: z.string().trim().min(1).max(1800),
@@ -19,6 +20,8 @@ export const learningSchema = z.object({
         id: z.string().max(30),
         question: z.string().max(250),
         suggestion: z.string().max(500),
+        inputType: z.enum(["choice", "text"]).optional(),
+        options: z.array(z.string().trim().min(1).max(160)).max(4).optional(),
       }),
     )
     .max(3),
@@ -58,8 +61,10 @@ export const learningJsonSchema = {
           id: { type: "string" },
           question: { type: "string" },
           suggestion: { type: "string" },
+          inputType: { type: "string", enum: ["choice", "text"] },
+          options: { type: "array", items: { type: "string" } },
         },
-        required: ["id", "question", "suggestion"],
+        required: ["id", "question", "suggestion", "inputType", "options"],
       },
     },
   },

@@ -90,6 +90,8 @@ void main() {
               configuration: const {
                 'businessName': 'Acme',
                 'welcomeMessage': 'How can we help?',
+                'logoUrl':
+                    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6rNwAAAAASUVORK5CYII=',
               },
             ),
           ),
@@ -105,6 +107,10 @@ void main() {
         const Color(0xFF3366CC),
       );
       expect(find.text('Acme'), findsOneWidget);
+      expect(
+        tester.widget<Image>(find.byType(Image)).image,
+        isA<MemoryImage>(),
+      );
       expect(find.text('Ask the team'), findsNothing);
       expect(
         tester.widget<TextField>(find.byType(TextField)).style?.fontSize,

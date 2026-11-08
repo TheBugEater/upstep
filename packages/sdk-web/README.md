@@ -100,7 +100,7 @@ Every entry point (`Upstep.init`, `<UpstepProvider>`, and the script tag's `data
 
 ### AI and live chat in the existing widget
 
-Version 0.7.1 includes a **Support** tab to the same widget that handles feedback and
+Version 0.7.2 includes a **Support** tab to the same widget that handles feedback and
 voting. Enable customer support for your paid project in the UpStep dashboard,
 learn the business website, and confirm the business details and contact email.
 The project must be enabled on the server; `chat: true` never bypasses plan access.
@@ -121,7 +121,7 @@ import { UpstepProvider, FeedbackWidget } from '@upstep/js/react';
 ```
 
 ```html
-<script defer src="https://unpkg.com/@upstep/js@0.7.1/dist/upstep.global.js"
+<script defer src="https://unpkg.com/@upstep/js@0.7.2/dist/upstep.global.js"
   data-api-key="YOUR_PROJECT_KEY" data-chat="true"></script>
 ```
 
@@ -140,3 +140,5 @@ The website launcher and its opened chat/feedback panel stay in the bottom-right
 Support can show quick replies, issue details, resolution confirmations, and a contact card. The team action appears only after AI discusses the issue and tries to help, or establishes that a human must perform the action. Asking for an agent alone never opens a contact form. Active cards stay near the composer, contact details use two short steps, and optional issue fields expand only when needed. The server requires a name and valid email before queueing a private ticket. AI replies stay short, with separate paragraphs and no em dashes.
 
 A DOM-free client is available from `@upstep/js/support` for custom native integrations. The React Native SDK uses this same client inside its existing feedback sheet.
+
+Business branding comes from Customer support → Settings in UpStep. Website learning detects a business icon for review; you can replace it with an upload or public image URL. The approved icon is shared by the web and native chat widgets. Setup questions offer suggested choices when appropriate, with a custom answer field.

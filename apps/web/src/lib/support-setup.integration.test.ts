@@ -86,12 +86,22 @@ test(
               question:
                 "What should AI do when a repair needs physical inspection?",
               suggestion: "",
+              inputType: "choice",
+              options: [
+                "Arrange a workshop visit",
+                "Offer remote advice",
+                "Arrange a workshop visit",
+              ],
             },
           ],
         };
       },
       async reply(input) {
         assert.match(input.businessSummary!, /bicycles/);
+        assert.doesNotMatch(
+          JSON.stringify(input.businessProfile),
+          /branding|logo.png|icon.png/,
+        );
         assert.match(
           JSON.stringify(input.businessProfile),
           /Arrange a workshop visit/,
@@ -117,7 +127,12 @@ test(
         "draft learning is private and unsupported emails/URLs are filtered",
         async () => {
           await assert.rejects(createSupportSession(p.id, undefined, db));
-          await processBusinessLearning(db, provider, p.id);
+          await processBusinessLearning(
+            db,
+            provider,
+            p.id,
+            async () => "https://example.com/icon.png",
+          );
           const c = await db.supportConfig.findUniqueOrThrow({
             where: { projectId: p.id },
           });
@@ -130,11 +145,18 @@ test(
             "https://example.com/help",
           ]);
           assert.equal(analysis.questions[0].id, "question_1");
+          assert.equal(analysis.logoUrl, "https://example.com/icon.png");
+          assert.equal(analysis.questions[0].inputType, "choice");
+          assert.deepEqual(analysis.questions[0].options, [
+            "Arrange a workshop visit",
+            "Offer remote advice",
+          ]);
         },
       );
       const review = {
         generation: 1,
         businessName: "Acme",
+        logoUrl: "https://example.com/custom-logo.png",
         supportEmail: "support@example.com",
         summary: "Acme repairs bicycles and gives maintenance advice.",
         instructions:
@@ -161,6 +183,22 @@ test(
           assert.equal(c.learningState, "READY");
           assert.equal(c.enabled, true);
           assert.equal(c.supportEmail, "support@example.com");
+          assert.equal(
+            (c.businessProfile as any).branding.logoUrl,
+            "https://example.com/custom-logo.png",
+          );
+          assert.match(
+            (c.businessProfile as any).answers[0].answer,
+            /workshop/,
+          );
+          await assert.rejects(
+            confirmBusinessLearning(
+              p.id,
+              { ...review, logoUrl: "http://127.0.0.1/private.png" },
+              db,
+            ),
+            /HTTPS/,
+          );
         },
       );
       const s = await createSupportSession(p.id, undefined, db);

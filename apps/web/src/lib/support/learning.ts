@@ -3,6 +3,11 @@ import { z } from "zod";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "../db";
 import { collaborationTransaction } from "../project-collaboration";
+import {
+  businessLogo,
+  normalizeBusinessLogo,
+  discoverBusinessLogo,
+} from "./branding";
 import { normalizeDomain } from "./crawler";
 import {
   getSupportAIProvider,
@@ -111,6 +116,7 @@ export async function beginBusinessLearning(
 export const reviewSchema = z.object({
   generation: z.number().int().min(1),
   businessName: z.string().trim().min(1).max(80),
+  logoUrl: z.string().max(180000).nullable().optional(),
   supportEmail: z.string().trim().email().max(254),
   summary: z.string().trim().min(10).max(4000),
   instructions: z.string().trim().min(10).max(2000),
@@ -159,6 +165,14 @@ export async function confirmBusinessLearning(
       throw new SupportError(
         "Answer the review questions, or say when you don't know yet.",
       );
+    const logoUrl =
+      input.logoUrl === undefined
+        ? businessLogo(config.businessProfile)
+        : normalizeBusinessLogo(input.logoUrl);
+    if (input.logoUrl?.trim() && !logoUrl)
+      throw new SupportError(
+        "Use a public HTTPS image URL or upload a PNG, JPEG or WebP logo.",
+      );
     await tx.supportConfig.update({
       where: { projectId },
       data: {
@@ -166,7 +180,7 @@ export async function confirmBusinessLearning(
         supportEmail: input.supportEmail.toLowerCase(),
         businessSummary: input.summary,
         agentInstructions: input.instructions,
-        businessProfile: { facts: input.facts, answers },
+        businessProfile: { facts: input.facts, answers, branding: { logoUrl } },
         mode: input.mode,
         welcomeMessage: input.welcomeMessage,
         enabled: input.enabled,
@@ -191,6 +205,9 @@ export async function processBusinessLearning(
   client: PrismaClient = db,
   provider?: SupportAIProvider,
   projectId?: string,
+  logoDiscovery: (
+    domain: string,
+  ) => Promise<string | null> = discoverBusinessLogo,
 ) {
   const stale = new Date(Date.now() - 2 * 60_000);
   const config = await client.supportConfig.findFirst({
@@ -282,9 +299,14 @@ export async function processBusinessLearning(
       throw new Error(
         "The configured AI provider doesn't support website learning. Complete the review manually.",
       );
-    const result = learningSchema.parse(
-      await ai.learn({ domain: config.domain, sources }),
-    );
+    const [learned, logoUrl] = await Promise.all([
+      ai.learn({ domain: config.domain, sources }),
+      logoDiscovery(config.domain).catch(() => null),
+    ]);
+    const result = learningSchema.parse({
+      ...learned,
+      logoUrl: normalizeBusinessLogo(logoUrl),
+    });
     const allowed = new Set(sources.map((s) => s.url));
     result.facts = result.facts
       .map((f) => ({
@@ -299,9 +321,18 @@ export async function processBusinessLearning(
       )
     )
       result.supportEmail = null;
-    result.questions = result.questions
-      .slice(0, 3)
-      .map((q, i) => ({ ...q, id: `question_${i + 1}` }));
+    result.questions = result.questions.slice(0, 3).map((q, i) => {
+      const options = [...new Set(q.options || [])].slice(0, 4);
+      return {
+        ...q,
+        id: `question_${i + 1}`,
+        inputType:
+          q.inputType === "choice" && options.length >= 2
+            ? ("choice" as const)
+            : ("text" as const),
+        options,
+      };
+    });
     await client.supportConfig.updateMany({
       where: {
         projectId: config.projectId,

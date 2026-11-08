@@ -75,7 +75,13 @@ export async function fetchBusinessPage(
   input: string,
   domain: string,
   redirects = 0,
-): Promise<{ status: number; text: string; url: string; type: string }> {
+): Promise<{
+  status: number;
+  text: string;
+  bytes: Buffer;
+  url: string;
+  type: string;
+}> {
   const url = new URL(input);
   if (
     url.protocol !== "https:" ||
@@ -98,6 +104,7 @@ export async function fetchBusinessPage(
   const result = await new Promise<{
     status: number;
     text: string;
+    bytes: Buffer;
     location?: string | undefined;
     type: string;
   }>((resolve, reject) => {
@@ -107,7 +114,7 @@ export async function fetchBusinessPage(
         method: "GET",
         headers: {
           "User-Agent": `${BOT}/1.0 (+https://upstep.dev)`,
-          Accept: "text/html,application/xml,text/plain",
+          Accept: "text/html,application/xml,text/plain,image/*",
           "Accept-Encoding": "identity",
         },
         lookup: (_host, options, callback) => {
@@ -124,14 +131,16 @@ export async function fetchBusinessPage(
             req.destroy(new Error("Page exceeds crawl size limit"));
           else chunks.push(chunk);
         });
-        response.on("end", () =>
+        response.on("end", () => {
+          const bytes = Buffer.concat(chunks);
           resolve({
             status: response.statusCode || 500,
-            text: Buffer.concat(chunks).toString("utf8"),
+            text: bytes.toString("utf8"),
+            bytes,
             location: response.headers.location,
             type: response.headers["content-type"] || "",
-          }),
-        );
+          });
+        });
         response.on("error", reject);
       },
     );

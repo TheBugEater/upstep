@@ -342,3 +342,39 @@ test("asking for an agent cannot bypass AI diagnosis and a genuine help attempt"
     false,
   );
 });
+
+test("business icon discovery selects website branding and rejects unsafe image sources", async () => {
+  const { extractBusinessLogo, normalizeBusinessLogo, businessLogo } =
+    await import("./support/branding");
+  const html =
+    '<html><head><link rel="icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/brand/icon.png"><meta property="og:image" content="https://cdn.example.com/hero.jpg"></head><body><header><img alt="Company logo" src="/wordmark.svg"></header></body></html>';
+  assert.equal(
+    extractBusinessLogo(html, "https://example.com/about"),
+    "https://example.com/brand/icon.png",
+  );
+  assert.equal(
+    extractBusinessLogo(
+      '<script type="application/ld+json">{"@type":"Organization","logo":{"url":"https://cdn.example.com/logo.png"}}</script>',
+      "https://example.com/",
+    ),
+    "https://cdn.example.com/logo.png",
+  );
+  for (const url of [
+    "javascript:alert(1)",
+    "http://example.com/logo.png",
+    "https://127.0.0.1/icon.png",
+    "https://192.168.1.1/icon.png",
+    "https://localhost/icon.png",
+    "data:image/svg+xml,<svg/>",
+    "https://user:secret@example.com/icon.png",
+  ])
+    assert.equal(normalizeBusinessLogo(url), null);
+  assert.equal(
+    businessLogo({ branding: { logoUrl: "https://example.com/logo.png" } }),
+    "https://example.com/logo.png",
+  );
+  const png =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6rNwAAAAASUVORK5CYII=";
+  assert.equal(normalizeBusinessLogo(png), png);
+  assert.equal(normalizeBusinessLogo("data:image/png;base64,notapng"), null);
+});

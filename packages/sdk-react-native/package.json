@@ -1,6 +1,6 @@
 {
   "name": "@upstep/react-native",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Native UpStep feedback and AI support chat for React Native",
   "homepage": "https://upstep.dev",
   "repository": {

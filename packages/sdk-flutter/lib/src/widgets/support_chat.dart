@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../support_client.dart';
 
@@ -178,6 +179,31 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
         await _refresh(id);
       }),
     );
+    final logoUrl = widget.configuration['logoUrl'] as String?;
+    final fallback = Text(
+      (widget.configuration['businessName'] as String? ?? 'S').substring(0, 1),
+      style: const TextStyle(fontSize: 16),
+    );
+    Widget? icon;
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      try {
+        icon = logoUrl.startsWith('data:image/png;base64,')
+            ? Image.memory(
+                base64Decode(logoUrl.substring(22)),
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => fallback,
+              )
+            : logoUrl.startsWith('https://')
+            ? Image.network(
+                logoUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => fallback,
+              )
+            : null;
+      } catch (_) {
+        icon = null;
+      }
+    }
     return ColoredBox(
       color: canvas,
       child: DefaultTextStyle(
@@ -189,16 +215,29 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      widget.configuration['businessName'] as String? ??
-                          'Support',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                  Row(
+                    children: [
+                      if (icon != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: ColoredBox(
+                            color: Colors.white,
+                            child: SizedBox(width: 30, height: 30, child: icon),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      Expanded(
+                        child: Text(
+                          widget.configuration['businessName'] as String? ??
+                              'Support',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                   Text(
                     _chat?['state'] == 'WAITING'

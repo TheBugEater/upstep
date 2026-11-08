@@ -184,7 +184,15 @@ export async function processAIConversation(
       supportEmail: config.supportEmail,
       businessSummary: config.businessSummary,
       agentInstructions: config.agentInstructions,
-      businessProfile: config.businessProfile,
+      businessProfile:
+        config.businessProfile &&
+        typeof config.businessProfile === "object" &&
+        !Array.isArray(config.businessProfile)
+          ? {
+              facts: config.businessProfile.facts || [],
+              answers: config.businessProfile.answers || [],
+            }
+          : null,
       sources,
       messages: [...c.messages]
         .reverse()

@@ -1,5 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BusinessAvatar } from "./BusinessAvatar";
+import { SetupQuestion } from "./SetupQuestion";
 import { SupportIcon } from "./SupportIcons";
 import type { BusinessLearning } from "@/lib/support/learning-types";
 export type SupportSetupConfig = {
@@ -17,6 +19,7 @@ export type SupportSetupConfig = {
   businessSummary: string | null;
   agentInstructions: string | null;
   businessProfile: {
+    branding?: { logoUrl?: string | null };
     facts?: { label: string; value: string }[];
     answers?: { question: string; answer: string }[];
   } | null;
@@ -53,6 +56,7 @@ export function SupportSetup({
   const [checked, setChecked] = useState(false);
   const [draft, setDraft] = useState({
     businessName: "",
+    logoUrl: "",
     supportEmail: "",
     summary: "",
     instructions: "",
@@ -64,6 +68,7 @@ export function SupportSetup({
   const [facts, setFacts] = useState<{ label: string; value: string }[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const marker = useRef("");
+  const attemptedLogo = useRef("");
   const analysis = config?.learningAnalysis;
   const learning = config?.learningState === "LEARNING";
   const ready = config?.learningState === "READY";
@@ -79,6 +84,11 @@ export function SupportSetup({
       businessName: ready
         ? config?.businessName || ""
         : info?.businessName || config?.businessName || "",
+      logoUrl:
+        config?.businessProfile?.branding &&
+        "logoUrl" in config.businessProfile.branding
+          ? config.businessProfile.branding.logoUrl || ""
+          : info?.logoUrl || "",
       supportEmail: config?.supportEmail || info?.supportEmail || "",
       summary: config?.businessSummary || info?.summary || "",
       instructions:
@@ -87,7 +97,10 @@ export function SupportSetup({
         "Help customers understand our services, offer practical troubleshooting, and create a ticket for unresolved issues. Do not make account changes or promises outside our confirmed policies.",
       welcomeMessage:
         config?.welcomeMessage || "Hi! How can we help you today?",
-      mode: config?.mode === "HUMAN_FIRST" ? "AI_FIRST" : config?.mode || "AI_FIRST",
+      mode:
+        config?.mode === "HUMAN_FIRST"
+          ? "AI_FIRST"
+          : config?.mode || "AI_FIRST",
       enabled: ready ? !!config?.enabled : true,
     });
     setFacts(
@@ -123,6 +136,172 @@ export function SupportSetup({
     } catch (e) {
       setError((e as Error).message);
       return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+  function imageData(image: CanvasImageSource, width: number, height: number) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 128;
+    const context = canvas.getContext("2d");
+    if (!context || !width || !height)
+      throw new Error("Could not prepare the logo.");
+    const scale = Math.min(128 / width, 128 / height);
+    context.drawImage(
+      image,
+      (128 - width * scale) / 2,
+      (128 - height * scale) / 2,
+      width * scale,
+      height * scale,
+    );
+    return canvas.toDataURL("image/png");
+  }
+  async function prepareRemoteLogo(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      const timer = setTimeout(
+        () =>
+          reject(
+            new Error(
+              "The icon could not be loaded. Try uploading a PNG, JPEG or WebP image.",
+            ),
+          ),
+        15000,
+      );
+      image.onload = () => {
+        clearTimeout(timer);
+        try {
+          resolve(imageData(image, image.naturalWidth, image.naturalHeight));
+        } catch {
+          reject(
+            new Error(
+              "The icon could not be prepared. Try uploading an image.",
+            ),
+          );
+        }
+      };
+      image.onerror = () => {
+        clearTimeout(timer);
+        reject(
+          new Error(
+            "The icon could not be loaded. Try uploading a PNG, JPEG or WebP image.",
+          ),
+        );
+      };
+      image.src = `/api/projects/${projectId}/support/logo?url=${encodeURIComponent(url)}`;
+    });
+  }
+  async function saveReview() {
+    if (!config || !checked) return;
+    if (analysis?.questions.some((q) => !answers[q.id]?.trim())) {
+      setError(
+        "Answer each setup question by choosing an option or writing your own answer.",
+      );
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const logoUrl = draft.logoUrl.startsWith("https://")
+        ? await prepareRemoteLogo(draft.logoUrl)
+        : draft.logoUrl;
+      const ok = await submit({
+        action: "confirm",
+        review: {
+          ...draft,
+          logoUrl,
+          generation: config.crawlGeneration,
+          facts,
+          answers,
+        },
+      });
+      if (ok) {
+        setEditing(false);
+        setNotice(
+          draft.enabled
+            ? "Your AI support team is live."
+            : "Business details saved. Support is paused.",
+        );
+      }
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const findLogo = useCallback(async () => {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch(`/api/projects/${projectId}/support/setup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "logo" }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "Could not find the website icon.");
+      if (data.logoUrl) {
+        setDraft((current) => ({ ...current, logoUrl: data.logoUrl }));
+        setNotice(
+          "Website icon found. Review it and save your business details.",
+        );
+      } else
+        setNotice(
+          "No suitable website icon was found. Upload a logo or use a public image URL.",
+        );
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }, [projectId]);
+  useEffect(() => {
+    const branding = config?.businessProfile?.branding;
+    if (
+      !editing ||
+      config?.learningState !== "READY" ||
+      draft.logoUrl ||
+      analysis?.logoUrl ||
+      (branding && "logoUrl" in branding)
+    )
+      return;
+    const key = `${projectId}:${config.domain}:${config.crawlGeneration}`;
+    if (attemptedLogo.current === key) return;
+    attemptedLogo.current = key;
+    void findLogo();
+  }, [
+    editing,
+    config?.learningState,
+    config?.domain,
+    config?.crawlGeneration,
+    config?.businessProfile?.branding,
+    draft.logoUrl,
+    analysis?.logoUrl,
+    projectId,
+    findLogo,
+  ]);
+  async function uploadLogo(file: File) {
+    setError("");
+    setNotice("");
+    if (
+      !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
+      file.size > 2 * 1024 * 1024
+    ) {
+      setError("Choose a PNG, JPEG or WebP image under 2 MB.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const image = await createImageBitmap(file);
+      const logoUrl = imageData(image, image.width, image.height);
+      image.close();
+      setDraft((current) => ({ ...current, logoUrl }));
+      setNotice("Logo uploaded. Save your business details to use it.");
+    } catch {
+      setError("Could not read that image. Try a PNG, JPEG or WebP file.");
     } finally {
       setBusy(false);
     }
@@ -262,6 +441,15 @@ export function SupportSetup({
           )}
           {ready && !editing && (
             <>
+              <div className="mt-5 flex items-center gap-3">
+                <BusinessAvatar
+                  name={config.businessName}
+                  logoUrl={config.businessProfile?.branding?.logoUrl ?? null}
+                />
+                <p className="text-sm font-medium text-ink">
+                  {config.businessName}
+                </p>
+              </div>
               <div className="mt-6 grid gap-4 rounded-xl bg-surface p-5 sm:grid-cols-2">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-faint">
@@ -324,27 +512,9 @@ export function SupportSetup({
       {config && config.learningState !== "NEW" && editing && !learning && (
         <form
           className="rounded-2xl border border-line bg-card p-6 shadow-soft sm:p-8"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!checked) return;
-            void submit({
-              action: "confirm",
-              review: {
-                ...draft,
-                generation: config.crawlGeneration,
-                facts,
-                answers,
-              },
-            }).then((ok) => {
-              if (ok) {
-                setEditing(false);
-                setNotice(
-                  draft.enabled
-                    ? "Your AI support team is live."
-                    : "Business details saved. Support is paused.",
-                );
-              }
-            });
+          onSubmit={(event) => {
+            event.preventDefault();
+            void saveReview();
           }}
         >
           <span className="text-xs font-semibold text-clay">
@@ -370,6 +540,78 @@ export function SupportSetup({
               </button>
             </p>
           )}
+          <section className="mt-6 rounded-xl border border-line bg-surface/50 p-4">
+            <div className="flex items-center gap-4">
+              <BusinessAvatar
+                name={draft.businessName || "Business"}
+                logoUrl={draft.logoUrl}
+                size={56}
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-semibold text-ink">
+                  Business icon
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-muted">
+                  We look for your website’s logo automatically. Review it or
+                  choose your own.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                className={button}
+                onClick={() => void findLogo()}
+              >
+                Find website icon
+              </button>
+              <label
+                className={`${button} cursor-pointer ${busy ? "opacity-50" : ""}`}
+              >
+                Upload image
+                <input
+                  type="file"
+                  className="sr-only"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={busy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void uploadLogo(file);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+              {draft.logoUrl && (
+                <button
+                  type="button"
+                  className={button}
+                  disabled={busy}
+                  onClick={() => setDraft({ ...draft, logoUrl: "" })}
+                >
+                  Remove icon
+                </button>
+              )}
+            </div>
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-muted">
+                Use an image URL
+              </summary>
+              <label className="mt-2 block text-xs text-muted">
+                Public HTTPS image URL
+                <input
+                  type="url"
+                  maxLength={2000}
+                  className={field}
+                  value={draft.logoUrl.startsWith("data:") ? "" : draft.logoUrl}
+                  placeholder="https://yourbusiness.com/logo.png"
+                  onChange={(event) =>
+                    setDraft({ ...draft, logoUrl: event.target.value })
+                  }
+                />
+              </label>
+            </details>
+          </section>
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             <label className="text-xs font-medium text-muted">
               Business name
@@ -424,8 +666,9 @@ export function SupportSetup({
                     What your website tells us
                   </h3>
                   <p className="mt-1 text-xs text-faint">
-                    {facts.length} useful facts. Check the sources and edit
-                    anything that needs it.
+                    {facts.length} useful{" "}
+                    {facts.length === 1 ? "fact" : "facts"}. Check the sources
+                    and edit anything that needs it.
                   </p>
                 </div>
                 <span className="rounded-full border border-line px-2.5 py-1 text-[9px] font-medium uppercase tracking-wide text-muted">
@@ -512,23 +755,14 @@ export function SupportSetup({
               </p>
               <div className="mt-4 space-y-4">
                 {analysis.questions.map((q) => (
-                  <label
+                  <SetupQuestion
                     key={q.id}
-                    className="block text-xs font-medium text-ink"
-                  >
-                    {q.question}
-                    <textarea
-                      required
-                      rows={2}
-                      maxLength={1000}
-                      placeholder={q.suggestion || "Your answer…"}
-                      className={field}
-                      value={answers[q.id] || ""}
-                      onChange={(e) =>
-                        setAnswers({ ...answers, [q.id]: e.target.value })
-                      }
-                    />
-                  </label>
+                    question={q}
+                    value={answers[q.id] || ""}
+                    onChange={(answer) =>
+                      setAnswers((current) => ({ ...current, [q.id]: answer }))
+                    }
+                  />
                 ))}
               </div>
             </section>

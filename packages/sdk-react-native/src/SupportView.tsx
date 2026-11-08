@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   AppState,
   Linking,
   ScrollView,
@@ -29,6 +30,8 @@ export function SupportView({
   accentColor?: string;
 }) {
   const { height } = useWindowDimensions();
+  const [logoFailed, setLogoFailed] = useState(false);
+  useEffect(() => setLogoFailed(false), [config.logoUrl]);
   const [chat, setChat] = useState<SupportConversation | null>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -117,9 +120,25 @@ export function SupportView({
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <View style={[styles.heading, { borderColor: colors.line }]}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          {config.businessName}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {config.logoUrl && !logoFailed && (
+            <Image
+              accessibilityLabel={`${config.businessName} logo`}
+              source={{ uri: config.logoUrl }}
+              resizeMode="contain"
+              onError={() => setLogoFailed(true)}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 8,
+                backgroundColor: "white",
+              }}
+            />
+          )}
+          <Text style={[styles.title, { color: colors.text, flex: 1 }]}>
+            {config.businessName}
+          </Text>
+        </View>
         <Text style={[styles.meta, { color: colors.muted }]}>
           {chat?.state === "HUMAN"
             ? "The team is here to help"
