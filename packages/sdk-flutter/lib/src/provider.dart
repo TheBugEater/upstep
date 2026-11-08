@@ -9,6 +9,8 @@ class Upstep extends StatefulWidget {
     required this.apiKey,
     required this.child,
     this.userId,
+    this.chat = true,
+    this.supportIdentityToken,
     this.baseUrl = 'https://upstep.dev',
     this.accentColor,
     this.themeMode = UpstepThemeMode.auto,
@@ -16,6 +18,8 @@ class Upstep extends StatefulWidget {
 
   final String apiKey;
   final String? userId;
+  final bool chat;
+  final String? supportIdentityToken;
   final String baseUrl;
   final Color? accentColor;
   final UpstepThemeMode themeMode;
@@ -58,7 +62,9 @@ class _UpstepState extends State<Upstep> {
     }
     if (oldWidget.userId != widget.userId ||
         oldWidget.accentColor != widget.accentColor ||
-        oldWidget.themeMode != widget.themeMode) {
+        oldWidget.themeMode != widget.themeMode ||
+        oldWidget.chat != widget.chat ||
+        oldWidget.supportIdentityToken != widget.supportIdentityToken) {
       _controller.updateConfig(_configFromWidget());
     }
   }
@@ -67,6 +73,8 @@ class _UpstepState extends State<Upstep> {
     return UpstepConfig(
       apiKey: widget.apiKey,
       userId: widget.userId,
+      chat: widget.chat,
+      supportIdentityToken: widget.supportIdentityToken,
       baseUrl: widget.baseUrl,
       accentColor: widget.accentColor,
       themeMode: widget.themeMode,

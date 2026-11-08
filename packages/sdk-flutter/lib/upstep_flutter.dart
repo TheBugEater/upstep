@@ -4,3 +4,6 @@ export 'src/models.dart';
 export 'src/provider.dart';
 export 'src/widgets/feedback_button.dart';
 export 'src/widgets/feedback_sheet.dart';
+
+export 'src/support_client.dart';
+export 'src/widgets/support_chat.dart';

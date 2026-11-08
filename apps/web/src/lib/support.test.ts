@@ -232,3 +232,64 @@ test("website learning sends a concrete input and keeps analysis separate from c
     else process.env.OPENAI_API_KEY = original;
   }
 });
+
+test("support presentation removes em dashes and separates readable paragraphs", async () => {
+  const { formatSupportReply, replyWidgets } =
+    await import("./support/presentation");
+  assert.equal(
+    formatSupportReply("Open settings — select Support.\nCheck the domain."),
+    "Open settings, select Support.\n\nCheck the domain.",
+  );
+  assert.match(
+    formatSupportReply("First step. Second step. Third step."),
+    /\n\n/,
+  );
+  const base = {
+    inScope: true,
+    reply: "Try settings.",
+    sources: [],
+    offerTicket: false,
+    handoff: false,
+    ticketTitle: "",
+    ticketType: "GENERAL" as const,
+  };
+  assert.deepEqual(
+    replyWidgets(
+      { ...base, inScope: false, requestDetails: true, quickReplies: ["Help"] },
+      "one",
+    ),
+    [],
+  );
+  assert.equal(
+    replyWidgets(
+      { ...base, resolution: "clarify", requestDetails: true },
+      "two",
+    )[0]?.type,
+    "issue_details",
+  );
+  assert.equal(
+    replyWidgets(
+      { ...base, resolution: "answer", askConfirmation: true },
+      "three",
+    )[0]?.type,
+    "confirmation",
+  );
+  assert.deepEqual(
+    replyWidgets(
+      { ...base, resolution: "escalate", issueSummary: "Too vague" },
+      "four",
+    ),
+    [],
+  );
+  assert.equal(
+    replyWidgets(
+      {
+        ...base,
+        resolution: "escalate",
+        issueSummary: "Order has not arrived after the delivery date",
+      },
+      "five",
+    )[0]?.type,
+    "contact_form",
+  );
+});

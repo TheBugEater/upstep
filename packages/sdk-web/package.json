@@ -1,7 +1,7 @@
 {
   "name": "@upstep/js",
-  "version": "0.6.1",
-  "description": "Upstep feedback widget for web apps",
+  "version": "0.7.0",
+  "description": "UpStep feedback, voting and AI support widgets for web apps",
   "license": "MIT",
   "homepage": "https://upstep.dev",
   "repository": {
@@ -31,7 +31,12 @@
       "import": "./dist/react.js",
       "require": "./dist/react.cjs"
     },
-    "./embed": "./dist/upstep.global.js"
+    "./embed": "./dist/upstep.global.js",
+    "./support": {
+      "types": "./dist/support.d.ts",
+      "import": "./dist/support.js",
+      "require": "./dist/support.cjs"
+    }
   },
   "files": [
     "dist"

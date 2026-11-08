@@ -13,12 +13,16 @@ import {
   customerMessage,
   createSupportTicket,
   requestHuman,
+  submitSupportContact,
+  submitIssueDetails,
 } from "./support/service";
 import {
   processAIConversation,
   processPendingSupportTicket,
+  resumeOfflineConversations,
 } from "./support/worker";
 import type { SupportAIProvider } from "./support/ai";
+import { supportInteraction } from "./support/interactions";
 const url = process.env.UPSTEP_INVITATION_TEST_DATABASE_URL;
 test(
   "guided support setup verifies website knowledge before activation and AI handles offline escalation",
@@ -160,7 +164,7 @@ test(
       const session = await authenticateSupportSession(p.id, s.token, db);
       const c = await startConversation(p.id, session.customerId, db);
       await t.test(
-        "offline AI creates a real reference and keeps helping without pretending a human joined",
+        "offline AI offers a contact form before creating a private follow-up ticket",
         async () => {
           await customerMessage(
             {
@@ -173,11 +177,59 @@ test(
             db,
           );
           await processAIConversation(db, provider, p.id);
+          const beforeContact = await db.supportConversation.findUniqueOrThrow({
+            where: { id: c.id },
+          });
+          assert.equal(beforeContact.ticketId, null);
+          assert.equal(beforeContact.ticketPending, false);
+          await assert.rejects(
+            requestHuman(p.id, c.id, session.customerId, db),
+            (error: unknown) =>
+              error instanceof Error && /name and email/.test(error.message),
+          );
+          await assert.rejects(
+            submitSupportContact(
+              {
+                projectId: p.id,
+                customerId: session.customerId,
+                conversationId: c.id,
+                name: "",
+                email: "invalid",
+              },
+              db,
+            ),
+          );
+          await submitSupportContact(
+            {
+              projectId: p.id,
+              customerId: session.customerId,
+              conversationId: c.id,
+              name: "Taylor Customer",
+              email: "businesscodepulse@gmail.com",
+            },
+            db,
+          );
+          await submitSupportContact(
+            {
+              projectId: p.id,
+              customerId: session.customerId,
+              conversationId: c.id,
+              name: "Taylor Customer",
+              email: "businesscodepulse@gmail.com",
+            },
+            db,
+          );
+          await processPendingSupportTicket(db, c.id);
           const after = await db.supportConversation.findUniqueOrThrow({
             where: { id: c.id },
           });
           assert.equal(after.state, "AI");
           assert.ok(after.ticketId);
+          const ticket = await db.feedback.findUniqueOrThrow({
+            where: { id: after.ticketId! },
+          });
+          assert.match(ticket.content, /Taylor Customer/);
+          assert.match(ticket.content, /businesscodepulse@gmail.com/);
           assert.match(after.ticketReference!, /^UP-[A-F0-9]{12}$/);
           const receipt = await db.supportMessage.findFirstOrThrow({
             where: { conversationId: c.id, clientMessageId: "ticket-created" },
@@ -232,6 +284,264 @@ test(
             await db.feedback.count({ where: { projectId: p.id } }),
             1,
           );
+        },
+      );
+      await t.test(
+        "issue forms are scoped, deduplicated and expire after the next turn",
+        async () => {
+          const auth = await createSupportSession(p.id, undefined, db);
+          const identity = await authenticateSupportSession(
+            p.id,
+            auth.token,
+            db,
+          );
+          const conversation = await startConversation(
+            p.id,
+            identity.customerId,
+            db,
+          );
+          await customerMessage(
+            {
+              projectId: p.id,
+              customerId: identity.customerId,
+              conversationId: conversation.id,
+              clientMessageId: randomUUID(),
+              content: "Something is wrong with the repair",
+            },
+            db,
+          );
+          await processAIConversation(
+            db,
+            {
+              async reply() {
+                return {
+                  inScope: true,
+                  reply: "What is happening?",
+                  sources: [],
+                  offerTicket: false,
+                  handoff: false,
+                  ticketTitle: "",
+                  ticketType: "GENERAL",
+                  resolution: "clarify",
+                  issueSummary: "",
+                  requestDetails: true,
+                  quickReplies: [],
+                  askConfirmation: false,
+                };
+              },
+            },
+            p.id,
+          );
+          const context = await supportInteraction(
+            p.id,
+            identity.customerId,
+            conversation.id,
+            db,
+          );
+          assert.equal(context.canEscalate, false);
+          await assert.rejects(
+            requestHuman(p.id, conversation.id, identity.customerId, db),
+            /understand/,
+          );
+          const values = {
+            projectId: p.id,
+            customerId: identity.customerId,
+            conversationId: conversation.id,
+            widgetId: context.widgets[0]!.id,
+            summary: "Brake repair still fails",
+            details: "I tried the adjustment",
+            reference: "ORDER-12",
+            clientMessageId: randomUUID(),
+          };
+          await assert.rejects(
+            submitIssueDetails(
+              { ...values, customerId: session.customerId },
+              db,
+            ),
+            /not found/,
+          );
+          const first = await submitIssueDetails(values, db);
+          assert.equal((await submitIssueDetails(values, db)).id, first.id);
+          await assert.rejects(
+            submitIssueDetails(
+              { ...values, clientMessageId: randomUUID() },
+              db,
+            ),
+            /form has changed/,
+          );
+          await assert.rejects(
+            submitIssueDetails({ ...values, summary: "Different issue" }, db),
+            /identifier/,
+          );
+          await processAIConversation(db, provider, p.id);
+          assert.equal(
+            (
+              await supportInteraction(
+                p.id,
+                identity.customerId,
+                conversation.id,
+                db,
+              )
+            ).canEscalate,
+            true,
+          );
+          await db.supportCustomer.update({
+            where: { id: identity.customerId },
+            data: { verified: true, email: "businesscodepulse@gmail.com" },
+          });
+          await assert.rejects(
+            submitSupportContact(
+              {
+                projectId: p.id,
+                customerId: identity.customerId,
+                conversationId: conversation.id,
+                name: "Taylor",
+                email: "other@example.test",
+              },
+              db,
+            ),
+            /account email/,
+          );
+          await db.supportConversation.update({
+            where: { id: conversation.id },
+            data: { state: "RESOLVED" },
+          });
+          await assert.rejects(
+            submitSupportContact(
+              {
+                projectId: p.id,
+                customerId: identity.customerId,
+                conversationId: conversation.id,
+                name: "Taylor",
+                email: "businesscodepulse@gmail.com",
+              },
+              db,
+            ),
+            /understand/,
+          );
+        },
+      );
+      await t.test(
+        "team-only support collects the issue and required contact details without AI",
+        async () => {
+          await db.supportConfig.update({
+            where: { projectId: p.id },
+            data: { mode: "HUMAN_ONLY" },
+          });
+          const auth = await createSupportSession(p.id, undefined, db);
+          const identity = await authenticateSupportSession(
+            p.id,
+            auth.token,
+            db,
+          );
+          const conversation = await startConversation(
+            p.id,
+            identity.customerId,
+            db,
+          );
+          assert.equal(
+            (
+              await supportInteraction(
+                p.id,
+                identity.customerId,
+                conversation.id,
+                db,
+              )
+            ).canEscalate,
+            false,
+          );
+          await customerMessage(
+            {
+              projectId: p.id,
+              customerId: identity.customerId,
+              conversationId: conversation.id,
+              clientMessageId: randomUUID(),
+              content: "My repaired brake is still broken",
+            },
+            db,
+          );
+          assert.equal(
+            (
+              await supportInteraction(
+                p.id,
+                identity.customerId,
+                conversation.id,
+                db,
+              )
+            ).canEscalate,
+            true,
+          );
+          await assert.rejects(
+            requestHuman(p.id, conversation.id, identity.customerId, db),
+            /name and email/,
+          );
+          await submitSupportContact(
+            {
+              projectId: p.id,
+              customerId: identity.customerId,
+              conversationId: conversation.id,
+              name: "Taylor",
+              email: "businesscodepulse@gmail.com",
+            },
+            db,
+          );
+          await processPendingSupportTicket(db, conversation.id);
+          const final = await db.supportConversation.findUniqueOrThrow({
+            where: { id: conversation.id },
+          });
+          assert.ok(final.ticketReference);
+          assert.equal(final.state, "WAITING");
+          assert.equal(final.aiPending, false);
+          await db.supportConfig.update({
+            where: { projectId: p.id },
+            data: { mode: "AI_FIRST" },
+          });
+        },
+      );
+      await t.test(
+        "anonymous waiting conversations can resume AI without bypassing contact requirements",
+        async () => {
+          const auth = await createSupportSession(p.id, undefined, db);
+          const identity = await authenticateSupportSession(
+            p.id,
+            auth.token,
+            db,
+          );
+          const conversation = await startConversation(
+            p.id,
+            identity.customerId,
+            db,
+          );
+          await customerMessage(
+            {
+              projectId: p.id,
+              customerId: identity.customerId,
+              conversationId: conversation.id,
+              clientMessageId: randomUUID(),
+              content: "Please help with this bicycle repair",
+            },
+            db,
+          );
+          await db.supportConversation.update({
+            where: { id: conversation.id },
+            data: {
+              state: "WAITING",
+              aiPending: false,
+              humanRequested: true,
+              updatedAt: new Date(Date.now() - 120000),
+            },
+          });
+          await resumeOfflineConversations(db);
+          const resumed = await db.supportConversation.findUniqueOrThrow({
+            where: { id: conversation.id },
+          });
+          assert.equal(resumed.state, "AI");
+          assert.equal(resumed.aiPending, true);
+          assert.equal(resumed.ticketPending, false);
+          await db.supportConversation.update({
+            where: { id: conversation.id },
+            data: { state: "RESOLVED", aiPending: false },
+          });
         },
       );
       await t.test(

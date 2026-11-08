@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0
+
+- Native AI and team chat inside the existing feedback sheet.
+- Quick replies, issue forms, resolution checks and contact details before handoff.
+- Private session persistence, signed customer identities and deduplicated message retries.
+- Readable text and softer chat surfaces.
+
 ## 0.1.2
 
 - Show the custom dashboard status name and color in the feedback sheet.

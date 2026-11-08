@@ -11,7 +11,13 @@ import {
   customerMessage,
   requestHuman,
   createSupportTicket,
+  submitSupportContact,
+  submitIssueDetails,
 } from "@/lib/support/service";
+import {
+  supportInteraction,
+  assertEscalationAllowed,
+} from "@/lib/support/interactions";
 import { SupportError, supportCors } from "@/lib/support/policy";
 import { processSupportJobs } from "@/lib/support/worker";
 type Context = { params: Promise<{ cid: string }> };
@@ -23,6 +29,11 @@ export async function GET(req: NextRequest, { params }: Context) {
     const { cid } = await params;
     const { project, session } = await sdkRequest(req, true);
     const c = await customerConversation(project.id, session!.customerId, cid);
+    const interaction = await supportInteraction(
+      project.id,
+      session!.customerId,
+      cid,
+    );
     const messages = await db.supportMessage.findMany({
       where: { conversationId: cid, role: { not: "NOTE" } },
       select: publicMessageSelect,
@@ -37,6 +48,10 @@ export async function GET(req: NextRequest, { params }: Context) {
         ticketReference: c.ticketReference,
         supportEmail: project.supportConfig?.supportEmail || null,
         aiPending: c.aiPending,
+        canEscalate: interaction.canEscalate,
+        escalationSummary: interaction.escalationSummary,
+        activeWidgetMessageId: interaction.activeWidgetMessageId,
+        humanRequested: c.humanRequested,
         messages,
         customer: {
           name: session!.customer.name,
@@ -54,6 +69,19 @@ const schema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("message"),
     content: z.string().trim().min(1).max(4000),
+    clientMessageId: z.string().uuid(),
+  }),
+  z.object({
+    action: z.literal("handoff"),
+    name: z.string().trim().min(1).max(100),
+    email: z.string().trim().email().max(254),
+  }),
+  z.object({
+    action: z.literal("details"),
+    widgetId: z.string().max(120),
+    summary: z.string().trim().min(1).max(160),
+    details: z.string().trim().max(2000).optional(),
+    reference: z.string().trim().max(100).optional(),
     clientMessageId: z.string().uuid(),
   }),
   z.object({ action: z.literal("human") }),
@@ -83,10 +111,27 @@ export async function POST(req: NextRequest, { params }: Context) {
       });
     if (action.action === "human")
       await requestHuman(project.id, cid, session!.customerId);
-    if (action.action === "ticket")
+    if (action.action === "handoff")
+      await submitSupportContact({
+        projectId: project.id,
+        customerId: session!.customerId,
+        conversationId: cid,
+        name: action.name,
+        email: action.email,
+      });
+    if (action.action === "details")
+      await submitIssueDetails({
+        projectId: project.id,
+        customerId: session!.customerId,
+        conversationId: cid,
+        ...action,
+      });
+    if (action.action === "ticket") {
+      await assertEscalationAllowed(project.id, session!.customerId, cid);
       return NextResponse.json(await createSupportTicket(project.id, cid), {
         headers: supportCors,
       });
+    }
     if (action.action === "contact") {
       if (session!.customer.verified)
         throw new SupportError("Update your details in your account.");

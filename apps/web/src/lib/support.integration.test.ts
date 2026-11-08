@@ -12,6 +12,7 @@ import {
   teamConversationAction,
   availableAgents,
   supportProject,
+  submitSupportContact,
 } from "./support/service";
 import { processAIConversation } from "./support/worker";
 import type { SupportAIProvider } from "./support/ai";
@@ -108,6 +109,23 @@ test(
       );
       const c = await startConversation(project.id, a.customerId, db);
       const otherC = await startConversation(project.id, b.customerId, db);
+      await assert.rejects(
+        requestHuman(project.id, c.id, a.customerId, db),
+        /understand/,
+      );
+      await assert.rejects(
+        submitSupportContact(
+          {
+            projectId: project.id,
+            conversationId: c.id,
+            customerId: a.customerId,
+            name: "Taylor",
+            email: "businesscodepulse@gmail.com",
+          },
+          db,
+        ),
+        /understand/,
+      );
       await db.supportKnowledgePage.create({
         data: {
           projectId: project.id,
@@ -252,7 +270,7 @@ test(
             },
           });
           assert.equal((await availableAgents(project.id, db)).length, 0);
-          await requestHuman(project.id, c.id, a.customerId, db);
+          // A teammate already took over; no new customer handoff is needed.
           assert.notEqual(
             (
               await db.supportConversation.findUniqueOrThrow({

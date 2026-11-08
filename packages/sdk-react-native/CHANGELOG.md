@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+- Native support chat in the existing feedback sheet, with signed customer identities and anonymous session persistence.
+- Quick replies, issue forms, resolution checks and a required contact card before team handoff.
+- Larger text, softer colors and white/black themes.
+
 ## 0.6.16
 
 - Fix TypeScript compatibility across React Native versions when rendering the feedback-sheet backdrop.

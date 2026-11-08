@@ -1,3 +1,5 @@
+import { assertEscalationAllowed, supportInteraction } from "./interactions";
+import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { db } from "../db";
@@ -152,15 +154,12 @@ export async function startConversation(
       orderBy: { updatedAt: "desc" },
     });
     if (existing) return existing;
-    const online =
-      config.mode === "HUMAN_FIRST" &&
-      (await availableAgents(projectId, tx)).length > 0;
     return tx.supportConversation.create({
       data: {
         projectId,
         customerId,
-        humanRequested: config.mode === "HUMAN_ONLY",
-        state: config.mode === "HUMAN_ONLY" || online ? "WAITING" : "AI",
+        humanRequested: false,
+        state: config.mode === "HUMAN_ONLY" ? "WAITING" : "AI",
         messages: {
           create: {
             clientMessageId: "welcome",
@@ -255,6 +254,7 @@ export async function createSupportTicket(
     const c = await tx.supportConversation.findFirst({
       where: { id: conversationId, projectId },
       include: {
+        customer: true,
         messages: {
           where: { role: { in: ["CUSTOMER", "AGENT", "ASSISTANT"] } },
           orderBy: { createdAt: "desc" },
@@ -324,7 +324,7 @@ export async function createSupportTicket(
       data: {
         projectId,
         title: `[${reference}] ${title}`,
-        content: `Reference: ${reference}\n\n${transcript}\n\nSupport conversation: /dashboard/projects/${projectId}?tab=support&conversation=${c.id}`,
+        content: `Reference: ${reference}\nCustomer: ${c.customer.name || "Visitor"}${c.customer.email ? `\nEmail: ${c.customer.email}` : ""}\n\n${transcript}\n\nSupport conversation: /dashboard/projects/${projectId}?tab=support&conversation=${c.id}`,
         type,
         status: "OPEN",
         statusId: status?.id ?? null,
@@ -400,6 +400,7 @@ export async function requestHuman(
   client: PrismaClient = db,
 ) {
   return collaborationTransaction(async (tx) => {
+    await assertEscalationAllowed(projectId, customerId, conversationId, tx);
     const c = await tx.supportConversation.findFirst({
       where: { id: conversationId, projectId, customerId },
       include: {
@@ -412,7 +413,15 @@ export async function requestHuman(
       },
     });
     if (!c) throw new SupportError("Conversation not found.", 404);
-    if (c.state === "HUMAN" || c.humanRequested) return;
+    if (c.humanRequested) {
+      if (!c.ticketId && c.messages.length)
+        await tx.supportConversation.update({
+          where: { id: c.id },
+          data: { ticketPending: true },
+        });
+      return;
+    }
+    if (c.state === "HUMAN") return;
     const online = await availableAgents(projectId, tx);
     const useAI =
       !online.length && c.project.supportConfig?.mode !== "HUMAN_ONLY";
@@ -422,8 +431,8 @@ export async function requestHuman(
         state: useAI ? "AI" : "WAITING",
         humanRequested: true,
         revision: { increment: 1 },
-        aiPending: useAI && c.messages.length > 0,
-        ticketPending: !online.length && c.messages.length > 0 && !c.ticketId,
+        aiPending: false,
+        ticketPending: c.messages.length > 0 && !c.ticketId,
         aiLock: null,
         aiLockedAt: null,
       },
@@ -437,8 +446,8 @@ export async function requestHuman(
         content: online.length
           ? "You've been added to the team's queue. A teammate will join when they can."
           : useAI
-            ? "The team is away right now. AI can keep helping, and we'll create a ticket for the team if you've described an issue. You can optionally share your email for follow-up."
-            : "The team is away. Leave your issue here and optionally add your email for follow-up.",
+            ? "The team is away right now. Your contact details are saved for follow-up. AI can keep helping while we prepare your ticket."
+            : "The team is away. Your request and contact details are saved for follow-up.",
       },
     });
   }, client);
@@ -590,4 +599,116 @@ export async function supportUsage(
     limit: supportLimits(plan).aiReplies,
     month: usageMonth(),
   };
+}
+
+export async function submitSupportContact(
+  input: {
+    projectId: string;
+    customerId: string;
+    conversationId: string;
+    name: string;
+    email: string;
+  },
+  client: PrismaClient = db,
+) {
+  const name = input.name.trim();
+  const email = input.email.trim().toLowerCase();
+  if (
+    !name ||
+    name.length > 100 ||
+    !z.string().email().max(254).safeParse(email).success
+  )
+    throw new SupportError("Enter your name and a valid email address.");
+  await collaborationTransaction(async (tx) => {
+    const context = await supportInteraction(
+      input.projectId,
+      input.customerId,
+      input.conversationId,
+      tx,
+    );
+    if (!context.canEscalate && !context.conversation.humanRequested)
+      throw new SupportError(
+        "AI needs to understand the issue and try to help first.",
+        409,
+      );
+    const customer = context.conversation.customer;
+    if (
+      customer.verified &&
+      customer.email &&
+      customer.email.toLowerCase() !== email
+    )
+      throw new SupportError("Use your account email for this request.");
+    await tx.supportCustomer.update({
+      where: { id: input.customerId },
+      data: { name, email },
+    });
+  }, client);
+  await requestHuman(
+    input.projectId,
+    input.conversationId,
+    input.customerId,
+    client,
+  );
+}
+export async function submitIssueDetails(
+  input: {
+    projectId: string;
+    customerId: string;
+    conversationId: string;
+    widgetId: string;
+    summary: string;
+    details?: string | undefined;
+    reference?: string | undefined;
+    clientMessageId: string;
+  },
+  client: PrismaClient = db,
+) {
+  const content = [
+    input.summary.trim(),
+    input.details?.trim(),
+    input.reference?.trim() ? `Reference: ${input.reference.trim()}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const existing = await client.supportMessage.findFirst({
+    where: {
+      conversationId: input.conversationId,
+      clientMessageId: input.clientMessageId,
+      conversation: {
+        projectId: input.projectId,
+        customerId: input.customerId,
+      },
+    },
+  });
+  if (existing) {
+    if (existing.role !== "CUSTOMER" || existing.content !== content)
+      throw new SupportError("Message identifier is already in use.", 409);
+    return existing;
+  }
+  const context = await supportInteraction(
+    input.projectId,
+    input.customerId,
+    input.conversationId,
+    client,
+  );
+  if (
+    !context.widgets.some(
+      (w) => w.id === input.widgetId && w.type === "issue_details",
+    ) ||
+    !context.activeWidgetMessageId
+  )
+    throw new SupportError(
+      "This form has changed. Use the latest question in the chat.",
+      409,
+    );
+  return customerMessage(
+    {
+      projectId: input.projectId,
+      customerId: input.customerId,
+      conversationId: input.conversationId,
+      clientMessageId: input.clientMessageId,
+      content,
+    },
+    client,
+  );
 }

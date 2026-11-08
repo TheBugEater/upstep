@@ -8,6 +8,7 @@ import {
   type SupportAIInput,
   type SupportReply,
 } from "./ai";
+import { formatSupportReply, replyWidgets } from "./presentation";
 import { processBusinessLearning } from "./learning";
 import { availableAgents, createSupportTicket } from "./service";
 import { SupportError } from "./policy";
@@ -138,7 +139,6 @@ export async function processAIConversation(
   const config = c.project.supportConfig!;
   const month = usageMonth();
   const lastCustomer = c.messages.find((m) => m.role === "CUSTOMER");
-  let scopeApproved = false;
   try {
     if (!lastCustomer) {
       await client.supportConversation.updateMany({
@@ -191,7 +191,6 @@ export async function processAIConversation(
     };
     const ai = provider || getSupportAIProvider();
     const allowed = ai.checkScope ? await ai.checkScope(aiInput) : true;
-    scopeApproved = allowed;
     const proposed = allowed ? await ai.reply(aiInput) : null;
     const result: SupportReply =
       proposed?.inScope === true
@@ -227,14 +226,7 @@ export async function processAIConversation(
           aiLock: null,
           aiLockedAt: null,
           aiError: null,
-          ...(result.handoff && online.length > 0
-            ? { state: "WAITING", humanRequested: true }
-            : {}),
-          ...(!online.length &&
-          (result.offerTicket || result.handoff) &&
-          !c.ticketId
-            ? { ticketPending: true }
-            : {}),
+          // Ticket creation is queued only by the customer contact card.
         },
       });
       if (!current.count) return;
@@ -253,10 +245,15 @@ export async function processAIConversation(
           clientMessageId: `ai:${lastCustomer.id}`,
           role: "ASSISTANT",
           authorName: `${config.businessName} AI`,
-          content: result.reply,
+          content: formatSupportReply(result.reply),
           metadata: {
             citations,
             inScope: result.inScope,
+            resolution:
+              result.resolution ||
+              (result.offerTicket || result.handoff ? "escalate" : "answer"),
+            issueSummary: result.issueSummary || result.ticketTitle,
+            widgets: replyWidgets(result, lastCustomer.id),
             offerTicket: result.offerTicket,
             ticketTitle: result.ticketTitle,
             ticketType: result.ticketType,
@@ -283,7 +280,6 @@ export async function processAIConversation(
         data: {
           aiPending: false,
           state: "WAITING",
-          ticketPending: scopeApproved && !c.ticketId && !!lastCustomer,
           aiError: message,
           aiLock: null,
           aiLockedAt: null,
@@ -372,6 +368,8 @@ export async function processPendingSupportTicket(
   const c = await client.supportConversation.findFirst({
     where: {
       ticketPending: true,
+      humanRequested: true,
+      customer: { name: { not: null }, email: { not: null } },
       ...(conversationId ? { id: conversationId } : {}),
       project: {
         supportConfig: { enabled: true },
@@ -435,6 +433,7 @@ export async function resumeOfflineConversations(client: PrismaClient = db) {
         owner: { plan: { in: ["PRO", "BUSINESS"] } },
       },
     },
+    include: { customer: { select: { name: true, email: true } } },
     take: 30,
   });
   const availability = new Map<string, boolean>();
@@ -455,7 +454,11 @@ export async function resumeOfflineConversations(client: PrismaClient = db) {
       data: {
         state: "AI",
         aiPending: true,
-        ...(!availability.get(c.projectId) && c.humanRequested && !c.ticketId
+        ...(!availability.get(c.projectId) &&
+        c.humanRequested &&
+        !c.ticketId &&
+        c.customer.name?.trim() &&
+        c.customer.email
           ? { ticketPending: true }
           : {}),
         revision: { increment: 1 },

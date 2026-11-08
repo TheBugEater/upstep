@@ -87,7 +87,7 @@ export function SupportSetup({
         "Help customers understand our services, offer practical troubleshooting, and create a ticket for unresolved issues. Do not make account changes or promises outside our confirmed policies.",
       welcomeMessage:
         config?.welcomeMessage || "Hi! How can we help you today?",
-      mode: config?.mode || "AI_FIRST",
+      mode: config?.mode === "HUMAN_FIRST" ? "AI_FIRST" : config?.mode || "AI_FIRST",
       enabled: ready ? !!config?.enabled : true,
     });
     setFacts(
@@ -550,16 +550,13 @@ export function SupportSetup({
             </label>
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="text-xs font-medium text-muted">
-                Who replies first?
+                Support mode
                 <select
                   className={field}
                   value={draft.mode}
                   onChange={(e) => setDraft({ ...draft, mode: e.target.value })}
                 >
                   <option value="AI_FIRST">AI first, team when needed</option>
-                  <option value="HUMAN_FIRST">
-                    Team first, AI when unavailable
-                  </option>
                   <option value="HUMAN_ONLY">Team only</option>
                 </select>
               </label>

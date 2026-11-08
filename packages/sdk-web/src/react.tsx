@@ -7,10 +7,16 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
-import type { Comment, Feedback, FeedbackType, FeedbackWithComments, UpstepConfig } from "@upstep/types";
+import type {
+  Comment,
+  Feedback,
+  FeedbackType,
+  FeedbackWithComments,
+  UpstepConfig,
+} from "@upstep/types";
 import { UpstepApiClient } from "./api";
 
-const DEFAULT_ACCENT = "#D97757";
+const DEFAULT_ACCENT = "#5B7168";
 
 // ─── Theming ─────────────────────────────────────────────────────────────────
 
@@ -28,14 +34,24 @@ interface Palette {
 }
 
 const LIGHT: Palette = {
-  bg: "#ffffff", bgSoft: "#f6f5f2", bgHover: "#efede8",
-  text: "#1a1915", textSoft: "#56544d", textFaint: "#9b9890",
-  border: "#e8e6df", overlay: "rgba(26,25,21,.45)",
+  bg: "#ffffff",
+  bgSoft: "#f4f6f4",
+  bgHover: "#eaf0eb",
+  text: "#1a1915",
+  textSoft: "#56544d",
+  textFaint: "#9b9890",
+  border: "#e8e6df",
+  overlay: "rgba(26,25,21,.45)",
 };
 const DARK: Palette = {
-  bg: "#000000", bgSoft: "#262522", bgHover: "#302e2a",
-  text: "#f5f4f0", textSoft: "#b4b1a8", textFaint: "#7d7a72",
-  border: "#33312c", overlay: "rgba(0,0,0,.6)",
+  bg: "#000000",
+  bgSoft: "#191d1b",
+  bgHover: "#252d28",
+  text: "#f5f4f0",
+  textSoft: "#b4b1a8",
+  textFaint: "#7d7a72",
+  border: "#33312c",
+  overlay: "rgba(0,0,0,.6)",
 };
 
 /** Reads the `.dark` class / `data-theme="dark"` convention most apps toggle
@@ -48,7 +64,10 @@ const DARK: Palette = {
 function isHostDark(): boolean {
   if (typeof document === "undefined") return false;
   const root = document.documentElement;
-  return root.classList.contains("dark") || root.getAttribute("data-theme") === "dark";
+  return (
+    root.classList.contains("dark") ||
+    root.getAttribute("data-theme") === "dark"
+  );
 }
 
 function usePalette(mode: ThemeMode): Palette {
@@ -88,7 +107,11 @@ interface UpstepContextValue {
   client: UpstepApiClient;
   feedItems: Feedback[];
   loadFeed: () => Promise<void>;
-  submit: (title: string, content: string, type?: FeedbackType) => Promise<void>;
+  submit: (
+    title: string,
+    content: string,
+    type?: FeedbackType,
+  ) => Promise<void>;
   vote: (feedbackId: string, value: "UP" | "DOWN") => Promise<void>;
   getItem: (feedbackId: string) => Promise<FeedbackWithComments>;
   isOpen: boolean;
@@ -118,7 +141,17 @@ export function UpstepProvider({
 
   useEffect(() => {
     client.supportIdentityToken = config.supportIdentityToken;
-    document.querySelectorAll<HTMLIFrameElement>("iframe[data-upstep-support]").forEach(frame => frame.contentWindow?.postMessage({type: "upstep:support:identity", token: config.supportIdentityToken}, new URL(client.baseUrl).origin));
+    document
+      .querySelectorAll<HTMLIFrameElement>("iframe[data-upstep-support]")
+      .forEach((frame) =>
+        frame.contentWindow?.postMessage(
+          {
+            type: "upstep:support:identity",
+            token: config.supportIdentityToken,
+          },
+          new URL(client.baseUrl).origin,
+        ),
+      );
   }, [client, config.supportIdentityToken]);
 
   const loadFeed = useCallback(async () => {
@@ -131,39 +164,58 @@ export function UpstepProvider({
     }
   }, [client]);
 
-  useEffect(() => { loadFeed(); }, [loadFeed]);
+  useEffect(() => {
+    loadFeed();
+  }, [loadFeed]);
 
-  const submit = useCallback(async (title: string, content: string, type?: FeedbackType) => {
-    const payload: Parameters<typeof client.submitFeedback>[0] = { content };
-    if (title.trim()) payload.title = title.trim();
-    if (type !== undefined) payload.type = type;
-    await client.submitFeedback(payload);
-    await loadFeed();
-  }, [client, loadFeed]);
-
-  const vote = useCallback(async (feedbackId: string, value: "UP" | "DOWN") => {
-    try {
-      await client.vote(feedbackId, value);
+  const submit = useCallback(
+    async (title: string, content: string, type?: FeedbackType) => {
+      const payload: Parameters<typeof client.submitFeedback>[0] = { content };
+      if (title.trim()) payload.title = title.trim();
+      if (type !== undefined) payload.type = type;
+      await client.submitFeedback(payload);
       await loadFeed();
-    } catch {
-      // vote failed silently
-    }
-  }, [client, loadFeed]);
+    },
+    [client, loadFeed],
+  );
+
+  const vote = useCallback(
+    async (feedbackId: string, value: "UP" | "DOWN") => {
+      try {
+        await client.vote(feedbackId, value);
+        await loadFeed();
+      } catch {
+        // vote failed silently
+      }
+    },
+    [client, loadFeed],
+  );
 
   const getItem = useCallback(
     (feedbackId: string) => client.getItem(feedbackId),
-    [client]
+    [client],
   );
 
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
-  const identify = useCallback((userId: string | undefined) => client.setUserId(userId), [client]);
+  const identify = useCallback(
+    (userId: string | undefined) => client.setUserId(userId),
+    [client],
+  );
 
   return (
     <UpstepContext.Provider
       value={{
-        client, feedItems, loadFeed, submit, vote, getItem,
-        isOpen, open, close, identify,
+        client,
+        feedItems,
+        loadFeed,
+        submit,
+        vote,
+        getItem,
+        isOpen,
+        open,
+        close,
+        identify,
         accentColor: config.accentColor ?? DEFAULT_ACCENT,
         theme: config.theme ?? "auto",
         showBranding,
@@ -204,11 +256,34 @@ export function FeedbackWidget({
   const ctx = useUpstep();
   const accent = accentColor ?? ctx.accentColor;
   const p = usePalette(theme ?? ctx.theme);
-  const { isOpen: open, open: openWidget, close: closeWidget, showBranding } = ctx;
+  const {
+    isOpen: open,
+    open: openWidget,
+    close: closeWidget,
+    showBranding,
+  } = ctx;
   const [screen, setScreen] = useState<Screen>("list");
   const [hasSupport, setHasSupport] = useState(false);
-  useEffect(() => { let active = true; ctx.client.chat = ctx.chat; if (!ctx.chat || !chat) {setHasSupport(false);return;} void ctx.client.supportEnabled().then(value => {if(active) setHasSupport(value);}); return () => {active = false;}; }, [ctx.client, ctx.chat, chat]);
-  useEffect(() => {if ((!ctx.chat || !chat) && screen === "support") setScreen("list");}, [ctx.chat, chat, screen]);
+  useEffect(() => {
+    let active = true;
+    ctx.client.chat = ctx.chat;
+    if (!ctx.chat || !chat) {
+      setHasSupport(false);
+      return;
+    }
+    void ctx.client.supportEnabled().then((value) => {
+      if (active) setHasSupport(value);
+    });
+    return () => {
+      active = false;
+    };
+  }, [ctx.client, ctx.chat, chat]);
+  useEffect(() => {
+    if ((!ctx.chat || !chat) && screen === "support") setScreen("list");
+  }, [ctx.chat, chat, screen]);
+  useEffect(() => {
+    if (open) setScreen(hasSupport && chat && ctx.chat ? "support" : "list");
+  }, [open, hasSupport, chat, ctx.chat]);
   const [detailId, setDetailId] = useState<string | null>(null);
   // Same SSR-safe rule as usePalette above: start deterministic (false) so
   // hydration never mismatches, and let the effect below drive the real
@@ -223,16 +298,18 @@ export function FeedbackWidget({
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  const posStyle: React.CSSProperties =
-    position === "bottom-left"
-      ? { position: "fixed", bottom: 24, left: 24 }
-      : { position: "fixed", bottom: 24, right: 24 };
+  const posStyle: React.CSSProperties = {
+    position: "fixed",
+    bottom: 24,
+    right: 24,
+  };
 
-  const font = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+  const font =
+    '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
 
   function handleClose() {
     closeWidget();
-    setTimeout(() => { setScreen("list"); setDetailId(null); }, 300);
+    setDetailId(null);
   }
 
   function goToDetail(id: string) {
@@ -244,16 +321,29 @@ export function FeedbackWidget({
     <>
       {!hideLauncher && (
         <button
+          aria-label="Open help and feedback"
           onClick={openWidget}
           style={{
-            ...posStyle, zIndex: 9998, display: "inline-flex", alignItems: "center", gap: 7,
-            background: accent, color: "#fff", border: "none", borderRadius: 9999,
-            padding: isMobile ? "12px" : "12px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer",
-            fontFamily: font, boxShadow: "0 6px 20px rgba(26,25,21,.18)",
+            ...posStyle,
+            zIndex: 9998,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 7,
+            background: accent,
+            color: "#fff",
+            border: "none",
+            borderRadius: 9999,
+            padding: isMobile ? "12px" : "12px 18px",
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: font,
+            boxShadow: "0 6px 20px rgba(26,25,21,.18)",
           }}
         >
           <ChatIcon size={16} />
-          {!isMobile && (hasSupport && chat && ctx.chat ? "Help & feedback" : "Feedback")}
+          {!isMobile &&
+            (hasSupport && chat && ctx.chat ? "Help & feedback" : "Feedback")}
         </button>
       )}
 
@@ -261,67 +351,259 @@ export function FeedbackWidget({
         <div
           onClick={(e) => e.target === e.currentTarget && handleClose()}
           style={{
-            position: "fixed", inset: 0, background: p.overlay, backdropFilter: "blur(3px)",
-            zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
-            padding: 16, fontFamily: font,
+            position: "fixed",
+            inset: 0,
+            background: "transparent",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "flex-end",
+            padding: isMobile ? "0 12px 80px" : "0 24px 88px",
+            fontFamily: font,
           }}
         >
           <div
             style={{
-              background: p.bg, border: `1px solid ${p.border}`, borderRadius: 20,
-              width: "100%", maxWidth: hasSupport && chat && ctx.chat ? 460 : 440, maxHeight: "88vh", display: "flex",
-              flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,.28)",
+              background: p.bg,
+              border: `1px solid ${p.border}`,
+              borderRadius: 20,
+              width: "100%",
+              maxWidth: hasSupport && chat && ctx.chat ? 460 : 440,
+              maxHeight: "calc(100dvh - 112px)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              boxShadow: "0 24px 64px rgba(0,0,0,.28)",
             }}
           >
             {/* Header */}
-            {hasSupport && chat && ctx.chat ? <div style={{display:"flex",alignItems:"center",gap:14,padding:"10px 14px",borderBottom:`1px solid ${p.border}`,flexShrink:0}}><div style={{display:"flex",flex:1,gap:4}}>{[["support","Support"],["list","Feedback"]].map(([value,label])=><button key={value} onClick={()=>setScreen(value as Screen)} style={{flex:1,border:0,borderRadius:8,padding:"9px 12px",background:(screen === "support" ? value === "support" : value === "list") ? p.bgSoft : "transparent",color:(screen === "support" ? value === "support" : value === "list") ? p.text : p.textSoft,fontSize:12,fontWeight:600,cursor:"pointer"}}>{label}</button>)}</div><button aria-label="Close" onClick={handleClose} style={{border:0,background:"transparent",color:p.textSoft,padding:6,cursor:"pointer",fontSize:14}}>✕</button></div> : <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${p.border}`, flexShrink: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {screen !== "list" && (
-                  <button
-                    onClick={() => setScreen("list")}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: accent, fontSize: 13, fontWeight: 600, padding: 0 }}
-                  >
-                    ← Back
-                  </button>
-                )}
-                {screen === "list" && (
-                  <span style={{ fontWeight: 700, fontSize: 16, color: p.text, letterSpacing: "-.01em" }}>Feedback</span>
-                )}
-                {screen === "create" && (
-                  <span style={{ fontWeight: 700, fontSize: 16, color: p.text, letterSpacing: "-.01em" }}>New feedback</span>
-                )}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {screen === "list" && (
-                  <button
-                    onClick={() => setScreen("create")}
-                    style={{ background: accent, color: "#fff", border: "none", borderRadius: 20, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-                  >
-                    + New
-                  </button>
-                )}
+            {hasSupport && chat && ctx.chat ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  padding: "10px 14px",
+                  borderBottom: `1px solid ${p.border}`,
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ display: "flex", flex: 1, gap: 4 }}>
+                  {[
+                    ["support", "Support"],
+                    ["list", "Feedback"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => setScreen(value as Screen)}
+                      style={{
+                        flex: 1,
+                        border: 0,
+                        borderRadius: 8,
+                        padding: "9px 12px",
+                        background: (
+                          screen === "support"
+                            ? value === "support"
+                            : value === "list"
+                        )
+                          ? p.bgSoft
+                          : "transparent",
+                        color: (
+                          screen === "support"
+                            ? value === "support"
+                            : value === "list"
+                        )
+                          ? p.text
+                          : p.textSoft,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <button
+                  aria-label="Close"
                   onClick={handleClose}
-                  style={{ background: p.bgSoft, border: "none", width: 28, height: 28, borderRadius: 8, fontSize: 14, cursor: "pointer", color: p.textSoft, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  style={{
+                    border: 0,
+                    background: "transparent",
+                    color: p.textSoft,
+                    padding: 6,
+                    cursor: "pointer",
+                    fontSize: 14,
+                  }}
                 >
                   ✕
                 </button>
               </div>
-            </div>}
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "16px 20px",
+                  borderBottom: `1px solid ${p.border}`,
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {screen !== "list" && (
+                    <button
+                      onClick={() => setScreen("list")}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: accent,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        padding: 0,
+                      }}
+                    >
+                      ← Back
+                    </button>
+                  )}
+                  {screen === "list" && (
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 16,
+                        color: p.text,
+                        letterSpacing: "-.01em",
+                      }}
+                    >
+                      Feedback
+                    </span>
+                  )}
+                  {screen === "create" && (
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 16,
+                        color: p.text,
+                        letterSpacing: "-.01em",
+                      }}
+                    >
+                      New feedback
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {screen === "list" && (
+                    <button
+                      onClick={() => setScreen("create")}
+                      style={{
+                        background: accent,
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 20,
+                        padding: "6px 14px",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      + New
+                    </button>
+                  )}
+                  <button
+                    onClick={handleClose}
+                    style={{
+                      background: p.bgSoft,
+                      border: "none",
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      fontSize: 14,
+                      cursor: "pointer",
+                      color: p.textSoft,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Body */}
-            <div style={{ flex: 1, overflowY: "auto", padding: screen === "support" ? 0 : "16px 20px 24px" }}>
-              {screen === "support" && chat && ctx.chat && <SupportFrame client={ctx.client} theme={p.bg === "#000000" ? "dark" : "light"} />}
-              {hasSupport && chat && ctx.chat && screen !== "support" && <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>{screen === "list" ? <><span style={{fontSize:14,fontWeight:600,color:p.text}}>Feedback & ideas</span><button onClick={()=>setScreen("create")} style={{border:0,borderRadius:8,background:accent,color:"white",fontSize:12,padding:"7px 10px",cursor:"pointer"}}>+ New</button></> : <button onClick={()=>setScreen("list")} style={{border:0,background:"none",padding:0,color:p.textSoft,fontSize:12,cursor:"pointer"}}>← Back to feedback</button>}</div>}
-              {screen === "list" && (
-                <FeedList
-                  onSelect={goToDetail}
-                  accent={accent}
-                  p={p}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: screen === "support" ? 0 : "16px 20px 24px",
+              }}
+            >
+              {screen === "support" && chat && ctx.chat && (
+                <SupportFrame
+                  client={ctx.client}
+                  theme={p.bg === "#000000" ? "dark" : "light"}
                 />
               )}
+              {hasSupport && chat && ctx.chat && screen !== "support" && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 16,
+                  }}
+                >
+                  {screen === "list" ? (
+                    <>
+                      <span
+                        style={{ fontSize: 14, fontWeight: 600, color: p.text }}
+                      >
+                        Feedback & ideas
+                      </span>
+                      <button
+                        onClick={() => setScreen("create")}
+                        style={{
+                          border: 0,
+                          borderRadius: 8,
+                          background: accent,
+                          color: "white",
+                          fontSize: 14,
+                          padding: "7px 10px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        + New
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setScreen("list")}
+                      style={{
+                        border: 0,
+                        background: "none",
+                        padding: 0,
+                        color: p.textSoft,
+                        fontSize: 14,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ← Back to feedback
+                    </button>
+                  )}
+                </div>
+              )}
+              {screen === "list" && (
+                <FeedList onSelect={goToDetail} accent={accent} p={p} />
+              )}
               {screen === "detail" && detailId && (
-                <FeedDetail feedbackId={detailId} accent={accent} p={p} font={font} />
+                <FeedDetail
+                  feedbackId={detailId}
+                  accent={accent}
+                  p={p}
+                  font={font}
+                />
               )}
               {screen === "create" && (
                 <CreateForm
@@ -340,12 +622,18 @@ export function FeedbackWidget({
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  display: "block", textAlign: "center", padding: "8px 0",
-                  borderTop: `1px solid ${p.border}`, fontSize: 11,
-                  color: p.textFaint, textDecoration: "none", flexShrink: 0,
+                  display: "block",
+                  textAlign: "center",
+                  padding: "8px 0",
+                  borderTop: `1px solid ${p.border}`,
+                  fontSize: 11,
+                  color: p.textFaint,
+                  textDecoration: "none",
+                  flexShrink: 0,
                 }}
               >
-                Powered by <strong style={{ fontWeight: 700 }}>Upstep.dev</strong>
+                Powered by{" "}
+                <strong style={{ fontWeight: 700 }}>Upstep.dev</strong>
               </a>
             )}
           </div>
@@ -355,16 +643,40 @@ export function FeedbackWidget({
   );
 }
 
-function SupportFrame({client, theme}: {client: UpstepApiClient; theme: string}) {
+function SupportFrame({
+  client,
+  theme,
+}: {
+  client: UpstepApiClient;
+  theme: string;
+}) {
   const ref = useRef<HTMLIFrameElement>(null);
-  useEffect(() => { if(ref.current) return client.connectSupportFrame(ref.current); }, [client]);
-  return <iframe ref={ref} data-upstep-support title="Customer support" src={client.supportFrameUrl(theme)} style={{width: "100%", height: "min(560px, calc(88dvh - 56px))", minHeight: 300, border: 0, display: "block"}} />;
+  useEffect(() => {
+    if (ref.current) return client.connectSupportFrame(ref.current);
+  }, [client]);
+  return (
+    <iframe
+      ref={ref}
+      data-upstep-support
+      title="Customer support"
+      src={client.supportFrameUrl(theme)}
+      style={{
+        width: "100%",
+        height: "min(560px, calc(100dvh - 168px))",
+        minHeight: 300,
+        border: 0,
+        display: "block",
+      }}
+    />
+  );
 }
 
 // ─── FeedList ─────────────────────────────────────────────────────────────────
 
 function FeedList({
-  onSelect, accent, p,
+  onSelect,
+  accent,
+  p,
 }: {
   onSelect: (id: string) => void;
   accent: string;
@@ -377,7 +689,14 @@ function FeedList({
   if (!items.length) {
     return (
       <div style={{ textAlign: "center", padding: "40px 0" }}>
-        <div style={{ color: p.textSoft, fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
+        <div
+          style={{
+            color: p.textSoft,
+            fontSize: 15,
+            fontWeight: 600,
+            marginBottom: 4,
+          }}
+        >
           No open feedback yet
         </div>
         <div style={{ color: p.textFaint, fontSize: 14 }}>
@@ -397,35 +716,97 @@ function FeedList({
             key={f.id}
             onClick={() => onSelect(f.id)}
             style={{
-              display: "flex", gap: 12, padding: 14, border: `1px solid ${p.border}`, borderRadius: 14,
-              marginBottom: 10, background: p.bg, cursor: "pointer",
+              display: "flex",
+              gap: 12,
+              padding: 14,
+              border: `1px solid ${p.border}`,
+              borderRadius: 14,
+              marginBottom: 10,
+              background: p.bg,
+              cursor: "pointer",
             }}
           >
             <button
-              onClick={(e) => { e.stopPropagation(); vote(f.id, "UP"); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                vote(f.id, "UP");
+              }}
               style={{
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
-                minWidth: 46, padding: "7px 0", borderRadius: 11, cursor: "pointer", flexShrink: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+                minWidth: 46,
+                padding: "7px 0",
+                borderRadius: 11,
+                cursor: "pointer",
+                flexShrink: 0,
                 border: `1px solid ${voted ? accent : p.border}`,
                 background: voted ? `${accent}1a` : p.bgSoft,
               }}
             >
               <UpArrowIcon color={accent} />
-              <span style={{ fontSize: 14, fontWeight: 700, color: p.text, lineHeight: 1.1 }}>{f.upvotes}</span>
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: p.text,
+                  lineHeight: 1.1,
+                }}
+              >
+                {f.upvotes}
+              </span>
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4, color: p.text, margin: "0 0 6px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+              <p
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  color: p.text,
+                  margin: "0 0 6px",
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical" as const,
+                }}
+              >
                 {title}
               </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
                 <TypeBadge type={f.type} p={p} />
-                {f.status === "PENDING"
-                  ? <PendingBadge />
-                  : <StatusBadge status={f.status} boardStatus={f.boardStatus} p={p} />}
-                <span style={{ fontSize: 11, color: p.textFaint }}>{fmtDate(f.createdAt)}</span>
+                {f.status === "PENDING" ? (
+                  <PendingBadge />
+                ) : (
+                  <StatusBadge
+                    status={f.status}
+                    boardStatus={f.boardStatus}
+                    p={p}
+                  />
+                )}
+                <span style={{ fontSize: 11, color: p.textFaint }}>
+                  {fmtDate(f.createdAt)}
+                </span>
               </div>
             </div>
-            <span style={{ color: p.textFaint, fontSize: 18, alignSelf: "center", flexShrink: 0 }}>›</span>
+            <span
+              style={{
+                color: p.textFaint,
+                fontSize: 18,
+                alignSelf: "center",
+                flexShrink: 0,
+              }}
+            >
+              ›
+            </span>
           </div>
         );
       })}
@@ -435,7 +816,17 @@ function FeedList({
 
 // ─── FeedDetail ───────────────────────────────────────────────────────────────
 
-function FeedDetail({ feedbackId, accent, p, font }: { feedbackId: string; accent: string; p: Palette; font: string }) {
+function FeedDetail({
+  feedbackId,
+  accent,
+  p,
+  font,
+}: {
+  feedbackId: string;
+  accent: string;
+  p: Palette;
+  font: string;
+}) {
   const { vote, getItem } = useUpstep();
   const [item, setItem] = useState<FeedbackWithComments | null>(null);
   const [voting, setVoting] = useState(false);
@@ -443,9 +834,13 @@ function FeedDetail({ feedbackId, accent, p, font }: { feedbackId: string; accen
   useEffect(() => {
     let cancelled = false;
     getItem(feedbackId)
-      .then((d) => { if (!cancelled) setItem(d); })
+      .then((d) => {
+        if (!cancelled) setItem(d);
+      })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [feedbackId, getItem]);
 
   async function handleVote() {
@@ -463,38 +858,105 @@ function FeedDetail({ feedbackId, accent, p, font }: { feedbackId: string; accen
   }
 
   if (!item) {
-    return <div style={{ textAlign: "center", padding: "40px 0", color: p.textFaint, fontSize: 14 }}>Loading…</div>;
+    return (
+      <div
+        style={{
+          textAlign: "center",
+          padding: "40px 0",
+          color: p.textFaint,
+          fontSize: 14,
+        }}
+      >
+        Loading…
+      </div>
+    );
   }
 
   const title = item.title;
 
   return (
     <div>
-      {title && <div style={{ fontSize: 20, fontWeight: 700, color: p.text, letterSpacing: "-.02em", marginBottom: 10, lineHeight: 1.3 }}>{title}</div>}
-      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+      {title && (
+        <div
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: p.text,
+            letterSpacing: "-.02em",
+            marginBottom: 10,
+            lineHeight: 1.3,
+          }}
+        >
+          {title}
+        </div>
+      )}
+      <div
+        style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}
+      >
         <TypeBadge type={item.type} p={p} />
-        {item.status === "PENDING" ? <PendingBadge /> : <StatusBadge status={item.status} boardStatus={item.boardStatus} p={p} />}
+        {item.status === "PENDING" ? (
+          <PendingBadge />
+        ) : (
+          <StatusBadge
+            status={item.status}
+            boardStatus={item.boardStatus}
+            p={p}
+          />
+        )}
       </div>
-      <p style={{ fontSize: 15, lineHeight: 1.6, color: p.textSoft, marginBottom: 20 }}>{item.content}</p>
+      <p
+        style={{
+          fontSize: 15,
+          lineHeight: 1.6,
+          color: p.textSoft,
+          marginBottom: 20,
+        }}
+      >
+        {item.content}
+      </p>
 
       <button
         onClick={handleVote}
         disabled={voting}
         style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
           border: `1px solid ${item.userVote === "UP" ? accent : p.border}`,
           background: item.userVote === "UP" ? `${accent}15` : p.bgSoft,
-          borderRadius: 12, padding: "10px 16px", cursor: "pointer", fontFamily: font,
+          borderRadius: 12,
+          padding: "10px 16px",
+          cursor: "pointer",
+          fontFamily: font,
         }}
       >
         <UpArrowIcon color={accent} size={13} />
-        <span style={{ fontSize: 18, fontWeight: 700, color: p.text }}>{item.upvotes}</span>
-        <span style={{ fontSize: 13, color: p.textFaint }}>{item.userVote === "UP" ? "Upvoted" : "Upvote"}</span>
+        <span style={{ fontSize: 18, fontWeight: 700, color: p.text }}>
+          {item.upvotes}
+        </span>
+        <span style={{ fontSize: 14, color: p.textFaint }}>
+          {item.userVote === "UP" ? "Upvoted" : "Upvote"}
+        </span>
       </button>
 
       {item.comments.length > 0 && (
-        <div style={{ marginTop: 28, borderTop: `1px solid ${p.border}`, paddingTop: 20 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", color: p.textFaint, marginBottom: 12, textTransform: "uppercase" }}>
+        <div
+          style={{
+            marginTop: 28,
+            borderTop: `1px solid ${p.border}`,
+            paddingTop: 20,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: ".08em",
+              color: p.textFaint,
+              marginBottom: 12,
+              textTransform: "uppercase",
+            }}
+          >
             Comments
           </div>
           {item.comments.map((c: Comment) => (
@@ -506,21 +968,71 @@ function FeedDetail({ feedbackId, accent, p, font }: { feedbackId: string; accen
   );
 }
 
-function CommentBubble({ comment, p, accent }: { comment: Comment; p: Palette; accent: string }) {
+function CommentBubble({
+  comment,
+  p,
+  accent,
+}: {
+  comment: Comment;
+  p: Palette;
+  accent: string;
+}) {
   return (
-    <div style={{ background: p.bgSoft, border: `1px solid ${p.border}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ background: `${accent}20`, color: accent, fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "2px 8px" }}>{comment.authorName?.trim() || "UpStep Team"}</span>
-        <span style={{ fontSize: 11, color: p.textFaint }}>{fmtDate(comment.createdAt)}</span>
+    <div
+      style={{
+        background: p.bgSoft,
+        border: `1px solid ${p.border}`,
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 8,
+        }}
+      >
+        <span
+          style={{
+            background: `${accent}20`,
+            color: accent,
+            fontSize: 11,
+            fontWeight: 700,
+            borderRadius: 20,
+            padding: "2px 8px",
+          }}
+        >
+          {comment.authorName?.trim() || "UpStep Team"}
+        </span>
+        <span style={{ fontSize: 11, color: p.textFaint }}>
+          {fmtDate(comment.createdAt)}
+        </span>
       </div>
-      <p style={{ fontSize: 14, lineHeight: 1.5, color: p.textSoft, margin: 0 }}>{comment.content}</p>
+      <p
+        style={{ fontSize: 16, lineHeight: 1.6, color: p.textSoft, margin: 0 }}
+      >
+        {comment.content}
+      </p>
     </div>
   );
 }
 
 // ─── CreateForm ───────────────────────────────────────────────────────────────
 
-function CreateForm({ accent, p, font, onDone }: { accent: string; p: Palette; font: string; onDone: () => void }) {
+function CreateForm({
+  accent,
+  p,
+  font,
+  onDone,
+}: {
+  accent: string;
+  p: Palette;
+  font: string;
+  onDone: () => void;
+}) {
   const { submit } = useUpstep();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -547,29 +1059,67 @@ function CreateForm({ accent, p, font, onDone }: { accent: string; p: Palette; f
   if (success) {
     return (
       <div style={{ textAlign: "center", paddingTop: 40 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: p.text, marginBottom: 6 }}>Submitted</div>
-        <div style={{ fontSize: 14, color: p.textFaint }}>Feedback received. Thank you.</div>
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: p.text,
+            marginBottom: 6,
+          }}
+        >
+          Submitted
+        </div>
+        <div style={{ fontSize: 14, color: p.textFaint }}>
+          Feedback received. Thank you.
+        </div>
       </div>
     );
   }
 
   const inputStyle: React.CSSProperties = {
-    width: "100%", border: `1px solid ${p.border}`, borderRadius: 12,
-    padding: "10px 12px", fontSize: 14, lineHeight: 1.5, outline: "none",
-    background: p.bgSoft, color: p.text, fontFamily: font, boxSizing: "border-box",
+    width: "100%",
+    border: `1px solid ${p.border}`,
+    borderRadius: 12,
+    padding: "10px 12px",
+    fontSize: 16,
+    lineHeight: 1.6,
+    outline: "none",
+    background: p.bgSoft,
+    color: p.text,
+    fontFamily: font,
+    boxSizing: "border-box",
   };
 
   return (
     <div>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", color: p.textFaint, marginBottom: 8, textTransform: "uppercase" }}>Type</div>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: ".08em",
+          color: p.textFaint,
+          marginBottom: 8,
+          textTransform: "uppercase",
+        }}
+      >
+        Type
+      </div>
       <div style={{ display: "flex", gap: 7, marginBottom: 16 }}>
         {(["BUG", "FEATURE", "GENERAL"] as FeedbackType[]).map((t) => (
           <button
             key={t}
             onClick={() => setType(t)}
             style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-              padding: "8px 10px", borderRadius: 9, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 5,
+              padding: "8px 10px",
+              borderRadius: 9,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
               background: type === t ? accent : p.bg,
               color: type === t ? "#fff" : p.textSoft,
               border: `1px solid ${type === t ? accent : p.border}`,
@@ -582,7 +1132,18 @@ function CreateForm({ accent, p, font, onDone }: { accent: string; p: Palette; f
         ))}
       </div>
 
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", color: p.textFaint, marginBottom: 8, textTransform: "uppercase" }}>Title</div>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: ".08em",
+          color: p.textFaint,
+          marginBottom: 8,
+          textTransform: "uppercase",
+        }}
+      >
+        Title
+      </div>
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -591,7 +1152,23 @@ function CreateForm({ accent, p, font, onDone }: { accent: string; p: Palette; f
         style={{ ...inputStyle, marginBottom: 16, display: "block" }}
       />
 
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", color: p.textFaint, marginBottom: 8, textTransform: "uppercase" }}>Description <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></div>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: ".08em",
+          color: p.textFaint,
+          marginBottom: 8,
+          textTransform: "uppercase",
+        }}
+      >
+        Description{" "}
+        <span
+          style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}
+        >
+          (optional)
+        </span>
+      </div>
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
@@ -601,15 +1178,27 @@ function CreateForm({ accent, p, font, onDone }: { accent: string; p: Palette; f
         style={{ ...inputStyle, resize: "vertical", marginBottom: 16 }}
       />
 
-      {error && <p style={{ fontSize: 13, color: "#d6453d", marginBottom: 12 }}>{error}</p>}
+      {error && (
+        <p style={{ fontSize: 14, color: "#d6453d", marginBottom: 12 }}>
+          {error}
+        </p>
+      )}
 
       <button
         onClick={handleSubmit}
         disabled={loading || !title.trim()}
         style={{
-          width: "100%", padding: 12, background: accent, color: "#fff", border: "none",
-          borderRadius: 11, fontSize: 14, fontWeight: 600, cursor: "pointer",
-          opacity: loading || !title.trim() ? 0.5 : 1, fontFamily: font,
+          width: "100%",
+          padding: 12,
+          background: accent,
+          color: "#fff",
+          border: "none",
+          borderRadius: 11,
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: "pointer",
+          opacity: loading || !title.trim() ? 0.5 : 1,
+          fontFamily: font,
         }}
       >
         {loading ? "Submitting…" : "Submit feedback"}
@@ -620,11 +1209,23 @@ function CreateForm({ accent, p, font, onDone }: { accent: string; p: Palette; f
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
-const TYPE_META: Record<FeedbackType, { icon: React.ReactNode; label: string }> = {
+const TYPE_META: Record<
+  FeedbackType,
+  { icon: React.ReactNode; label: string }
+> = {
   BUG: {
     label: "Bug",
     icon: (
-      <svg width={12} height={12} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width={12}
+        height={12}
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <ellipse cx="8" cy="10" rx="3.5" ry="4.5" />
         <path d="M8 5.5V4M5.5 6.5 3.5 5M10.5 6.5 12.5 5M4.5 10.5 2.5 10M11.5 10.5 13.5 10" />
       </svg>
@@ -633,7 +1234,16 @@ const TYPE_META: Record<FeedbackType, { icon: React.ReactNode; label: string }> 
   FEATURE: {
     label: "Feature",
     icon: (
-      <svg width={12} height={12} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width={12}
+        height={12}
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M4.1 4.1l1 1M10.9 10.9l1 1M11.9 4.1l-1 1M5.1 10.9l-1 1" />
         <circle cx="8" cy="8" r="2.5" />
       </svg>
@@ -642,7 +1252,16 @@ const TYPE_META: Record<FeedbackType, { icon: React.ReactNode; label: string }> 
   GENERAL: {
     label: "General",
     icon: (
-      <svg width={12} height={12} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width={12}
+        height={12}
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M14 9a2 2 0 0 1-2 2H5L2 14V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5z" />
       </svg>
     ),
@@ -654,59 +1273,148 @@ const TYPE_FG: Record<string, string> = { BUG: "#d6453d", FEATURE: "#3b76d6" };
 
 function TypeBadge({ type, p }: { type: FeedbackType; p: Palette }) {
   return (
-    <span style={{
-      padding: "2px 8px", borderRadius: 9999, fontSize: 10.5, fontWeight: 700, letterSpacing: ".02em",
-      background: TYPE_BG[type] ?? p.bgSoft,
-      color: TYPE_FG[type] ?? p.textSoft,
-    }}>
+    <span
+      style={{
+        padding: "2px 8px",
+        borderRadius: 9999,
+        fontSize: 10.5,
+        fontWeight: 700,
+        letterSpacing: ".02em",
+        background: TYPE_BG[type] ?? p.bgSoft,
+        color: TYPE_FG[type] ?? p.textSoft,
+      }}
+    >
       {type}
     </span>
   );
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  OPEN: "#b45309", IN_PROGRESS: "#1d4ed8", DONE: "#15803d", CLOSED: "#6b7280",
+  OPEN: "#b45309",
+  IN_PROGRESS: "#1d4ed8",
+  DONE: "#15803d",
+  CLOSED: "#6b7280",
 };
 
 function PendingBadge() {
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 6, padding: "1px 6px", fontSize: 10, fontWeight: 700, color: "#ea580c" }}>
-      <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#ea580c", display: "inline-block" }} />
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        background: "#fff7ed",
+        border: "1px solid #fed7aa",
+        borderRadius: 6,
+        padding: "1px 6px",
+        fontSize: 10,
+        fontWeight: 700,
+        color: "#ea580c",
+      }}
+    >
+      <span
+        style={{
+          width: 5,
+          height: 5,
+          borderRadius: "50%",
+          background: "#ea580c",
+          display: "inline-block",
+        }}
+      />
       Pending review
     </span>
   );
 }
 
 function StatusBadge({
-  status, boardStatus, p,
+  status,
+  boardStatus,
+  p,
 }: {
-  status: string; boardStatus: Feedback["boardStatus"]; p: Palette;
+  status: string;
+  boardStatus: Feedback["boardStatus"];
+  p: Palette;
 }) {
   const color = boardStatus?.color ?? STATUS_COLOR[status] ?? "#9ca3af";
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: p.bgSoft, border: `1px solid ${p.border}`, borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 600, color: p.textSoft }}>
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }} />
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        background: p.bgSoft,
+        border: `1px solid ${p.border}`,
+        borderRadius: 6,
+        padding: "2px 8px",
+        fontSize: 10,
+        fontWeight: 600,
+        color: p.textSoft,
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: color,
+          display: "inline-block",
+          flexShrink: 0,
+        }}
+      />
       {boardStatus?.name ?? status.replace("_", " ")}
     </span>
   );
 }
 
-function ChatIcon({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
+function ChatIcon({
+  size = 16,
+  color = "currentColor",
+}: {
+  size?: number;
+  color?: string;
+}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
 
-function UpArrowIcon({ color = "currentColor", size = 11 }: { color?: string; size?: number }) {
+function UpArrowIcon({
+  color = "currentColor",
+  size = 11,
+}: {
+  color?: string;
+  size?: number;
+}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke={color}
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M8 13V3M3 8l5-5 5 5" />
     </svg>
   );
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }

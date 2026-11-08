@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../controller.dart';
+import '../config.dart';
 import '../models.dart';
 import '../provider.dart';
+import 'support_chat.dart';
 
 class FeedbackSheet extends StatefulWidget {
   const FeedbackSheet({super.key});
@@ -66,50 +68,94 @@ class _SheetScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.88,
-      child: DefaultTabController(
-        length: 2,
-        child: Column(
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      'Upstep feedback',
-                      style: theme.textTheme.titleLarge,
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final inherited = Theme.of(context);
+        final brightness = switch (controller.themeMode) {
+          UpstepThemeMode.light => Brightness.light,
+          UpstepThemeMode.dark => Brightness.dark,
+          UpstepThemeMode.auto => inherited.brightness,
+        };
+        final theme = ThemeData(
+          brightness: brightness,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: controller.accentColor,
+            brightness: brightness,
+            surface: brightness == Brightness.dark
+                ? Colors.black
+                : Colors.white,
+          ),
+          textTheme: inherited.textTheme.apply(
+            bodyColor: brightness == Brightness.dark
+                ? const Color(0xFFE5EAE6)
+                : const Color(0xFF354239),
+            displayColor: brightness == Brightness.dark
+                ? const Color(0xFFE5EAE6)
+                : const Color(0xFF354239),
+          ),
+        );
+        final support = controller.supportConfig;
+        final chat = support != null && support['enabled'] == true;
+        return Theme(
+          data: theme,
+          child: ColoredBox(
+            color: theme.colorScheme.surface,
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.88,
+              child: DefaultTabController(
+                key: ValueKey(chat),
+                length: chat ? 3 : 2,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              chat ? 'Help & feedback' : 'UpStep feedback',
+                              style: theme.textTheme.titleLarge,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
+                    TabBar(
+                      indicatorColor: controller.accentColor,
+                      labelColor: controller.accentColor,
+                      tabs: [
+                        if (chat) const Tab(text: 'Support'),
+                        const Tab(text: 'Top requests'),
+                        const Tab(text: 'Send feedback'),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          if (chat)
+                            SupportChat(
+                              key: ValueKey(controller.supportRevision),
+                              client: controller.support,
+                              configuration: support,
+                            ),
+                          _FeedTab(controller: controller),
+                          _SubmitTab(controller: controller),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            TabBar(
-              indicatorColor: controller.accentColor,
-              labelColor: controller.accentColor,
-              tabs: const <Tab>[
-                Tab(text: 'Top requests'),
-                Tab(text: 'Send feedback'),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
-                children: <Widget>[
-                  _FeedTab(controller: controller),
-                  _SubmitTab(controller: controller),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -520,10 +566,7 @@ String _statusLabel(FeedbackStatus status) {
 
 Widget _labelChip(Label label) {
   return Chip(
-    avatar: CircleAvatar(
-      backgroundColor: _labelColor(label.color),
-      radius: 5,
-    ),
+    avatar: CircleAvatar(backgroundColor: _labelColor(label.color), radius: 5),
     label: Text(label.name),
   );
 }

@@ -5,13 +5,19 @@ import 'package:flutter/material.dart';
 import 'api_client.dart';
 import 'config.dart';
 import 'models.dart';
+import 'support_client.dart';
 
 class UpstepController extends ChangeNotifier {
   UpstepController({required UpstepConfig config, UpstepApiClient? client})
     : _config = config,
-      _client = client ?? UpstepApiClient(config);
+      _client = client ?? UpstepApiClient(config),
+      support = SupportClient(config);
 
   final UpstepApiClient _client;
+  final SupportClient support;
+  Map<String, dynamic>? supportConfig;
+  int supportRevision = 0;
+  bool _disposed = false;
   UpstepConfig _config;
 
   List<FeedbackItem> _feedItems = const <FeedbackItem>[];
@@ -27,7 +33,7 @@ class UpstepController extends ChangeNotifier {
   bool get showBranding => _showBranding;
   bool get isOpen => _isOpen;
   Object? get lastError => _lastError;
-  Color get accentColor => _config.accentColor ?? const Color(0xFFD97757);
+  Color get accentColor => _config.accentColor ?? const Color(0xFF5B7168);
   UpstepThemeMode get themeMode => _config.themeMode;
   String? get userId => _client.userId;
 
@@ -35,7 +41,26 @@ class UpstepController extends ChangeNotifier {
     if (_initialized) return;
     _initialized = true;
     await _client.initialize();
-    await loadFeed();
+    await Future.wait([loadFeed(), loadSupport()]);
+  }
+
+  Future<void> loadSupport() async {
+    try {
+      supportConfig = _config.chat ? await support.configuration() : null;
+    } catch (_) {
+      supportConfig = null;
+    }
+    if (!_disposed) notifyListeners();
+  }
+
+  Future<void> identifySupport(String? token) async {
+    _config = _config.copyWith(
+      supportIdentityToken: token,
+      clearSupportIdentity: token == null,
+    );
+    supportRevision++;
+    await support.identify(token);
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> loadFeed() async {
@@ -97,7 +122,14 @@ class UpstepController extends ChangeNotifier {
   }
 
   void updateConfig(UpstepConfig config) {
+    final identityChanged =
+        _config.supportIdentityToken != config.supportIdentityToken;
+    final chatChanged = _config.chat != config.chat;
     _config = config;
+    if (identityChanged) {
+      unawaited(identifySupport(config.supportIdentityToken));
+    }
+    if (chatChanged) unawaited(loadSupport());
     _client.setUserId(config.userId);
     notifyListeners();
   }
@@ -116,6 +148,8 @@ class UpstepController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    support.dispose();
     _client.dispose();
     super.dispose();
   }

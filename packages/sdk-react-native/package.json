@@ -1,7 +1,7 @@
 {
   "name": "@upstep/react-native",
-  "version": "0.6.16",
-  "description": "Upstep feedback SDK for React Native",
+  "version": "0.7.0",
+  "description": "Native UpStep feedback and AI support chat for React Native",
   "homepage": "https://upstep.dev",
   "repository": {
     "type": "git",
@@ -22,7 +22,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@upstep/types": "workspace:*"
+    "@upstep/types": "workspace:*",
+    "@upstep/js": "workspace:*"
   },
   "peerDependencies": {
     "@react-native-async-storage/async-storage": ">=1.18",
@@ -42,5 +43,9 @@
     "feedback",
     "upstep"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ]
 }

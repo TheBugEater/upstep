@@ -1,3 +1,4 @@
+import {SupportClient} from "@upstep/js/support";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type {
   Feedback,
@@ -18,6 +19,7 @@ export class UpstepApiClient {
   private readonly baseUrl: string;
   private readonly apiKey: string;
   userId: string | undefined;
+  readonly support:SupportClient;
   // Set synchronously to a throwaway id so there's always something to send;
   // swapped for the persisted value (or backfilled into storage) once
   // AsyncStorage resolves. Callers await anonymousIdReady first so requests
@@ -28,6 +30,7 @@ export class UpstepApiClient {
   constructor(config: UpstepConfig) {
     this.baseUrl = (config.baseUrl ?? "https://upstep.dev").replace(/\/$/, "");
     this.apiKey = config.apiKey;
+    this.support = new SupportClient(config,AsyncStorage);
     if (config.userId !== undefined) this.userId = config.userId;
     this.anonymousId = generateId();
     this.anonymousIdReady = this.loadAnonymousId();

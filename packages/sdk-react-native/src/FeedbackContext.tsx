@@ -13,23 +13,30 @@ import type {
   FeedbackWithComments,
   UpstepConfig,
   VoteValue,
+  SupportConfiguration,
 } from "@upstep/types";
 import { UpstepApiClient } from "./api";
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === "android") {
-  const um = UIManager as unknown as { setLayoutAnimationEnabledExperimental?: (v: boolean) => void };
+  const um = UIManager as unknown as {
+    setLayoutAnimationEnabledExperimental?: (v: boolean) => void;
+  };
   um.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-const DEFAULT_ACCENT = "#D97757";
+const DEFAULT_ACCENT = "#5B7168";
 
 interface UpstepContextValue {
   client: UpstepApiClient;
   feedItems: Feedback[];
   feedLoading: boolean;
   loadFeed: () => Promise<void>;
-  submit: (title: string, content: string, type?: FeedbackType) => Promise<void>;
+  submit: (
+    title: string,
+    content: string,
+    type?: FeedbackType,
+  ) => Promise<void>;
   vote: (feedbackId: string, value: VoteValue) => Promise<void>;
   getItem: (feedbackId: string) => Promise<FeedbackWithComments>;
   isOpen: boolean;
@@ -39,6 +46,8 @@ interface UpstepContextValue {
   accentColor: string;
   theme: "light" | "dark" | "auto";
   showBranding: boolean;
+  supportConfig: SupportConfiguration | null;
+  supportRevision: number;
 }
 
 const UpstepContext = createContext<UpstepContextValue | null>(null);
@@ -51,11 +60,36 @@ export function FeedbackProvider({
   const [feedItems, setFeedItems] = useState<Feedback[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [supportConfig, setSupportConfig] =
+    useState<SupportConfiguration | null>(null);
+  const [supportRevision, setSupportRevision] = useState(0);
   const [showBranding, setShowBranding] = useState(true);
 
   useEffect(() => {
     client.setUserId(config.userId);
   }, [client, config.userId]);
+
+  useEffect(() => {
+    let active = true;
+    void client.support.identify(config.supportIdentityToken).then(() => {
+      if (active) setSupportRevision((v) => v + 1);
+    });
+    if (config.chat === false) {
+      setSupportConfig(null);
+      return () => {
+        active = false;
+      };
+    }
+    void client.support
+      .configuration()
+      .then((value) => {
+        if (active) setSupportConfig(value);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [client, config.chat, config.supportIdentityToken]);
 
   const loadFeed = useCallback(async () => {
     setFeedLoading(true);
@@ -70,7 +104,9 @@ export function FeedbackProvider({
     }
   }, [client]);
 
-  useEffect(() => { loadFeed(); }, [loadFeed]);
+  useEffect(() => {
+    loadFeed();
+  }, [loadFeed]);
 
   const submit = useCallback(
     async (title: string, content: string, type?: FeedbackType) => {
@@ -80,39 +116,42 @@ export function FeedbackProvider({
       await client.submitFeedback(payload);
       await loadFeed();
     },
-    [client, loadFeed]
+    [client, loadFeed],
   );
 
-  const vote = useCallback(async (feedbackId: string, value: VoteValue) => {
-    // Capture snapshot for rollback, then animate into new sorted position
-    let snapshot: Feedback[] = [];
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setFeedItems((prev) => {
-      snapshot = prev;
-      const updated = prev.map((f) => {
-        if (f.id !== feedbackId) return f;
-        const wasVoted = f.userVote === "UP";
-        return {
-          ...f,
-          upvotes: wasVoted ? f.upvotes - 1 : f.upvotes + 1,
-          userVote: wasVoted ? null : ("UP" as VoteValue),
-        };
-      });
-      return [...updated].sort((a, b) => b.upvotes - a.upvotes);
-    });
-
-    try {
-      await client.vote(feedbackId, value);
-    } catch {
-      // API failed — animate back to original order
+  const vote = useCallback(
+    async (feedbackId: string, value: VoteValue) => {
+      // Capture snapshot for rollback, then animate into new sorted position
+      let snapshot: Feedback[] = [];
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setFeedItems(snapshot);
-    }
-  }, [client]);
+      setFeedItems((prev) => {
+        snapshot = prev;
+        const updated = prev.map((f) => {
+          if (f.id !== feedbackId) return f;
+          const wasVoted = f.userVote === "UP";
+          return {
+            ...f,
+            upvotes: wasVoted ? f.upvotes - 1 : f.upvotes + 1,
+            userVote: wasVoted ? null : ("UP" as VoteValue),
+          };
+        });
+        return [...updated].sort((a, b) => b.upvotes - a.upvotes);
+      });
+
+      try {
+        await client.vote(feedbackId, value);
+      } catch {
+        // API failed — animate back to original order
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setFeedItems(snapshot);
+      }
+    },
+    [client],
+  );
 
   const getItem = useCallback(
     (feedbackId: string) => client.getItem(feedbackId),
-    [client]
+    [client],
   );
 
   const openSheet = useCallback(() => {
@@ -125,17 +164,28 @@ export function FeedbackProvider({
 
   const identify = useCallback(
     (userId: string | undefined) => client.setUserId(userId),
-    [client]
+    [client],
   );
 
   return (
     <UpstepContext.Provider
       value={{
-        client, feedItems, feedLoading, loadFeed, submit, vote, getItem,
-        isOpen, openSheet, closeSheet, identify,
+        client,
+        feedItems,
+        feedLoading,
+        loadFeed,
+        submit,
+        vote,
+        getItem,
+        isOpen,
+        openSheet,
+        closeSheet,
+        identify,
         accentColor: config.accentColor ?? DEFAULT_ACCENT,
         theme: config.theme ?? "auto",
         showBranding,
+        supportConfig,
+        supportRevision,
       }}
     >
       {children}

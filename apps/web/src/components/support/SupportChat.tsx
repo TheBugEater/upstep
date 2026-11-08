@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SupportWidgets } from "./SupportWidgets";
+import type { SupportWidget } from "@upstep/types";
 import { SupportIcon } from "./SupportIcons";
 type Message = {
   id: string;
@@ -10,6 +12,7 @@ type Message = {
     citations?: { url: string; title: string }[];
     offerTicket?: boolean;
     ticketReference?: string;
+    widgets?: SupportWidget[];
   };
 };
 type Chat = {
@@ -19,6 +22,10 @@ type Chat = {
   ticketReference: string | null;
   supportEmail: string | null;
   aiPending: boolean;
+  canEscalate: boolean;
+  escalationSummary: string | null;
+  activeWidgetMessageId: string | null;
+  humanRequested: boolean;
   messages: Message[];
   customer: { name: string | null; email: string | null; verified: boolean };
 };
@@ -41,6 +48,12 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
   const [busy, setBusy] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (input.current) {
+      input.current.style.height = "auto";
+      input.current.style.height = `${Math.min(input.current.scrollHeight, 112)}px`;
+    }
+  }, [message]);
   const [showContact, setShowContact] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -236,11 +249,12 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
       setBusy(false);
     }
   }
-  async function send() {
-    if (!message.trim() || busy) return;
+  async function send(quickText?: string) {
+    const outgoing = quickText ?? message;
+    if (!outgoing.trim() || busy) return false;
     setBusy(true);
     setError("");
-    const content = message.trim();
+    const content = outgoing.trim();
     const snapshot = epoch.current;
     if (!pendingMessage.current || pendingMessage.current.content !== content)
       pendingMessage.current = { id: crypto.randomUUID(), content };
@@ -254,17 +268,22 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
         content,
         clientMessageId: pendingMessage.current.id,
       });
-      if (snapshot !== epoch.current) return;
+      if (snapshot !== epoch.current) return false;
       pendingMessage.current = null;
-      setMessage("");
+      if (!quickText) setMessage("");
       await refresh(c.id);
       const items = await request("/conversations");
       setHistory(items.conversations);
+      return true;
     } catch (e) {
       setError((e as Error).message);
+      return false;
     } finally {
       setBusy(false);
     }
+  }
+  async function quickReply(text: string) {
+    return send(text);
   }
   const business = config?.businessName || "Support";
   const isHuman = chat?.state === "HUMAN";
@@ -295,17 +314,17 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
           <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-neutral-200 bg-white text-base font-semibold shadow-sm dark:border-neutral-800 dark:bg-black">
             {business.charAt(0).toUpperCase()}
             <span
-              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-black ${config?.online.length || isHuman ? "bg-emerald-500" : "bg-orange-500"}`}
+              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-black ${config?.online.length || isHuman ? "bg-emerald-500" : "bg-[#8ba394]"}`}
             />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold tracking-tight">
-              {business}
-              <span className="ml-2 text-xs font-normal text-neutral-400">
+              {business}{" "}
+              <span className="ml-2 text-sm font-normal text-neutral-400">
                 Support
               </span>
             </h1>
-            <p className="mt-1 truncate text-[10px] text-neutral-500 dark:text-neutral-400">
+            <p className="mt-1 truncate text-sm text-neutral-500 dark:text-neutral-400">
               {subtitle}
             </p>
           </div>
@@ -344,15 +363,15 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
       {chat?.ticketReference && (
         <section
           aria-label="Support ticket"
-          className="shrink-0 border-b border-orange-100 bg-orange-50/40 px-5 py-3 dark:border-orange-950/50 dark:bg-orange-950/10"
+          className="shrink-0 border-b border-neutral-200 bg-[#f3f6f4] px-5 py-3 dark:border-neutral-800 dark:bg-neutral-950"
         >
           <div className="flex items-center gap-2">
             <SupportIcon
               name="ticket"
-              className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400"
+              className="h-3.5 w-3.5 text-[#8c7565] dark:text-[#a2b9ac]"
             />
-            <span className="text-[11px] text-neutral-500">Ticket</span>
-            <strong className="font-mono text-[11px] font-semibold tracking-wide">
+            <span className="text-sm text-neutral-500">Ticket</span>
+            <strong className="font-mono text-sm font-semibold tracking-wide">
               {chat.ticketReference}
             </strong>
             <button
@@ -370,7 +389,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
           </div>
           {chat.supportEmail && (
             <a
-              className="mt-1.5 block truncate text-[10px] text-neutral-500 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-400"
+              className="mt-1.5 block truncate text-xs text-neutral-500 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-400"
               href={`mailto:${chat.supportEmail}?subject=${encodeURIComponent(`Support ${chat.ticketReference}`)}`}
             >
               {chat.supportEmail}
@@ -387,8 +406,8 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
       >
         {!chat && (
           <div className="mx-auto max-w-sm pt-3">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-neutral-200 px-2.5 py-1 text-[9px] font-medium text-neutral-500 dark:border-neutral-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-neutral-200 px-2.5 py-1 text-xs font-medium text-neutral-500 dark:border-neutral-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#8ba394]" />
               {business} help desk
             </div>
             <h2 className="text-[30px] font-semibold leading-[1.13] tracking-[-0.045em]">
@@ -398,7 +417,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 How can we help?
               </span>
             </h2>
-            <p className="mt-4 text-[13px] leading-6 text-neutral-500 dark:text-neutral-400">
+            <p className="mt-4 text-base leading-6 text-neutral-500 dark:text-neutral-400">
               {config?.welcomeMessage ||
                 "Ask a question about the business. We're here to help."}
             </p>
@@ -407,7 +426,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 <button
                   key={text}
                   onClick={() => suggest(text)}
-                  className="group flex w-full items-center gap-3 rounded-xl border border-neutral-200/80 bg-white px-3.5 py-3 text-left text-xs transition hover:border-orange-300 hover:bg-orange-50/30 dark:border-neutral-800 dark:bg-black dark:hover:border-orange-800 dark:hover:bg-orange-950/10"
+                  className="group flex w-full items-center gap-3 rounded-xl border border-neutral-200/80 bg-white px-3.5 py-3 text-left text-sm transition hover:border-orange-300 hover:bg-[#f3f6f4] dark:border-neutral-800 dark:bg-black dark:hover:border-orange-800 dark:hover:bg-orange-950/10"
                 >
                   <SupportIcon
                     name={i === 2 ? "person" : "message"}
@@ -420,7 +439,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 </button>
               ))}
             </div>
-            <p className="mt-5 text-[10px] text-neutral-400">
+            <p className="mt-5 text-xs text-neutral-400">
               No account or email needed to start.
             </p>
           </div>
@@ -431,19 +450,19 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             return m.metadata?.ticketReference ? (
               <details
                 key={m.id}
-                className="rounded-xl border border-orange-100 bg-orange-50/30 px-3.5 py-3 text-[11px] text-neutral-600 dark:border-orange-950/50 dark:bg-orange-950/10 dark:text-neutral-400"
+                className="rounded-xl border border-neutral-200 bg-[#f3f6f4] px-3.5 py-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400"
               >
                 <summary className="cursor-pointer font-medium text-neutral-700 dark:text-neutral-300">
                   ✓ Ticket {m.metadata.ticketReference} opened
                 </summary>
-                <p className="mt-2 whitespace-pre-wrap text-[11px] leading-5">
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-5">
                   {m.content}
                 </p>
               </details>
             ) : (
               <div
                 key={m.id}
-                className="flex items-start gap-2 px-1 text-[10px] leading-5 text-neutral-400"
+                className="flex items-start gap-2 px-1 text-xs leading-5 text-neutral-400"
               >
                 <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-700" />
                 <p>{m.content}</p>
@@ -459,11 +478,11 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 previous.role !== m.role ||
                 previous.authorName !== m.authorName) && (
                 <div
-                  className={`mb-1.5 flex items-center gap-1.5 text-[9px] font-medium text-neutral-400 ${customer ? "pr-1" : "pl-1"}`}
+                  className={`mb-1.5 flex items-center gap-1.5 text-xs font-medium text-neutral-400 ${customer ? "pr-1" : "pl-1"}`}
                 >
                   {!customer && (
                     <span
-                      className={`grid h-4 w-4 place-items-center rounded-md text-[8px] font-semibold ${m.role === "ASSISTANT" ? "bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400" : "bg-neutral-100 text-neutral-500 dark:bg-neutral-900"}`}
+                      className={`grid h-4 w-4 place-items-center rounded-md text-[8px] font-semibold ${m.role === "ASSISTANT" ? "bg-[#eaf0ec] text-[#8c7565] dark:bg-[#202c25] dark:text-[#a2b9ac]" : "bg-neutral-100 text-neutral-500 dark:bg-neutral-900"}`}
                     >
                       {m.role === "ASSISTANT" ? "AI" : m.authorName.charAt(0)}
                     </span>
@@ -472,9 +491,15 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 </div>
               )}
               <div
-                className={`max-w-[94%] rounded-2xl px-4 py-3 text-[13px] leading-[1.7] ${customer ? "rounded-tr-md bg-neutral-900 text-white dark:bg-neutral-100 dark:text-black" : "rounded-tl-md border border-neutral-100 bg-neutral-50/70 text-neutral-800 dark:border-neutral-900 dark:bg-neutral-950 dark:text-neutral-200"}`}
+                className={`max-w-[94%] rounded-2xl px-4 py-3 text-base leading-[1.7] ${customer ? "rounded-tr-md bg-[#edf3f1] text-neutral-800 dark:bg-[#182522] dark:text-neutral-100" : "rounded-tl-md border border-neutral-100 bg-[#f7f7f5] text-neutral-700 dark:border-neutral-900 dark:bg-neutral-950 dark:text-neutral-200"}`}
               >
-                <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                <div className="space-y-3">
+                  {m.content.split(/\n\s*\n/).map((paragraph, n) => (
+                    <p key={n} className="whitespace-pre-wrap break-words">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
                 {!!m.metadata?.citations?.length && (
                   <div className="mt-3 flex flex-wrap gap-1.5 border-t border-neutral-200/60 pt-2.5 dark:border-neutral-800">
                     {m.metadata.citations.map((s) => (
@@ -483,7 +508,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                         href={s.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex max-w-full items-center gap-1 rounded-md border border-neutral-200 bg-white px-1.5 py-1 text-[9px] leading-4 text-neutral-500 transition hover:text-orange-600 dark:border-neutral-800 dark:bg-black dark:text-neutral-400"
+                        className="inline-flex max-w-full items-center gap-1 rounded-md border border-neutral-200 bg-white px-1.5 py-1 text-xs leading-4 text-neutral-500 transition hover:text-[#8c7565] dark:border-neutral-800 dark:bg-black dark:text-neutral-400"
                       >
                         <SupportIcon
                           name="link"
@@ -496,20 +521,58 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                     ))}
                   </div>
                 )}
+                {chat.activeWidgetMessageId === m.id && m.metadata?.widgets && (
+                  <SupportWidgets
+                    widgets={m.metadata.widgets.filter(
+                      (w) => w.type !== "contact_form" || chat.canEscalate,
+                    )}
+                    busy={busy}
+                    name={chat.customer.name || ""}
+                    email={chat.customer.email || ""}
+                    verified={chat.customer.verified}
+                    onReply={quickReply}
+                    onDetails={(data) => act("details", data).then(Boolean)}
+                    onContact={(name, email) =>
+                      act("handoff", { name, email }).then(Boolean)
+                    }
+                  />
+                )}
               </div>
             </div>
           );
         })}
+        {chat?.canEscalate && !chat.activeWidgetMessageId && (
+          <SupportWidgets
+            widgets={[
+              {
+                id: `contact:${chat.id}`,
+                type: "contact_form",
+                title: "Let the team follow up",
+                summary:
+                  chat.escalationSummary || "Share your issue with the team.",
+              },
+            ]}
+            busy={busy}
+            name={chat.customer.name || ""}
+            email={chat.customer.email || ""}
+            verified={chat.customer.verified}
+            onReply={quickReply}
+            onDetails={(data) => act("details", data).then(Boolean)}
+            onContact={(name, email) =>
+              act("handoff", { name, email }).then(Boolean)
+            }
+          />
+        )}
         {chat?.aiPending && (
           <div
             role="status"
-            className="flex items-center gap-2 pl-1 text-[10px] text-neutral-400"
+            className="flex items-center gap-2 pl-1 text-xs text-neutral-400"
           >
             <span className="flex gap-1">
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className="h-1 w-1 animate-pulse rounded-full bg-orange-400"
+                  className="h-1 w-1 animate-pulse rounded-full bg-[#8ba394]"
                   style={{ animationDelay: `${i * 150}ms` }}
                 />
               ))}
@@ -522,13 +585,13 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
         {error && (
           <p
             role="alert"
-            className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600 dark:bg-red-950/30 dark:text-red-400"
+            className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400"
           >
             {error}
           </p>
         )}
         {notice && (
-          <p role="status" className="mb-2 px-1 text-[10px] text-neutral-500">
+          <p role="status" className="mb-2 px-1 text-xs text-neutral-500">
             {notice}
           </p>
         )}
@@ -548,7 +611,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold">Stay in the loop</p>
-                <p className="mt-1 text-[10px] text-neutral-400">
+                <p className="mt-1 text-xs text-neutral-400">
                   Optional details for the support team.
                 </p>
               </div>
@@ -582,7 +645,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             </div>
             <button
               disabled={busy}
-              className="mt-2 rounded-lg bg-neutral-900 px-3 py-2 text-[10px] font-semibold text-white dark:bg-white dark:text-black"
+              className="mt-2 rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-white dark:bg-white dark:text-black"
             >
               Save details
             </button>
@@ -601,7 +664,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
           </button>
         ) : (
           <form
-            className="rounded-2xl border border-neutral-200 bg-white p-3 shadow-[0_2px_12px_rgba(0,0,0,0.035)] transition focus-within:border-neutral-400 dark:border-neutral-800 dark:bg-black dark:focus-within:border-neutral-600"
+            className="flex items-end gap-2 rounded-2xl border border-neutral-200 bg-white p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.035)] transition focus-within:border-neutral-400 dark:border-neutral-800 dark:bg-black dark:focus-within:border-neutral-600"
             onSubmit={(e) => {
               e.preventDefault();
               void send();
@@ -622,11 +685,11 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 }
               }}
               maxLength={4000}
-              rows={2}
+              rows={1}
               placeholder={`Message ${business}…`}
-              className="block w-full resize-none bg-transparent px-1 py-0.5 text-[13px] leading-6 outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+              className="block max-h-28 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
             />
-            <div className="mt-2 flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {chat && !chat.customer.verified && (
                 <button
                   type="button"
@@ -642,42 +705,20 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                   <SupportIcon name="person" className="h-3.5 w-3.5" />
                 </button>
               )}
-              {chat && (
-                <button
-                  type="button"
-                  disabled={
-                    busy || chat.state === "HUMAN" || chat.state === "WAITING"
-                  }
-                  className="rounded-lg px-2 py-1.5 text-[10px] font-medium text-neutral-500 transition hover:bg-neutral-100 disabled:opacity-40 dark:hover:bg-neutral-900"
-                  onClick={() => void act("human")}
-                >
-                  Ask the team
-                </button>
-              )}
-              {chat && !chat.ticketId && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="rounded-lg px-2 py-1.5 text-[10px] font-medium text-neutral-500 transition hover:bg-neutral-100 disabled:opacity-40 dark:hover:bg-neutral-900"
-                  onClick={() => void act("ticket")}
-                >
-                  Create ticket
-                </button>
-              )}
               <button
                 aria-label="Send message"
                 disabled={busy || !message.trim() || !config}
-                className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-neutral-900 text-white transition hover:bg-orange-600 disabled:bg-neutral-100 disabled:text-neutral-300 dark:bg-white dark:text-black dark:disabled:bg-neutral-900 dark:disabled:text-neutral-700"
+                className="ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#5b7168] text-white transition hover:bg-[#4c6259] disabled:bg-neutral-100 disabled:text-neutral-300 dark:bg-[#5b7168] dark:text-white dark:disabled:bg-neutral-900 dark:disabled:text-neutral-700"
               >
                 <SupportIcon name="arrow" className="h-4 w-4" />
               </button>
             </div>
           </form>
         )}
-        <div className="mt-2.5 flex items-center justify-center gap-1 text-[9px] text-neutral-400">
+        <div className="mt-2.5 flex items-center justify-center gap-1 text-xs text-neutral-400">
           {config?.showBranding !== false ? (
             <>
-              <span className="h-1 w-1 rounded-full bg-orange-400" />
+              <span className="h-1 w-1 rounded-full bg-[#8ba394]" />
               Powered by{" "}
               <a
                 href="https://upstep.dev"

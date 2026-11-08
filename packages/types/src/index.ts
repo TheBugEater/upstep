@@ -100,7 +100,7 @@ export interface UpstepConfig {
   baseUrl?: string;
   /**
    * Accent color for the widget button, tabs, and highlights.
-   * Any CSS color string. Defaults to "#D97757".
+   * Any CSS color string. Defaults to "#5B7168".
    */
   accentColor?: string;
   /**
@@ -108,7 +108,7 @@ export interface UpstepConfig {
    * `prefers-color-scheme`. Defaults to "auto".
    */
   theme?: "light" | "dark" | "auto";
-  /** Launcher button position. Defaults to "right". */
+  /** @deprecated Website launchers and panels are always anchored bottom-right. */
   position?: "left" | "right";
   /**
    * Whether to render the floating launcher button (vanilla web widget).
@@ -149,3 +149,19 @@ export interface ApiError {
   error: string;
   status: number;
 }
+
+// Shared support protocol used by the web and native widgets.
+export type SupportWidget =
+ | {id:string;type:"quick_replies"|"confirmation";title:string;options:string[]}
+ | {id:string;type:"issue_details";title:string}
+ | {id:string;type:"contact_form";title:string;summary:string};
+export interface SupportMessage {
+ id:string; role:"CUSTOMER"|"ASSISTANT"|"AGENT"|"SYSTEM";authorName:string;content:string;createdAt?:string;
+ metadata?:{citations?:{url:string;title:string}[];widgets?:SupportWidget[];inScope?:boolean;ticketReference?:string};
+}
+export interface SupportConversation {
+ id:string;state:string;ticketId:string|null;ticketReference:string|null;supportEmail:string|null;aiPending:boolean;
+ canEscalate:boolean;escalationSummary:string|null;activeWidgetMessageId:string|null;humanRequested:boolean;
+ messages:SupportMessage[];customer:{name:string|null;email:string|null;verified:boolean};
+}
+export interface SupportConfiguration {enabled:boolean;businessName:string;welcomeMessage:string;mode:string;showBranding?:boolean;online:{name:string}[]}

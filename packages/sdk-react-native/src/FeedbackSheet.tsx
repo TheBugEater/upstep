@@ -15,7 +15,13 @@ import {
   Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Comment, Feedback, FeedbackType, FeedbackWithComments } from "@upstep/types";
+import type {
+  Comment,
+  Feedback,
+  FeedbackType,
+  FeedbackWithComments,
+} from "@upstep/types";
+import { SupportView } from "./SupportView";
 import { useUpstep } from "./FeedbackContext";
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -32,7 +38,7 @@ interface Palette {
 
 const LIGHT: Palette = {
   bg: "#ffffff",
-  bgSoft: "#f6f5f2",
+  bgSoft: "#f4f6f4",
   text: "#1a1915",
   textSoft: "#56544d",
   textFaint: "#9b9890",
@@ -41,8 +47,8 @@ const LIGHT: Palette = {
 };
 
 const DARK: Palette = {
-  bg: "#1c1b19",
-  bgSoft: "#262522",
+  bg: "#000000",
+  bgSoft: "#191d1b",
   text: "#f5f4f0",
   textSoft: "#b4b1a8",
   textFaint: "#7d7a72",
@@ -53,6 +59,7 @@ const DARK: Palette = {
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
 type Nav =
+  | { screen: "support" }
   | { screen: "list" }
   | { screen: "detail"; feedbackId: string }
   | { screen: "create" };
@@ -60,7 +67,17 @@ type Nav =
 // ─── FeedbackSheet ────────────────────────────────────────────────────────────
 
 export function FeedbackSheet() {
-  const { isOpen, closeSheet, accentColor, theme, loadFeed, showBranding } = useUpstep();
+  const {
+    client,
+    isOpen,
+    closeSheet,
+    accentColor,
+    theme,
+    loadFeed,
+    showBranding,
+    supportConfig,
+    supportRevision,
+  } = useUpstep();
   const scheme = useColorScheme();
   const isDark = theme === "dark" || (theme === "auto" && scheme === "dark");
   const p = isDark ? DARK : LIGHT;
@@ -70,13 +87,14 @@ export function FeedbackSheet() {
 
   // Refresh list every time the modal opens
   useEffect(() => {
-    if (isOpen) loadFeed();
-  }, [isOpen, loadFeed]);
+    if (isOpen) {
+      loadFeed();
+      setNav({ screen: supportConfig?.enabled ? "support" : "list" });
+    }
+  }, [isOpen, loadFeed, supportConfig?.enabled]);
 
   function handleClose() {
     closeSheet();
-    // Reset to list when closed so next open starts fresh
-    setTimeout(() => setNav({ screen: "list" }), 300);
   }
 
   return (
@@ -103,9 +121,51 @@ export function FeedbackSheet() {
 
           {/* Fixed header */}
           <View style={[styles.header, { borderBottomColor: p.border }]}>
-            {nav.screen === "list" ? (
+            {supportConfig ? (
               <>
-                <Text style={[styles.headerTitle, { color: p.text }]}>Feedback</Text>
+                <View style={{ flexDirection: "row", gap: 8, flex: 1 }}>
+                  {["support", "list"].map((screen) => (
+                    <TouchableOpacity
+                      key={screen}
+                      onPress={() => setNav({ screen } as Nav)}
+                      style={{
+                        paddingVertical: 10,
+                        paddingHorizontal: 14,
+                        borderRadius: 10,
+                        backgroundColor: (
+                          screen === "support"
+                            ? nav.screen === "support"
+                            : nav.screen !== "support"
+                        )
+                          ? p.bgSoft
+                          : "transparent",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: "600",
+                          color: p.text,
+                        }}
+                      >
+                        {screen === "support" ? "Support" : "Feedback"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  accessibilityLabel="Close"
+                  onPress={handleClose}
+                  style={{ padding: 10 }}
+                >
+                  <Text style={{ fontSize: 20, color: p.textSoft }}>×</Text>
+                </TouchableOpacity>
+              </>
+            ) : nav.screen === "list" ? (
+              <>
+                <Text style={[styles.headerTitle, { color: p.text }]}>
+                  Feedback
+                </Text>
                 <TouchableOpacity
                   onPress={() => setNav({ screen: "create" })}
                   activeOpacity={0.8}
@@ -120,9 +180,13 @@ export function FeedbackSheet() {
                   onPress={() => setNav({ screen: "list" })}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 16 }}
                 >
-                  <Text style={[styles.navBtn, { color: accentColor }]}>Cancel</Text>
+                  <Text style={[styles.navBtn, { color: accentColor }]}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: p.text }]}>New feedback</Text>
+                <Text style={[styles.headerTitle, { color: p.text }]}>
+                  New feedback
+                </Text>
                 <View style={styles.navBtnSpacer} />
               </>
             ) : (
@@ -130,51 +194,89 @@ export function FeedbackSheet() {
                 onPress={() => setNav({ screen: "list" })}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 16 }}
               >
-                <Text style={[styles.navBtn, { color: accentColor }]}>← Back</Text>
+                <Text style={[styles.navBtn, { color: accentColor }]}>
+                  ← Back
+                </Text>
               </TouchableOpacity>
             )}
           </View>
 
           {/* Scrollable body */}
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {nav.screen === "list" && (
-              <FeedListBody
-                p={p}
-                accent={accentColor}
-                onSelect={(id) => setNav({ screen: "detail", feedbackId: id })}
-              />
-            )}
-            {nav.screen === "detail" && "feedbackId" in nav && (
-              <FeedDetailBody
-                p={p}
-                accent={accentColor}
-                feedbackId={(nav as { screen: "detail"; feedbackId: string }).feedbackId}
-              />
-            )}
-            {nav.screen === "create" && (
-              <FeedCreateBody
-                p={p}
-                accent={accentColor}
-                onDone={() => {
-                  setNav({ screen: "list" });
-                }}
-              />
-            )}
-          </ScrollView>
+          {nav.screen === "support" && supportConfig ? (
+            <View style={{ flex: 1, paddingBottom: insets.bottom }}>
+              {isOpen && (
+                <SupportView
+                  key={supportRevision}
+                  client={client.support}
+                  config={supportConfig}
+                  dark={isDark}
+                />
+              )}
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {supportConfig && nav.screen === "list" && (
+                <TouchableOpacity
+                  onPress={() => setNav({ screen: "create" })}
+                  style={[
+                    styles.newBtn,
+                    {
+                      backgroundColor: accentColor,
+                      alignSelf: "flex-end",
+                      marginBottom: 12,
+                    },
+                  ]}
+                >
+                  <Text style={styles.newBtnText}>+ New feedback</Text>
+                </TouchableOpacity>
+              )}
+              {nav.screen === "list" && (
+                <FeedListBody
+                  p={p}
+                  accent={accentColor}
+                  onSelect={(id) =>
+                    setNav({ screen: "detail", feedbackId: id })
+                  }
+                />
+              )}
+              {nav.screen === "detail" && "feedbackId" in nav && (
+                <FeedDetailBody
+                  p={p}
+                  accent={accentColor}
+                  feedbackId={
+                    (nav as { screen: "detail"; feedbackId: string }).feedbackId
+                  }
+                />
+              )}
+              {nav.screen === "create" && (
+                <FeedCreateBody
+                  p={p}
+                  accent={accentColor}
+                  onDone={() => {
+                    setNav({ screen: "list" });
+                  }}
+                />
+              )}
+            </ScrollView>
+          )}
 
           {/* Branding — hidden for Business plan */}
-          {showBranding && (
+          {showBranding && nav.screen !== "support" && (
             <TouchableOpacity
               onPress={() => Linking.openURL("https://upstep.dev")}
               activeOpacity={0.6}
               style={[
                 styles.poweredBy,
-                { borderTopColor: p.border, paddingBottom: insets.bottom + 10, backgroundColor: p.bg },
+                {
+                  borderTopColor: p.border,
+                  paddingBottom: insets.bottom + 10,
+                  backgroundColor: p.bg,
+                },
               ]}
             >
               <Text style={[styles.poweredByText, { color: p.textFaint }]}>
@@ -191,9 +293,13 @@ export function FeedbackSheet() {
 // ─── FeedListBody ─────────────────────────────────────────────────────────────
 
 function FeedListBody({
-  p, accent, onSelect,
+  p,
+  accent,
+  onSelect,
 }: {
-  p: Palette; accent: string; onSelect: (id: string) => void;
+  p: Palette;
+  accent: string;
+  onSelect: (id: string) => void;
 }) {
   const { feedItems, feedLoading, vote } = useUpstep();
 
@@ -234,10 +340,17 @@ function FeedListBody({
 }
 
 function FeedCard({
-  item, p, accent, onPress, onVote,
+  item,
+  p,
+  accent,
+  onPress,
+  onVote,
 }: {
-  item: Feedback; p: Palette; accent: string;
-  onPress: () => void; onVote: () => void;
+  item: Feedback;
+  p: Palette;
+  accent: string;
+  onPress: () => void;
+  onVote: () => void;
 }) {
   const voted = item.userVote === "UP";
   const displayTitle = item.title ?? item.content;
@@ -260,8 +373,12 @@ function FeedCard({
           },
         ]}
       >
-        <Text style={[styles.voteArrow, { color: voted ? "#fff" : accent }]}>▲</Text>
-        <Text style={[styles.voteCount, { color: voted ? "#fff" : p.text }]}>{item.upvotes}</Text>
+        <Text style={[styles.voteArrow, { color: voted ? "#fff" : accent }]}>
+          ▲
+        </Text>
+        <Text style={[styles.voteCount, { color: voted ? "#fff" : p.text }]}>
+          {item.upvotes}
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.cardBody}>
@@ -269,16 +386,23 @@ function FeedCard({
           {displayTitle}
         </Text>
         {item.title && (
-          <Text style={[styles.cardDesc, { color: p.textFaint }]} numberOfLines={1}>
+          <Text
+            style={[styles.cardDesc, { color: p.textFaint }]}
+            numberOfLines={1}
+          >
             {item.content}
           </Text>
         )}
         <View style={styles.cardMeta}>
           <TypeBadge type={item.type} p={p} />
-          {item.status === "PENDING"
-            ? <PendingBadge />
-            : <StatusDot status={item.status} color={item.boardStatus?.color} />}
-          <Text style={[styles.cardDate, { color: p.textFaint }]}>{fmtDate(item.createdAt)}</Text>
+          {item.status === "PENDING" ? (
+            <PendingBadge />
+          ) : (
+            <StatusDot status={item.status} color={item.boardStatus?.color} />
+          )}
+          <Text style={[styles.cardDate, { color: p.textFaint }]}>
+            {fmtDate(item.createdAt)}
+          </Text>
         </View>
         <LabelBadges labels={item.labels} p={p} />
       </View>
@@ -291,9 +415,13 @@ function FeedCard({
 // ─── FeedDetailBody ───────────────────────────────────────────────────────────
 
 function FeedDetailBody({
-  p, accent, feedbackId,
+  p,
+  accent,
+  feedbackId,
 }: {
-  p: Palette; accent: string; feedbackId: string;
+  p: Palette;
+  accent: string;
+  feedbackId: string;
 }) {
   const { vote, getItem } = useUpstep();
   const [item, setItem] = useState<FeedbackWithComments | null>(null);
@@ -304,9 +432,18 @@ function FeedDetailBody({
     let cancelled = false;
     setLoading(true);
     getItem(feedbackId)
-      .then((data) => { if (!cancelled) { setItem(data); setLoading(false); } })
-      .catch(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .then((data) => {
+        if (!cancelled) {
+          setItem(data);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [feedbackId, getItem]);
 
   async function handleVote() {
@@ -332,17 +469,27 @@ function FeedDetailBody({
   return (
     <View style={styles.detailPad}>
       {item.title && (
-        <Text style={[styles.detailTitle, { color: p.text }]}>{item.title}</Text>
+        <Text style={[styles.detailTitle, { color: p.text }]}>
+          {item.title}
+        </Text>
       )}
       <View style={styles.badgeRow}>
         <TypeBadge type={item.type} p={p} />
-        {item.status === "PENDING"
-          ? <PendingBadge />
-          : <StatusBadge status={item.status} boardStatus={item.boardStatus} p={p} />}
+        {item.status === "PENDING" ? (
+          <PendingBadge />
+        ) : (
+          <StatusBadge
+            status={item.status}
+            boardStatus={item.boardStatus}
+            p={p}
+          />
+        )}
         <LabelBadges labels={item.labels} p={p} />
       </View>
 
-      <Text style={[styles.detailContent, { color: p.textSoft }]}>{item.content}</Text>
+      <Text style={[styles.detailContent, { color: p.textSoft }]}>
+        {item.content}
+      </Text>
 
       <TouchableOpacity
         onPress={handleVote}
@@ -361,7 +508,9 @@ function FeedDetailBody({
         ) : (
           <>
             <Text style={[styles.upvoteArrow, { color: accent }]}>▲</Text>
-            <Text style={[styles.upvoteCount, { color: p.text }]}>{item.upvotes}</Text>
+            <Text style={[styles.upvoteCount, { color: p.text }]}>
+              {item.upvotes}
+            </Text>
             <Text style={[styles.upvoteLabel, { color: p.textFaint }]}>
               {item.userVote === "UP" ? "Upvoted" : "Upvote"}
             </Text>
@@ -371,7 +520,9 @@ function FeedDetailBody({
 
       {item.comments.length > 0 && (
         <View style={[styles.commentsSection, { borderTopColor: p.border }]}>
-          <Text style={[styles.commentsLabel, { color: p.textFaint }]}>COMMENTS</Text>
+          <Text style={[styles.commentsLabel, { color: p.textFaint }]}>
+            COMMENTS
+          </Text>
           {item.comments.map((c) => (
             <CommentBubble key={c.id} comment={c} p={p} accent={accent} />
           ))}
@@ -381,18 +532,35 @@ function FeedDetailBody({
   );
 }
 
-function CommentBubble({ comment, p, accent }: { comment: Comment; p: Palette; accent: string }) {
+function CommentBubble({
+  comment,
+  p,
+  accent,
+}: {
+  comment: Comment;
+  p: Palette;
+  accent: string;
+}) {
   return (
-    <View style={[styles.commentBubble, { backgroundColor: p.bgSoft, borderColor: p.border }]}>
+    <View
+      style={[
+        styles.commentBubble,
+        { backgroundColor: p.bgSoft, borderColor: p.border },
+      ]}
+    >
       <View style={styles.commentMeta}>
         <View style={[styles.ownerBadge, { backgroundColor: accent + "20" }]}>
           <Text style={[styles.ownerBadgeText, { color: accent }]}>
             {comment.authorName?.trim() || "UpStep Team"}
           </Text>
         </View>
-        <Text style={[styles.commentDate, { color: p.textFaint }]}>{fmtDate(comment.createdAt)}</Text>
+        <Text style={[styles.commentDate, { color: p.textFaint }]}>
+          {fmtDate(comment.createdAt)}
+        </Text>
       </View>
-      <Text style={[styles.commentContent, { color: p.textSoft }]}>{comment.content}</Text>
+      <Text style={[styles.commentContent, { color: p.textSoft }]}>
+        {comment.content}
+      </Text>
     </View>
   );
 }
@@ -407,9 +575,13 @@ const TYPE_LABELS: Record<FeedbackType, string> = {
 };
 
 function FeedCreateBody({
-  p, accent, onDone,
+  p,
+  accent,
+  onDone,
 }: {
-  p: Palette; accent: string; onDone: () => void;
+  p: Palette;
+  accent: string;
+  onDone: () => void;
 }) {
   const { submit } = useUpstep();
   const [title, setTitle] = useState("");
@@ -464,7 +636,12 @@ function FeedCreateBody({
                 },
               ]}
             >
-              <Text style={[styles.typeBtnText, { color: active ? "#fff" : p.textSoft }]}>
+              <Text
+                style={[
+                  styles.typeBtnText,
+                  { color: active ? "#fff" : p.textSoft },
+                ]}
+              >
                 {TYPE_LABELS[t]}
               </Text>
             </TouchableOpacity>
@@ -480,10 +657,15 @@ function FeedCreateBody({
         placeholderTextColor={p.textFaint}
         maxLength={200}
         returnKeyType="next"
-        style={[styles.titleInput, { borderColor: p.border, backgroundColor: p.bgSoft, color: p.text }]}
+        style={[
+          styles.titleInput,
+          { borderColor: p.border, backgroundColor: p.bgSoft, color: p.text },
+        ]}
       />
 
-      <Text style={[styles.fieldLabel, { color: p.textFaint }]}>DESCRIPTION</Text>
+      <Text style={[styles.fieldLabel, { color: p.textFaint }]}>
+        DESCRIPTION
+      </Text>
       <TextInput
         value={description}
         onChangeText={setDescription}
@@ -493,7 +675,10 @@ function FeedCreateBody({
         numberOfLines={5}
         maxLength={2000}
         textAlignVertical="top"
-        style={[styles.descInput, { borderColor: p.border, backgroundColor: p.bgSoft, color: p.text }]}
+        style={[
+          styles.descInput,
+          { borderColor: p.border, backgroundColor: p.bgSoft, color: p.text },
+        ]}
       />
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -521,10 +706,14 @@ function FeedCreateBody({
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
 const TYPE_BG: Record<FeedbackType, string> = {
-  BUG: "#fdecec", FEATURE: "#e9f0fd", GENERAL: "",
+  BUG: "#fdecec",
+  FEATURE: "#e9f0fd",
+  GENERAL: "",
 };
 const TYPE_FG: Record<FeedbackType, string> = {
-  BUG: "#d6453d", FEATURE: "#3b76d6", GENERAL: "",
+  BUG: "#d6453d",
+  FEATURE: "#3b76d6",
+  GENERAL: "",
 };
 
 function PendingBadge() {
@@ -538,43 +727,91 @@ function PendingBadge() {
 
 function TypeBadge({ type, p }: { type: FeedbackType; p: Palette }) {
   return (
-    <View style={[styles.badge, { backgroundColor: TYPE_BG[type] || p.bgSoft }]}>
-      <Text style={[styles.badgeText, { color: TYPE_FG[type] || p.textSoft }]}>{type}</Text>
+    <View
+      style={[styles.badge, { backgroundColor: TYPE_BG[type] || p.bgSoft }]}
+    >
+      <Text style={[styles.badgeText, { color: TYPE_FG[type] || p.textSoft }]}>
+        {type}
+      </Text>
     </View>
   );
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  OPEN: "#b45309", IN_PROGRESS: "#1d4ed8", DONE: "#15803d",
-  PENDING: "#ea580c", CLOSED: "#6b7280",
+  OPEN: "#b45309",
+  IN_PROGRESS: "#1d4ed8",
+  DONE: "#15803d",
+  PENDING: "#ea580c",
+  CLOSED: "#6b7280",
 };
 
-function StatusDot({ status, color }: { status: string; color?: string | undefined }) {
-  return <View style={[styles.statusDot, { backgroundColor: color ?? STATUS_COLOR[status] ?? "#9ca3af" }]} />;
+function StatusDot({
+  status,
+  color,
+}: {
+  status: string;
+  color?: string | undefined;
+}) {
+  return (
+    <View
+      style={[
+        styles.statusDot,
+        { backgroundColor: color ?? STATUS_COLOR[status] ?? "#9ca3af" },
+      ]}
+    />
+  );
 }
 
 function StatusBadge({
-  status, boardStatus, p,
+  status,
+  boardStatus,
+  p,
 }: {
-  status: string; boardStatus: Feedback["boardStatus"]; p: Palette;
+  status: string;
+  boardStatus: Feedback["boardStatus"];
+  p: Palette;
 }) {
   return (
-    <View style={[styles.statusBadge, { backgroundColor: p.bgSoft, borderColor: p.border }]}>
+    <View
+      style={[
+        styles.statusBadge,
+        { backgroundColor: p.bgSoft, borderColor: p.border },
+      ]}
+    >
       <StatusDot status={status} color={boardStatus?.color} />
-      <Text style={[styles.statusBadgeText, { color: p.textSoft }]}>{boardStatus?.name ?? status.replace("_", " ")}</Text>
+      <Text style={[styles.statusBadgeText, { color: p.textSoft }]}>
+        {boardStatus?.name ?? status.replace("_", " ")}
+      </Text>
     </View>
   );
 }
 
-function LabelBadges({ labels, p }: { labels: Feedback["labels"]; p: Palette }) {
+function LabelBadges({
+  labels,
+  p,
+}: {
+  labels: Feedback["labels"];
+  p: Palette;
+}) {
   if (!labels?.length) return null;
 
   return (
     <View style={styles.labelBadges}>
       {labels.map((label) => (
-        <View key={label.id} style={[styles.labelBadge, { backgroundColor: p.bgSoft, borderColor: label.color }]}>
+        <View
+          key={label.id}
+          style={[
+            styles.labelBadge,
+            { backgroundColor: p.bgSoft, borderColor: label.color },
+          ]}
+        >
           <View style={[styles.labelDot, { backgroundColor: label.color }]} />
-          <Text style={[styles.labelBadgeText, { color: p.textSoft }]} numberOfLines={1}>{label.name}</Text>
+          <Text
+            style={[styles.labelBadgeText, { color: p.textSoft }]}
+            numberOfLines={1}
+          >
+            {label.name}
+          </Text>
         </View>
       ))}
     </View>
@@ -582,7 +819,10 @@ function LabelBadges({ labels, p }: { labels: Feedback["labels"]; p: Palette }) 
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -640,7 +880,11 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, padding: 16, paddingBottom: 32 },
 
   // List
-  centered: { alignItems: "center", justifyContent: "center", paddingVertical: 60 },
+  centered: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
   emptyText: { fontSize: 14 },
   card: {
     flexDirection: "row",
@@ -662,36 +906,85 @@ const styles = StyleSheet.create({
   voteArrow: { fontSize: 11, lineHeight: 13 },
   voteCount: { fontSize: 15, fontWeight: "700", lineHeight: 18 },
   cardBody: { flex: 1 },
-  cardTitle: { fontSize: 14, fontWeight: "600", lineHeight: 19, marginBottom: 2 },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 19,
+    marginBottom: 2,
+  },
   cardDesc: { fontSize: 12.5, lineHeight: 17, marginBottom: 6 },
   cardMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
   cardDate: { fontSize: 11 },
   labelBadges: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 },
-  labelBadge: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, maxWidth: "100%" },
+  labelBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    maxWidth: "100%",
+  },
   labelDot: { width: 6, height: 6, borderRadius: 3 },
   labelBadgeText: { fontSize: 11, fontWeight: "500", flexShrink: 1 },
   chevron: { fontSize: 22, fontWeight: "300", marginLeft: 4 },
 
   // Detail
   detailPad: { paddingTop: 4 },
-  detailTitle: { fontSize: 22, fontWeight: "700", letterSpacing: -0.4, marginBottom: 10, lineHeight: 28 },
-  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+  detailTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    letterSpacing: -0.4,
+    marginBottom: 10,
+    lineHeight: 28,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
   detailContent: { fontSize: 15, lineHeight: 23, marginBottom: 24 },
   upvoteBtn: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    alignSelf: "flex-start", borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 10, marginBottom: 8,
-    minWidth: 80, justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom: 8,
+    minWidth: 80,
+    justifyContent: "center",
   },
   upvoteArrow: { fontSize: 13, lineHeight: 15 },
   upvoteCount: { fontSize: 18, fontWeight: "700" },
   upvoteLabel: { fontSize: 13, fontWeight: "500" },
-  commentsSection: { marginTop: 28, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 20 },
-  commentsLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.8, marginBottom: 12 },
-  commentBubble: {
-    borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 14, marginBottom: 10,
+  commentsSection: {
+    marginTop: 28,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 20,
   },
-  commentMeta: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  commentsLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
+  commentBubble: {
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    marginBottom: 10,
+  },
+  commentMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
   ownerBadge: { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
   ownerBadgeText: { fontSize: 11, fontWeight: "700" },
   commentDate: { fontSize: 11 },
@@ -699,27 +992,54 @@ const styles = StyleSheet.create({
 
   // Create
   createPad: { paddingTop: 4 },
-  fieldLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.8, marginBottom: 8 },
+  fieldLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
   typeRow: { flexDirection: "row", gap: 8, marginBottom: 20, flexWrap: "wrap" },
-  typeBtn: { paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1 },
+  typeBtn: {
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
   typeBtnText: { fontSize: 13, fontWeight: "600" },
   titleInput: {
-    borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, marginBottom: 20,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    marginBottom: 20,
     ...(Platform.OS === "ios" ? {} : { paddingTop: 12 }),
   },
   descInput: {
-    borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, minHeight: 110, marginBottom: 20,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    minHeight: 110,
+    marginBottom: 20,
     ...(Platform.OS === "ios" ? {} : { paddingTop: 12 }),
   },
-  errorText: { fontSize: 13, marginBottom: 12, fontWeight: "500", color: "#d6453d" },
+  errorText: {
+    fontSize: 13,
+    marginBottom: 12,
+    fontWeight: "500",
+    color: "#d6453d",
+  },
   submitBtn: { borderRadius: 12, padding: 14, alignItems: "center" },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  successTitle: { fontSize: 20, fontWeight: "700", textAlign: "center", marginBottom: 6 },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 6,
+  },
   successSub: { fontSize: 14, textAlign: "center" },
 
   // Pending badge
@@ -759,9 +1079,17 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: "700", letterSpacing: 0.2 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusBadge: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 6, borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  statusBadgeText: { fontSize: 10, fontWeight: "600", textTransform: "capitalize" },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "capitalize",
+  },
 });

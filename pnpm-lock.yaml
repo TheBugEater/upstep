@@ -108,6 +108,9 @@ importers:
 
   packages/sdk-react-native:
     dependencies:
+      '@upstep/js':
+        specifier: workspace:*
+        version: link:../sdk-web
       '@upstep/types':
         specifier: workspace:*
         version: link:../types
