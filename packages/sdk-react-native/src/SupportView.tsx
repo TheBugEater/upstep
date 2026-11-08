@@ -29,7 +29,7 @@ export function SupportView({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const list = useRef<ScrollView>(null);
+  const list = useRef<React.ElementRef<typeof ScrollView>>(null);
   const active = useRef(true);
   const pending = useRef<{ text: string; id: string } | null>(null);
   const colors = {
