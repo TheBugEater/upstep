@@ -65,8 +65,11 @@ test(
         return {
           reply: "Returns are accepted within 30 days.",
           sources: [0],
-          offerTicket: true,
+          offerTicket: false,
           handoff: false,
+          resolution: "answer",
+          escalationReason: "none",
+          askConfirmation: true,
           ticketTitle: "Return request",
           ticketType: "GENERAL",
           inScope: true,
@@ -174,7 +177,7 @@ test(
         },
       );
       await t.test(
-        "automatic escalation reuses one private ticket and follows the support assignee",
+        "staff ticket creation reuses one private ticket and follows the support assignee",
         async () => {
           await teamConversationAction(
             {

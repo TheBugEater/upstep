@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1
+
+- Restore the original accent and use the configured accent for all chat actions.
+- Compact text and action cards pinned near the composer, with two-step contact collection and expandable optional details.
+
 ## 0.7.0
 
 - Native support chat in the existing feedback sheet, with signed customer identities and anonymous session persistence.

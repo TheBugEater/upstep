@@ -61,20 +61,45 @@ export class UpstepApiClient {
 
   async supportEnabled(): Promise<boolean> {
     if (!this.chat) return false;
-    try { const response = await fetch(`${this.baseUrl}/api/sdk/support`, {headers: this.headers()}); return response.ok && (await response.json()).enabled === true; } catch { return false; }
+    try {
+      const response = await fetch(`${this.baseUrl}/api/sdk/support`, {
+        headers: this.headers(),
+      });
+      return response.ok && (await response.json()).enabled === true;
+    } catch {
+      return false;
+    }
   }
 
-  supportFrameUrl(theme: string): string {
-    return `${this.baseUrl}/support/${encodeURIComponent(this.apiKey)}?theme=${encodeURIComponent(theme)}`;
+  supportFrameUrl(theme: string, accentColor = "#D97757"): string {
+    return `${this.baseUrl}/support/${encodeURIComponent(this.apiKey)}?theme=${encodeURIComponent(theme)}&accent=${encodeURIComponent(accentColor)}`;
   }
 
   connectSupportFrame(frame: HTMLIFrameElement) {
     const target = new URL(this.baseUrl).origin;
-    const send = () => frame.contentWindow?.postMessage({type: "upstep:support:identity", token: this.supportIdentityToken}, target);
-    const receive = (event: MessageEvent) => { if (event.origin === target && event.source === frame.contentWindow && event.data?.type === "upstep:support:ready") send(); };
+    const send = () =>
+      frame.contentWindow?.postMessage(
+        {
+          type: "upstep:support:identity",
+          token: this.supportIdentityToken,
+          accentColor: getComputedStyle(frame).color,
+        },
+        target,
+      );
+    const receive = (event: MessageEvent) => {
+      if (
+        event.origin === target &&
+        event.source === frame.contentWindow &&
+        event.data?.type === "upstep:support:ready"
+      )
+        send();
+    };
     frame.addEventListener("load", send);
     window.addEventListener("message", receive);
-    return () => { frame.removeEventListener("load", send); window.removeEventListener("message", receive); };
+    return () => {
+      frame.removeEventListener("load", send);
+      window.removeEventListener("message", receive);
+    };
   }
 
   async listFeedback(params?: {
@@ -116,11 +141,18 @@ export class UpstepApiClient {
   }
 
   async vote(feedbackId: string, value: VotePayload["value"]): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/api/sdk/feedback/${feedbackId}/vote`, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify({ value, endUserId: this.userId, anonymousId: this.anonymousId }),
-    });
+    const res = await fetch(
+      `${this.baseUrl}/api/sdk/feedback/${feedbackId}/vote`,
+      {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify({
+          value,
+          endUserId: this.userId,
+          anonymousId: this.anonymousId,
+        }),
+      },
+    );
     if (!res.ok) throw new Error(`Upstep: ${res.status}`);
   }
 
@@ -128,9 +160,12 @@ export class UpstepApiClient {
     const qs = new URLSearchParams();
     if (this.userId) qs.set("endUserId", this.userId);
     if (this.anonymousId) qs.set("anonymousId", this.anonymousId);
-    const res = await fetch(`${this.baseUrl}/api/sdk/feedback/${feedbackId}?${qs}`, {
-      headers: this.headers(),
-    });
+    const res = await fetch(
+      `${this.baseUrl}/api/sdk/feedback/${feedbackId}?${qs}`,
+      {
+        headers: this.headers(),
+      },
+    );
     if (!res.ok) throw new Error(`Upstep: ${res.status}`);
     return res.json() as Promise<FeedbackWithComments>;
   }
@@ -140,10 +175,13 @@ export class UpstepApiClient {
     const qs = new URLSearchParams();
     if (this.userId) qs.set("endUserId", this.userId);
     if (this.anonymousId) qs.set("anonymousId", this.anonymousId);
-    const res = await fetch(`${this.baseUrl}/api/sdk/feedback/${feedbackId}/vote?${qs}`, {
-      method: "DELETE",
-      headers: this.headers(),
-    });
+    const res = await fetch(
+      `${this.baseUrl}/api/sdk/feedback/${feedbackId}/vote?${qs}`,
+      {
+        method: "DELETE",
+        headers: this.headers(),
+      },
+    );
     if (!res.ok) throw new Error(`Upstep: ${res.status}`);
   }
 }

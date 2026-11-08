@@ -131,14 +131,36 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
     final canvas = dark ? Colors.black : Colors.white;
-    final soft = dark ? const Color(0xFF1B201D) : const Color(0xFFF3F6F3);
-    final foreground = dark ? const Color(0xFFE5EAE6) : const Color(0xFF354239);
+    final soft = dark ? const Color(0xFF171717) : const Color(0xFFF5F5F5);
+    final foreground = dark ? const Color(0xFFE5E5E5) : const Color(0xFF404040);
     final customer =
         (_chat?['customer'] as Map?)?.cast<String, dynamic>() ??
         <String, dynamic>{};
+    final actions = <Map<String, dynamic>>[];
+    for (final raw in (_chat?['messages'] as List? ?? [])) {
+      final message = raw as Map;
+      if (message['id'] != _chat?['activeWidgetMessageId']) continue;
+      for (final entry
+          in ((message['metadata'] as Map?)?['widgets'] as List? ?? [])) {
+        if (entry['type'] != 'contact_form' || _chat?['canEscalate'] == true) {
+          actions.add((entry as Map).cast<String, dynamic>());
+        }
+      }
+    }
+    if (_chat?['canEscalate'] == true &&
+        _chat?['activeWidgetMessageId'] == null) {
+      actions.add({
+        'id': 'contact:${_chat!['id']}',
+        'type': 'contact_form',
+        'title': 'Let the team follow up',
+        'summary': _chat?['escalationSummary'] ?? '',
+      });
+    }
     Widget card(Map<String, dynamic> data) => _SupportCard(
       key: ValueKey(data['id']),
       data: data,
+      transferAvailable:
+          (widget.configuration['online'] as List? ?? []).isNotEmpty,
       customer: customer,
       busy: _busy,
       onReply: _send,
@@ -159,7 +181,7 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
     return ColoredBox(
       color: canvas,
       child: DefaultTextStyle(
-        style: TextStyle(fontSize: 16, height: 1.5, color: foreground),
+        style: TextStyle(fontSize: 15, height: 1.5, color: foreground),
         child: Column(
           children: [
             Padding(
@@ -184,7 +206,7 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                         : _chat?['state'] == 'HUMAN'
                         ? 'The team is here to help'
                         : 'Ask a question. We’re here to help.',
-                    style: const TextStyle(fontSize: 14),
+                    style: const TextStyle(fontSize: 13),
                   ),
                 ],
               ),
@@ -226,8 +248,6 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                             (message['metadata'] as Map?)
                                 ?.cast<String, dynamic>() ??
                             <String, dynamic>{};
-                        final active =
-                            _chat?['activeWidgetMessageId'] == message['id'];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: Column(
@@ -241,28 +261,28 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                                     : message['authorName'] as String? ??
                                           'Support',
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                               const SizedBox(height: 6),
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.all(14),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: mine ? soft : canvas,
                                   border: Border.all(
                                     color: dark
-                                        ? const Color(0xFF303B33)
-                                        : const Color(0xFFDFE6E0),
+                                        ? const Color(0xFF404040)
+                                        : const Color(0xFFE5E5E5),
                                   ),
                                   borderRadius: BorderRadius.circular(18),
                                 ),
                                 child: SelectableText(
                                   message['content'] as String? ?? '',
                                   style: TextStyle(
-                                    fontSize: 16,
-                                    height: 1.55,
+                                    fontSize: 15,
+                                    height: 1.5,
                                     color: foreground,
                                   ),
                                 ),
@@ -273,53 +293,59 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                                   padding: const EdgeInsets.only(top: 8),
                                   child: SelectableText(
                                     '${source['title']}\n${source['url']}',
-                                    style: const TextStyle(fontSize: 14),
+                                    style: const TextStyle(fontSize: 13),
                                   ),
                                 ),
-                              if (active)
-                                for (final entry
-                                    in (metadata['widgets'] as List? ?? []))
-                                  if (entry['type'] != 'contact_form' ||
-                                      _chat?['canEscalate'] == true)
-                                    card(
-                                      (entry as Map).cast<String, dynamic>(),
-                                    ),
                             ],
                           ),
                         );
                       },
                     ),
-                  if (_chat?['canEscalate'] == true &&
-                      _chat?['activeWidgetMessageId'] == null)
-                    card({
-                      'id': 'contact:${_chat!['id']}',
-                      'type': 'contact_form',
-                      'title': 'Let the team follow up',
-                      'summary': _chat?['escalationSummary'] ?? '',
-                    }),
                   if (_chat?['ticketReference'] != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       child: SelectableText(
                         'Reference: ${_chat!['ticketReference']}${_chat?['supportEmail'] != null ? '\nContact: ${_chat!['supportEmail']}' : ''}',
-                        style: const TextStyle(fontSize: 14),
+                        style: const TextStyle(fontSize: 13),
                       ),
                     ),
                   if (_chat?['aiPending'] == true)
                     const Padding(
                       padding: EdgeInsets.all(8),
-                      child: Text('Thinking…', style: TextStyle(fontSize: 14)),
+                      child: Text('Thinking…', style: TextStyle(fontSize: 13)),
                     ),
                 ],
               ),
             ),
+            if (actions.isNotEmpty)
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight:
+                      (MediaQuery.sizeOf(context).height -
+                          MediaQuery.viewInsetsOf(context).bottom) *
+                      .38,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  child: _SupportActions(
+                    key: ValueKey(
+                      _chat?['activeWidgetMessageId'] ?? _chat?['id'],
+                    ),
+                    actions: actions,
+                    card: card,
+                  ),
+                ),
+              ),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   _error!,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     color: theme.colorScheme.error,
                   ),
                 ),
@@ -342,7 +368,7 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                         minLines: 1,
                         maxLines: 4,
                         maxLength: 4000,
-                        style: const TextStyle(fontSize: 16),
+                        style: const TextStyle(fontSize: 15),
                         textCapitalization: TextCapitalization.sentences,
                         decoration: InputDecoration(
                           hintText: 'How can we help?',
@@ -361,7 +387,7 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                     IconButton.filled(
                       tooltip: 'Send message',
                       style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFF5B7168),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                         minimumSize: const Size(48, 48),
                       ),
@@ -397,12 +423,14 @@ class _SupportCard extends StatefulWidget {
   const _SupportCard({
     super.key,
     required this.data,
+    required this.transferAvailable,
     required this.customer,
     required this.busy,
     required this.onReply,
     required this.onSubmit,
   });
   final Map<String, dynamic> data, customer;
+  final bool transferAvailable;
   final bool busy;
   final Future<bool> Function(String) onReply;
   final Future<bool> Function(Map<String, dynamic>) onSubmit;
@@ -422,7 +450,8 @@ class _SupportCardState extends State<_SupportCard> {
       _details = TextEditingController(),
       _reference = TextEditingController();
   final _messageId = supportMessageId();
-  bool _open = false, _done = false;
+  int _step = 0;
+  bool _issueOpen = false, _more = false, _done = false;
   @override
   void dispose() {
     for (final c in [_name, _email, _summary, _details, _reference]) {
@@ -457,17 +486,23 @@ class _SupportCardState extends State<_SupportCard> {
     int maxLength = 160,
     int lines = 1,
   }) => Padding(
-    padding: const EdgeInsets.only(top: 12),
+    padding: const EdgeInsets.only(top: 8),
     child: TextFormField(
+      key: ValueKey(label),
       controller: controller,
       readOnly: readOnly,
       maxLength: maxLength,
       maxLines: lines,
       keyboardType: email ? TextInputType.emailAddress : TextInputType.text,
       autofillHints: email ? const [AutofillHints.email] : null,
-      style: const TextStyle(fontSize: 16),
+      style: const TextStyle(fontSize: 15),
       decoration: InputDecoration(
         labelText: label,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
         counterText: '',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -490,84 +525,104 @@ class _SupportCardState extends State<_SupportCard> {
     final data = widget.data;
     if (_done) {
       return const Padding(
-        padding: EdgeInsets.all(12),
-        child: Text('Details sent.', style: TextStyle(fontSize: 14)),
+        padding: EdgeInsets.all(8),
+        child: Text('Details sent.', style: TextStyle(fontSize: 13)),
       );
     }
     final quick =
         data['type'] == 'quick_replies' || data['type'] == 'confirmation';
     if (quick) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(data['title'] as String, style: const TextStyle(fontSize: 14)),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: (data['options'] as List)
-                  .map(
-                    (option) => OutlinedButton(
-                      onPressed: widget.busy
-                          ? null
-                          : () async {
-                              final ok = await widget.onReply(option as String);
-                              if (mounted && ok) setState(() => _done = true);
-                            },
-                      child: Text(
-                        option as String,
-                        style: const TextStyle(fontSize: 14),
-                      ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(data['title'] as String, style: const TextStyle(fontSize: 13)),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: (data['options'] as List)
+                .map(
+                  (option) => OutlinedButton(
+                    onPressed: widget.busy
+                        ? null
+                        : () async {
+                            final ok = await widget.onReply(option as String);
+                            if (mounted && ok) setState(() => _done = true);
+                          },
+                    child: Text(
+                      option as String,
+                      style: const TextStyle(fontSize: 13),
                     ),
-                  )
-                  .toList(),
-            ),
-          ],
-        ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
       );
     }
     final contact = data['type'] == 'contact_form';
+    Widget primary(String title, VoidCallback onPressed) => FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(44, 40),
+      ),
+      onPressed: widget.busy ? null : onPressed,
+      child: Text(title, style: const TextStyle(fontSize: 13)),
+    );
     return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF181D1A)
-            : const Color(0xFFF5F7F5),
-        borderRadius: BorderRadius.circular(18),
+            ? const Color(0xFF171717)
+            : const Color(0xFFFAFAFA),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Form(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              data['title'] as String,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    data['title'] as String,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (contact && _step > 0)
+                  Text('$_step of 2', style: const TextStyle(fontSize: 12)),
+              ],
             ),
-            if (contact) ...[
-              const SizedBox(height: 8),
+            if (contact && _step == 0) ...[
+              const SizedBox(height: 4),
               Text(
                 data['summary'] as String? ?? '',
-                style: const TextStyle(fontSize: 14),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton(
+                  onPressed: widget.busy
+                      ? null
+                      : () => setState(() => _step = 1),
+                  child: const Text(
+                    'Ask the team',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ),
               ),
             ],
-            if (contact && !_open)
-              OutlinedButton(
-                onPressed: widget.busy
-                    ? null
-                    : () => setState(() => _open = true),
-                child: const Text('Ask the team'),
-              ),
-            if (!contact || _open) ...[
-              if (contact) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  'Share your details so support can reach you.',
-                  style: TextStyle(fontSize: 14),
-                ),
-                _field('Your name', _name, required: true, maxLength: 100),
+            if (contact && _step > 0) ...[
+              if (_step == 1)
+                _field('Your name', _name, required: true, maxLength: 100)
+              else
                 _field(
                   'Email address',
                   _email,
@@ -578,34 +633,117 @@ class _SupportCardState extends State<_SupportCard> {
                       widget.customer['email'] != null,
                   maxLength: 254,
                 ),
-              ] else ...[
-                _field('What is happening?', _summary, required: true),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: widget.busy
+                        ? null
+                        : () => setState(() => _step--),
+                    child: const Text('Back', style: TextStyle(fontSize: 13)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: primary(
+                      _step == 1
+                          ? 'Continue'
+                          : widget.transferAvailable
+                          ? 'Request transfer'
+                          : 'Send to the team',
+                      () {
+                        if (_step == 1) {
+                          if (_form.currentState!.validate()) {
+                            setState(() => _step = 2);
+                          }
+                        } else {
+                          _submit();
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (!contact && !_issueOpen)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton(
+                  onPressed: widget.busy
+                      ? null
+                      : () => setState(() => _issueOpen = true),
+                  child: const Text(
+                    'Add issue details',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ),
+              ),
+            if (!contact && _issueOpen) ...[
+              _field('What is happening?', _summary, required: true),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => setState(() => _more = !_more),
+                  child: Text(
+                    _more
+                        ? 'Hide optional details'
+                        : 'Add notes or a reference (optional)',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ),
+              if (_more) ...[
                 _field(
-                  'What have you tried? (optional)',
+                  'What have you tried?',
                   _details,
                   maxLength: 2000,
                   lines: 2,
                 ),
-                _field(
-                  'Order or issue reference (optional)',
-                  _reference,
-                  maxLength: 100,
-                ),
+                _field('Order or issue reference', _reference, maxLength: 100),
               ],
-              const SizedBox(height: 12),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF5B7168),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(44, 48),
-                ),
-                onPressed: widget.busy ? null : _submit,
-                child: Text(contact ? 'Send to the team' : 'Send details'),
-              ),
+              primary('Send details', _submit),
             ],
           ],
         ),
       ),
     );
   }
+}
+
+class _SupportActions extends StatefulWidget {
+  const _SupportActions({super.key, required this.actions, required this.card});
+  final List<Map<String, dynamic>> actions;
+  final Widget Function(Map<String, dynamic>) card;
+  @override
+  State<_SupportActions> createState() => _SupportActionsState();
+}
+
+class _SupportActionsState extends State<_SupportActions> {
+  late int _selected = widget.actions
+      .indexWhere((a) => a['type'] == 'quick_replies')
+      .clamp(0, widget.actions.length - 1);
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (widget.actions.length > 1)
+        Wrap(
+          spacing: 8,
+          children: [
+            for (var i = 0; i < widget.actions.length; i++)
+              ChoiceChip(
+                label: Text(
+                  widget.actions[i]['type'] == 'quick_replies'
+                      ? 'Quick replies'
+                      : 'Issue details',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                selected: _selected == i,
+                onSelected: (_) => setState(() => _selected = i),
+              ),
+          ],
+        ),
+      widget.card(widget.actions[_selected]),
+    ],
+  );
 }

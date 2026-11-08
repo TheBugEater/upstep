@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SupportClient, supportMessageId } from "@upstep/js/support";
 import type {
@@ -20,11 +21,14 @@ export function SupportView({
   client,
   config,
   dark = false,
+  accentColor = "#D97757",
 }: {
   client: SupportClient;
   config: SupportConfiguration;
   dark?: boolean;
+  accentColor?: string;
 }) {
+  const { height } = useWindowDimensions();
   const [chat, setChat] = useState<SupportConversation | null>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,10 +38,10 @@ export function SupportView({
   const pending = useRef<{ text: string; id: string } | null>(null);
   const colors = {
     bg: dark ? "#000000" : "#ffffff",
-    soft: dark ? "#191d1b" : "#f4f6f4",
-    text: dark ? "#e5e7e5" : "#37413c",
-    muted: dark ? "#a2aaa5" : "#69756d",
-    line: dark ? "#303833" : "#dde4de",
+    soft: dark ? "#171717" : "#f5f5f5",
+    text: dark ? "#e5e5e5" : "#404040",
+    muted: dark ? "#a3a3a3" : "#737373",
+    line: dark ? "#404040" : "#e5e5e5",
   };
   async function refresh(id: string) {
     const next = await client.conversation(id);
@@ -95,6 +99,21 @@ export function SupportView({
       await refresh(c.id);
     });
   }
+  const widgets: SupportWidget[] = chat?.activeWidgetMessageId
+    ? (
+        chat.messages.find((m) => m.id === chat.activeWidgetMessageId)?.metadata
+          ?.widgets || []
+      ).filter((w) => w.type !== "contact_form" || chat.canEscalate)
+    : chat?.canEscalate
+      ? [
+          {
+            id: `contact:${chat.id}`,
+            type: "contact_form",
+            title: "Let the team follow up",
+            summary: chat.escalationSummary || "",
+          },
+        ]
+      : [];
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <View style={[styles.heading, { borderColor: colors.line }]}>
@@ -203,45 +222,33 @@ export function SupportView({
                 </TouchableOpacity>
               ))}
             </View>
-            {m.id === chat.activeWidgetMessageId &&
-              m.metadata?.widgets
-                ?.filter((w) => w.type !== "contact_form" || chat.canEscalate)
-                .map((w) => (
-                  <NativeSupportWidget
-                    key={w.id}
-                    widget={w}
-                    busy={busy}
-                    color={colors}
-                    name={chat.customer.name || ""}
-                    email={chat.customer.email || ""}
-                    verified={chat.customer.verified}
-                    onReply={send}
-                    onContact={(name, email) =>
-                      perform(async () => {
-                        await client.handoff(chat.id, name, email);
-                        await refresh(chat.id);
-                      })
-                    }
-                    onDetails={(values) =>
-                      perform(async () => {
-                        await client.details(chat.id, values);
-                        await refresh(chat.id);
-                      })
-                    }
-                  />
-                ))}
           </View>
         ))}
-        {chat?.canEscalate && !chat.activeWidgetMessageId && (
-          <NativeSupportWidget
-            widget={{
-              id: `contact:${chat.id}`,
-              type: "contact_form",
-              title: "Let the team follow up",
-              summary: chat.escalationSummary || "",
-            }}
+        {chat?.aiPending && (
+          <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+            <ActivityIndicator color={accentColor} />
+            <Text style={[styles.meta, { color: colors.muted }]}>
+              Thinking…
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+      {chat && widgets.length > 0 && (
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={{
+            maxHeight: height * 0.38,
+            flexGrow: 0,
+            marginHorizontal: 12,
+          }}
+        >
+          <NativeSupportActions
+            key={chat.activeWidgetMessageId || chat.id}
+            widgets={widgets}
+            online={config.online.length > 0}
             busy={busy}
             color={colors}
+            accentColor={accentColor}
             name={chat.customer.name || ""}
             email={chat.customer.email || ""}
             verified={chat.customer.verified}
@@ -259,16 +266,8 @@ export function SupportView({
               })
             }
           />
-        )}
-        {chat?.aiPending && (
-          <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-            <ActivityIndicator color="#7c9386" />
-            <Text style={[styles.meta, { color: colors.muted }]}>
-              Thinking…
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
       {error.length > 0 && (
         <Text
           accessibilityRole="alert"
@@ -283,7 +282,10 @@ export function SupportView({
         </Text>
       )}
       {chat?.state === "RESOLVED" ? (
-        <TouchableOpacity style={styles.send} onPress={() => setChat(null)}>
+        <TouchableOpacity
+          style={[styles.send, { backgroundColor: accentColor }]}
+          onPress={() => setChat(null)}
+        >
           <Text style={styles.sendText}>Start a new conversation</Text>
         </TouchableOpacity>
       ) : (
@@ -303,7 +305,13 @@ export function SupportView({
             accessibilityLabel="Send message"
             disabled={busy || !text.trim()}
             onPress={() => void send()}
-            style={[styles.send, { opacity: busy || !text.trim() ? 0.45 : 1 }]}
+            style={[
+              styles.send,
+              {
+                backgroundColor: accentColor,
+                opacity: busy || !text.trim() ? 0.45 : 1,
+              },
+            ]}
           >
             <Text style={styles.sendText}>Send</Text>
           </TouchableOpacity>
@@ -322,20 +330,11 @@ export function SupportView({
     </View>
   );
 }
-function NativeSupportWidget({
-  widget,
-  busy,
-  color,
-  name,
-  email,
-  verified,
-  onReply,
-  onContact,
-  onDetails,
-}: {
-  widget: SupportWidget;
+type ActionProps = {
+  online: boolean;
   busy: boolean;
   color: { soft: string; text: string; muted: string; line: string };
+  accentColor: string;
   name: string;
   email: string;
   verified: boolean;
@@ -348,48 +347,113 @@ function NativeSupportWidget({
     reference: string;
     clientMessageId: string;
   }) => Promise<boolean>;
-}) {
-  const [open, setOpen] = useState(false);
-  const [fullName, setName] = useState(name);
-  const [address, setEmail] = useState(email);
-  const [summary, setSummary] = useState("");
-  const [details, setDetails] = useState("");
-  const [reference, setReference] = useState("");
+};
+function NativeSupportActions({
+  widgets,
+  ...props
+}: ActionProps & { widgets: SupportWidget[] }) {
+  const [selected, setSelected] = useState(
+    widgets.find((w) => w.type === "quick_replies")?.id || widgets[0]?.id,
+  );
+  const widget = widgets.find((w) => w.id === selected) || widgets[0];
+  return (
+    <View style={{ gap: 8, paddingBottom: 4 }}>
+      {widgets.length > 1 && (
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {widgets.map((w) => (
+            <TouchableOpacity
+              key={w.id}
+              onPress={() => setSelected(w.id)}
+              style={[
+                styles.option,
+                { borderColor: props.color.line, padding: 8 },
+              ]}
+            >
+              <Text style={{ fontSize: 13, color: props.color.text }}>
+                {w.type === "quick_replies" ? "Quick replies" : "Issue details"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      {widget && (
+        <NativeSupportWidget key={widget.id} {...props} widget={widget} />
+      )}
+    </View>
+  );
+}
+function NativeSupportWidget({
+  widget,
+  busy,
+  color,
+  accentColor,
+  name,
+  email,
+  verified,
+  online,
+  onReply,
+  onContact,
+  onDetails,
+}: ActionProps & { widget: SupportWidget }) {
+  const [step, setStep] = useState(0),
+    [issueOpen, setIssueOpen] = useState(false),
+    [more, setMore] = useState(false);
+  const [fullName, setName] = useState(name),
+    [address, setEmail] = useState(email),
+    [summary, setSummary] = useState(""),
+    [details, setDetails] = useState(""),
+    [reference, setReference] = useState("");
   const id = useRef(supportMessageId());
+  const action = (title: string, press: () => void, disabled = false) => (
+    <TouchableOpacity
+      disabled={disabled || busy}
+      style={[
+        styles.send,
+        { backgroundColor: accentColor, opacity: disabled || busy ? 0.5 : 1 },
+      ]}
+      onPress={press}
+    >
+      <Text style={styles.sendText}>{title}</Text>
+    </TouchableOpacity>
+  );
   if (widget.type === "quick_replies" || widget.type === "confirmation")
     return (
-      <View style={{ gap: 8, marginTop: 12 }}>
-        <Text style={[styles.label, { color: color.text }]}>
+      <View style={{ gap: 8 }}>
+        <Text style={[styles.meta, { color: color.muted }]}>
           {widget.title}
         </Text>
-        {widget.options.map((option) => (
-          <TouchableOpacity
-            key={option}
-            disabled={busy}
-            style={[styles.option, { borderColor: color.line }]}
-            onPress={() => void onReply(option)}
-          >
-            <Text style={[styles.body, { color: color.text }]}>{option}</Text>
-          </TouchableOpacity>
-        ))}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {widget.options.map((option) => (
+            <TouchableOpacity
+              key={option}
+              disabled={busy}
+              style={[styles.option, { borderColor: color.line }]}
+              onPress={() => void onReply(option)}
+            >
+              <Text style={{ fontSize: 13, color: color.text }}>{option}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     );
   const field = (
     label: string,
     value: string,
-    set: (s: string) => void,
-    kind: "email-address" | "default" = "default",
+    set: (v: string) => void,
+    emailField = false,
     readOnly = false,
+    maxLength = 160,
   ) => (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: 4 }}>
       <Text style={[styles.meta, { color: color.muted }]}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
         value={value}
         onChangeText={set}
-        editable={!readOnly && !busy}
-        keyboardType={kind}
-        autoCapitalize={kind === "email-address" ? "none" : "sentences"}
+        editable={!busy && !readOnly}
+        maxLength={maxLength}
+        keyboardType={emailField ? "email-address" : "default"}
+        autoCapitalize={emailField ? "none" : "sentences"}
         style={[
           styles.formInput,
           { color: color.text, borderColor: color.line },
@@ -404,73 +468,119 @@ function NativeSupportWidget({
         { backgroundColor: color.soft, borderColor: color.line },
       ]}
     >
-      <Text style={[styles.title, { color: color.text }]}>{widget.title}</Text>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          gap: 8,
+        }}
+      >
+        <Text style={[styles.label, { color: color.text }]}>
+          {widget.title}
+        </Text>
+        {widget.type === "contact_form" && step > 0 && (
+          <Text style={[styles.meta, { color: color.muted }]}>{step} of 2</Text>
+        )}
+      </View>
       {widget.type === "contact_form" ? (
-        <>
-          <Text style={[styles.body, { color: color.muted }]}>
-            {widget.summary}
-          </Text>
-          {!open ? (
-            <TouchableOpacity
-              disabled={busy}
-              style={styles.send}
-              onPress={() => setOpen(true)}
+        step === 0 ? (
+          <>
+            <Text
+              numberOfLines={2}
+              style={[styles.meta, { color: color.muted }]}
             >
-              <Text style={styles.sendText}>Ask the team</Text>
-            </TouchableOpacity>
-          ) : (
-            <>
-              {field("Your name", fullName, setName)}
-              {field(
-                "Email address",
-                address,
-                setEmail,
-                "email-address",
-                verified && !!email,
-              )}
-              <Text style={[styles.meta, { color: color.muted }]}>
-                The team will use these details to follow up.
-              </Text>
+              {widget.summary}
+            </Text>
+            {action("Ask the team", () => setStep(1))}
+          </>
+        ) : (
+          <>
+            {step === 1
+              ? field("Your name", fullName, setName, false, false, 100)
+              : field(
+                  "Email for support follow-up",
+                  address,
+                  setEmail,
+                  true,
+                  verified && !!email,
+                  254,
+                )}
+            <View
+              style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
+            >
               <TouchableOpacity
-                disabled={busy || !fullName.trim() || !address.trim()}
-                style={[
-                  styles.send,
-                  {
-                    opacity:
-                      busy || !fullName.trim() || !address.trim() ? 0.5 : 1,
-                  },
-                ]}
-                onPress={() => void onContact(fullName, address)}
+                style={styles.option}
+                disabled={busy}
+                onPress={() => setStep(step - 1)}
               >
-                <Text style={styles.sendText}>Send to the team</Text>
+                <Text style={{ color: color.text, fontSize: 13 }}>Back</Text>
               </TouchableOpacity>
-            </>
-          )}
-        </>
+              <View style={{ flex: 1 }}>
+                {action(
+                  step === 1
+                    ? "Continue"
+                    : online
+                      ? "Request transfer"
+                      : "Send to the team",
+                  () => {
+                    if (step === 1) setStep(2);
+                    else void onContact(fullName, address);
+                  },
+                  !fullName.trim() || (step === 2 && !address.trim()),
+                )}
+              </View>
+            </View>
+          </>
+        )
+      ) : !issueOpen ? (
+        action("Add issue details", () => setIssueOpen(true))
       ) : (
         <>
           {field("What is happening?", summary, setSummary)}
-          {field("What have you tried? (optional)", details, setDetails)}
-          {field(
-            "Order or issue reference (optional)",
-            reference,
-            setReference,
+          <TouchableOpacity onPress={() => setMore(!more)}>
+            <Text
+              style={[
+                styles.meta,
+                { color: color.muted, textDecorationLine: "underline" },
+              ]}
+            >
+              {more
+                ? "Hide optional details"
+                : "Add notes or a reference (optional)"}
+            </Text>
+          </TouchableOpacity>
+          {more && (
+            <>
+              {field(
+                "What have you tried?",
+                details,
+                setDetails,
+                false,
+                false,
+                2000,
+              )}
+              {field(
+                "Order or issue reference",
+                reference,
+                setReference,
+                false,
+                false,
+                100,
+              )}
+            </>
           )}
-          <TouchableOpacity
-            disabled={busy || !summary.trim()}
-            style={styles.send}
-            onPress={() =>
+          {action(
+            "Send details",
+            () =>
               void onDetails({
                 widgetId: widget.id,
                 summary,
                 details,
                 reference,
                 clientMessageId: id.current,
-              })
-            }
-          >
-            <Text style={styles.sendText}>Send details</Text>
-          </TouchableOpacity>
+              }),
+            !summary.trim(),
+          )}
         </>
       )}
     </View>
@@ -481,10 +591,10 @@ const styles = StyleSheet.create({
   heading: { padding: 16, borderBottomWidth: StyleSheet.hairlineWidth },
   title: { fontSize: 18, fontWeight: "600" },
   hero: { fontSize: 28, fontWeight: "600" },
-  body: { fontSize: 16, lineHeight: 25 },
-  meta: { fontSize: 14, lineHeight: 21 },
+  body: { fontSize: 15, lineHeight: 23 },
+  meta: { fontSize: 13, lineHeight: 19 },
   label: { fontSize: 15, fontWeight: "600" },
-  bubble: { padding: 14, borderRadius: 16 },
+  bubble: { padding: 12, borderRadius: 16 },
   ticket: { padding: 12, gap: 4 },
   composer: {
     margin: 12,
@@ -505,21 +615,21 @@ const styles = StyleSheet.create({
   },
   send: {
     minHeight: 44,
-    backgroundColor: "#5b7168",
+
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  sendText: { fontSize: 16, fontWeight: "600", color: "white" },
+  sendText: { fontSize: 14, fontWeight: "600", color: "white" },
   option: { minHeight: 44, borderWidth: 1, borderRadius: 12, padding: 12 },
   form: {
-    marginTop: 12,
+    marginTop: 0,
     borderWidth: 1,
     borderRadius: 16,
-    padding: 14,
-    gap: 12,
+    padding: 12,
+    gap: 8,
   },
   formInput: {
     borderWidth: 1,

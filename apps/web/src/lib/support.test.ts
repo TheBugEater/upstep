@@ -240,6 +240,10 @@ test("support presentation removes em dashes and separates readable paragraphs",
     formatSupportReply("Open settings — select Support.\nCheck the domain."),
     "Open settings, select Support.\n\nCheck the domain.",
   );
+  assert.equal(
+    formatSupportReply("The team can investigate.\n\n[0]"),
+    "The team can investigate.",
+  );
   assert.match(
     formatSupportReply("First step. Second step. Third step."),
     /\n\n/,
@@ -291,5 +295,50 @@ test("support presentation removes em dashes and separates readable paragraphs",
       "five",
     )[0]?.type,
     "contact_form",
+  );
+});
+
+test("asking for an agent cannot bypass AI diagnosis and a genuine help attempt", async () => {
+  const { assessEscalation, hasTriedToHelp } =
+    await import("./support/escalation");
+  const premature = {
+    inScope: true,
+    reply: "Share your details for an agent.",
+    sources: [],
+    offerTicket: true,
+    handoff: true,
+    ticketTitle: "Invite cannot be accepted",
+    ticketType: "BUG" as const,
+    resolution: "escalate" as const,
+    issueSummary: "Team invitation cannot be accepted",
+    escalationReason: "unresolved" as const,
+  };
+  assert.equal(assessEscalation(premature, []).resolution, "clarify");
+  const clarified = [
+    { role: "ASSISTANT", metadata: { inScope: true, resolution: "clarify" } },
+  ];
+  assert.equal(assessEscalation(premature, clarified).resolution, "clarify");
+  assert.equal(
+    assessEscalation(
+      { ...premature, escalationReason: "human_authority" },
+      clarified,
+    ).resolution,
+    "escalate",
+  );
+  const tried = [
+    { role: "ASSISTANT", metadata: { inScope: true, resolution: "answer" } },
+  ];
+  assert.equal(assessEscalation(premature, tried).resolution, "escalate");
+  assert.equal(
+    hasTriedToHelp(
+      [
+        {
+          role: "ASSISTANT",
+          metadata: { inScope: false, resolution: "answer" },
+        },
+      ],
+      "unresolved",
+    ),
+    false,
   );
 });

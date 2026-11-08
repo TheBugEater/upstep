@@ -1,7 +1,7 @@
 import type { Feedback, FeedbackType } from "@upstep/types";
 import { UpstepApiClient } from "./api";
 
-const DEFAULT_ACCENT = "#5B7168";
+const DEFAULT_ACCENT = "#D97757";
 
 type ThemeMode = "light" | "dark" | "auto";
 
@@ -18,8 +18,8 @@ interface Palette {
 
 const LIGHT: Palette = {
   bg: "#ffffff",
-  bgSoft: "#f4f6f4",
-  bgHover: "#eaf0eb",
+  bgSoft: "#f5f5f5",
+  bgHover: "#ededed",
   text: "#1a1915",
   textSoft: "#56544d",
   textFaint: "#9b9890",
@@ -29,8 +29,8 @@ const LIGHT: Palette = {
 
 const DARK: Palette = {
   bg: "#000000",
-  bgSoft: "#191d1b",
-  bgHover: "#252d28",
+  bgSoft: "#171717",
+  bgHover: "#262626",
   text: "#f5f4f0",
   textSoft: "#b4b1a8",
   textFaint: "#7d7a72",
@@ -243,7 +243,7 @@ export class UpstepWidget {
       <div id="upstep-modal" style="max-width:${this.hasSupport ? "460px" : "440px"}">
         ${this.hasSupport ? `<div class="upstep-mode" style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid ${this.palette.border}"><div id="upstep-tabs" style="margin:0;padding:0;background:transparent;flex:1"><button class="upstep-tab ${this.tab === "support" ? "active" : ""}" data-tab="support">Support</button><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Ideas</button></div><button id="upstep-close" aria-label="Close" style="flex-shrink:0;background:transparent">✕</button></div>` : `<div id="upstep-header"><div><h2>Share your feedback</h2><p>Tell us what to build next, or vote on ideas.</p></div><button id="upstep-close" aria-label="Close">✕</button></div><div id="upstep-tabs"><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Give feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Vote on ideas</button></div>`}
         <div id="upstep-body" style="${this.tab === "support" ? "padding:0;overflow:hidden" : ""}">
-          ${this.tab === "support" ? `<iframe id="upstep-support-frame" title="Customer support" src="${this.client.supportFrameUrl(this.palette.bg === "#000000" ? "dark" : "light")}" style="width:100%;height:min(560px,calc(100dvh - 168px));min-height:300px;border:0;display:block"></iframe>` : this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
+          ${this.tab === "support" ? `<iframe id="upstep-support-frame" title="Customer support" src="${this.client.supportFrameUrl(this.palette.bg === "#000000" ? "dark" : "light", this.accent)}" style="width:100%;height:min(560px,calc(100dvh - 168px));min-height:300px;border:0;display:block"></iframe>` : this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
         </div>
       </div>
     `;
@@ -264,7 +264,10 @@ export class UpstepWidget {
     const frame = backdrop.querySelector<HTMLIFrameElement>(
       "#upstep-support-frame",
     );
-    if (frame) this.disconnectSupport = this.client.connectSupportFrame(frame);
+    if (frame) {
+      frame.style.color = this.accent;
+      this.disconnectSupport = this.client.connectSupportFrame(frame);
+    }
     this.bindSubmitForm();
     this.bindVoteButtons();
   }

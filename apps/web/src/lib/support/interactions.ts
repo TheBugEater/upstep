@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "../db";
+import { hasTriedToHelp } from "./escalation";
 import { SupportError } from "./policy";
 type Client = Pick<Prisma.TransactionClient, "supportConversation">;
 export async function supportInteraction(
@@ -16,7 +17,7 @@ export async function supportInteraction(
       messages: {
         where: { role: { in: ["CUSTOMER", "ASSISTANT", "AGENT"] } },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        take: 1,
+        take: 20,
       },
     },
   });
@@ -26,6 +27,7 @@ export async function supportInteraction(
     inScope?: boolean;
     resolution?: string;
     issueSummary?: string;
+    escalationReason?: string;
     widgets?: { id: string; type: string }[];
   } | null;
   const humanOnly =
@@ -36,7 +38,8 @@ export async function supportInteraction(
     latest?.role === "ASSISTANT" &&
     meta?.inScope === true &&
     meta.resolution === "escalate" &&
-    (meta.issueSummary?.trim().length || 0) >= 10;
+    (meta.issueSummary?.trim().length || 0) >= 10 &&
+    hasTriedToHelp(c.messages.slice(1), meta.escalationReason || "unresolved");
   const canEscalate = !!(
     c.state !== "RESOLVED" &&
     !c.aiPending &&

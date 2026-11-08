@@ -70,7 +70,7 @@ Every entry point (`Upstep.init`, `<UpstepProvider>`, and the script tag's `data
 | `apiKey` | `string` | — | **Required.** Your project's API key. |
 | `userId` | `string` | — | End-user id from your app, used to deduplicate votes per user. Call `identify(userId)` if it's only known after login. |
 | `baseUrl` | `string` | `https://upstep.dev` | Only needed for self-hosted or staging setups. |
-| `accentColor` | `string` | `#5B7168` | Any CSS color, used for the launcher button and highlights. |
+| `accentColor` | `string` | `#D97757` | Any CSS color, used for the launcher button and highlights. |
 | `theme` | `"light" \| "dark" \| "auto"` | `"auto"` | `"auto"` follows the host page's `prefers-color-scheme`. |
 | `position` | `"left" \| "right"` | `"right"` | Deprecated. Website launchers and panels stay bottom-right. |
 | `launcher` | `boolean` | `true` | Set `false` to hide the floating button and trigger the widget yourself via `Upstep.open()`. |
@@ -100,7 +100,7 @@ Every entry point (`Upstep.init`, `<UpstepProvider>`, and the script tag's `data
 
 ### AI and live chat in the existing widget
 
-Version 0.7.0 includes a **Support** tab to the same widget that handles feedback and
+Version 0.7.1 includes a **Support** tab to the same widget that handles feedback and
 voting. Enable customer support for your paid project in the UpStep dashboard,
 learn the business website, and confirm the business details and contact email.
 The project must be enabled on the server; `chat: true` never bypasses plan access.
@@ -121,7 +121,7 @@ import { UpstepProvider, FeedbackWidget } from '@upstep/js/react';
 ```
 
 ```html
-<script defer src="https://unpkg.com/@upstep/js@0.7.0/dist/upstep.global.js"
+<script defer src="https://unpkg.com/@upstep/js@0.7.1/dist/upstep.global.js"
   data-api-key="YOUR_PROJECT_KEY" data-chat="true"></script>
 ```
 
@@ -137,6 +137,6 @@ secret in browser code. [Integration guide](https://upstep.dev/guides/customer-s
 
 The website launcher and its opened chat/feedback panel stay in the bottom-right corner. Position options and old drag positions no longer move website widgets. Text uses a readable size with softer surfaces, white light mode and black dark mode.
 
-Support can show quick replies, issue details, resolution confirmations, and a contact card. The team action appears only after AI identifies an issue it cannot resolve. The server requires a name and valid email before queueing a private ticket. AI replies stay short, with separate paragraphs and no em dashes.
+Support can show quick replies, issue details, resolution confirmations, and a contact card. The team action appears only after AI discusses the issue and tries to help, or establishes that a human must perform the action. Asking for an agent alone never opens a contact form. Active cards stay near the composer, contact details use two short steps, and optional issue fields expand only when needed. The server requires a name and valid email before queueing a private ticket. AI replies stay short, with separate paragraphs and no em dashes.
 
 A DOM-free client is available from `@upstep/js/support` for custom native integrations. The React Native SDK uses this same client inside its existing feedback sheet.

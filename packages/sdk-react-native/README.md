@@ -5,7 +5,7 @@ The [Upstep](https://upstep.dev) feedback SDK for React Native: a launcher butto
 ## Install
 
 ```bash
-npm install @upstep/react-native@^0.7.0 react-native-safe-area-context @react-native-async-storage/async-storage
+npm install @upstep/react-native@^0.7.1 react-native-safe-area-context @react-native-async-storage/async-storage
 ```
 
 `react-native-safe-area-context` is a required peer dependency (the sheet needs it for safe-area insets). Get an API key by creating a free project at [upstep.dev](https://upstep.dev).
@@ -56,7 +56,7 @@ If `expo-sensors` isn't installed, the hook is a no-op — safe to call uncondit
 | `apiKey` | `string` | — | **Required.** Your project's API key. |
 | `userId` | `string` | — | End-user id from your app, used to deduplicate votes per user. Call `identify(userId)` if it's only known after login. |
 | `baseUrl` | `string` | `https://upstep.dev` | Only needed for self-hosted or staging setups. |
-| `accentColor` | `string` | `#5B7168` | Any CSS color, used for the launcher button and highlights. |
+| `accentColor` | `string` | `#D97757` | Any CSS color, used for the launcher button and highlights. |
 | `theme` | `"light" \| "dark" \| "auto"` | `"auto"` | `"auto"` follows the device color scheme. |
 
 ## API
@@ -75,7 +75,7 @@ If `expo-sensors` isn't installed, the hook is a no-op — safe to call uncondit
 
 ## Native AI and team support
 
-Version 0.7.0 adds a native Support tab to the existing feedback sheet. Enable Customer support for a paid project in UpStep, then use the existing provider and launcher. No WebView or separate chat package is needed. Set `chat={false}` on `FeedbackProvider` to hide support.
+Version 0.7.1 adds a native Support tab to the existing feedback sheet. Enable Customer support for a paid project in UpStep, then use the existing provider and launcher. No WebView or separate chat package is needed. Set `chat={false}` on `FeedbackProvider` to hide support.
 
 ```tsx
 <FeedbackProvider apiKey="YOUR_PROJECT_KEY" chat={true} supportIdentityToken={signedToken}>
@@ -86,4 +86,4 @@ Version 0.7.0 adds a native Support tab to the existing feedback sheet. Enable C
 
 `supportIdentityToken` is optional: generate a short-lived project-scoped JWT on your authenticated backend using the signing secret from Support settings. Never put that secret in the app. Pass a new token on login and `undefined` on logout. `userId` is for feedback voting and does not authenticate private chat. Anonymous chat sessions persist using AsyncStorage.
 
-Chat includes large text, soft message bubbles, quick replies, issue detail cards and resolution confirmations. The team contact form appears after AI understands an unresolved issue, and requires name/email before handoff. Tickets include a reference and the business contact email.
+Chat includes compact text, neutral message bubbles, quick replies, issue detail cards and resolution confirmations. Active actions stay near the composer, and contact details use two short steps. The team contact form appears after AI understands an unresolved issue, and requires name/email before handoff. Tickets include a reference and the business contact email.

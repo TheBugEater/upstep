@@ -6,6 +6,7 @@ export type ChatWidget =
   | { id: string; type: "contact_form"; title: string; summary: string };
 export function formatSupportReply(text: string) {
   const clean = text
+    .replace(/^\s*\[\d+(?:\s*,\s*\d+)*\]\s*$/gm, "")
     .replace(/\s*\u2014\s*/g, ", ")
     .replace(/([.!?]), /g, "$1 ")
     .replace(/[ \t]+/g, " ")

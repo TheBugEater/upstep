@@ -1,6 +1,6 @@
 {
   "name": "@upstep/js",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "UpStep feedback, voting and AI support widgets for web apps",
   "license": "MIT",
   "homepage": "https://upstep.dev",

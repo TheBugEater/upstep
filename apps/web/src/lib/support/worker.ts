@@ -8,6 +8,7 @@ import {
   type SupportAIInput,
   type SupportReply,
 } from "./ai";
+import { assessEscalation } from "./escalation";
 import { formatSupportReply, replyWidgets } from "./presentation";
 import { processBusinessLearning } from "./learning";
 import { availableAgents, createSupportTicket } from "./service";
@@ -194,7 +195,7 @@ export async function processAIConversation(
     const proposed = allowed ? await ai.reply(aiInput) : null;
     const result: SupportReply =
       proposed?.inScope === true
-        ? proposed
+        ? assessEscalation(proposed, c.messages)
         : {
             inScope: false,
             reply: `I'm here to help with ${config.businessName}'s products and services. Ask me about the business or a support issue, and I'll help you from there.`,
@@ -253,6 +254,7 @@ export async function processAIConversation(
               result.resolution ||
               (result.offerTicket || result.handoff ? "escalate" : "answer"),
             issueSummary: result.issueSummary || result.ticketTitle,
+            escalationReason: result.escalationReason || "unresolved",
             widgets: replyWidgets(result, lastCustomer.id),
             offerTicket: result.offerTicket,
             ticketTitle: result.ticketTitle,

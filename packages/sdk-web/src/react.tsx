@@ -16,7 +16,7 @@ import type {
 } from "@upstep/types";
 import { UpstepApiClient } from "./api";
 
-const DEFAULT_ACCENT = "#5B7168";
+const DEFAULT_ACCENT = "#D97757";
 
 // ─── Theming ─────────────────────────────────────────────────────────────────
 
@@ -35,8 +35,8 @@ interface Palette {
 
 const LIGHT: Palette = {
   bg: "#ffffff",
-  bgSoft: "#f4f6f4",
-  bgHover: "#eaf0eb",
+  bgSoft: "#f5f5f5",
+  bgHover: "#ededed",
   text: "#1a1915",
   textSoft: "#56544d",
   textFaint: "#9b9890",
@@ -45,8 +45,8 @@ const LIGHT: Palette = {
 };
 const DARK: Palette = {
   bg: "#000000",
-  bgSoft: "#191d1b",
-  bgHover: "#252d28",
+  bgSoft: "#171717",
+  bgHover: "#262626",
   text: "#f5f4f0",
   textSoft: "#b4b1a8",
   textFaint: "#7d7a72",
@@ -543,6 +543,7 @@ export function FeedbackWidget({
               {screen === "support" && chat && ctx.chat && (
                 <SupportFrame
                   client={ctx.client}
+                  accentColor={accent}
                   theme={p.bg === "#000000" ? "dark" : "light"}
                 />
               )}
@@ -646,9 +647,11 @@ export function FeedbackWidget({
 function SupportFrame({
   client,
   theme,
+  accentColor,
 }: {
   client: UpstepApiClient;
   theme: string;
+  accentColor: string;
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
@@ -659,8 +662,9 @@ function SupportFrame({
       ref={ref}
       data-upstep-support
       title="Customer support"
-      src={client.supportFrameUrl(theme)}
+      src={client.supportFrameUrl(theme, accentColor)}
       style={{
+        color: accentColor,
         width: "100%",
         height: "min(560px, calc(100dvh - 168px))",
         minHeight: 300,

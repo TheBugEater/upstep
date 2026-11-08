@@ -25,7 +25,7 @@ if (Platform.OS === "android") {
   um.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-const DEFAULT_ACCENT = "#5B7168";
+const DEFAULT_ACCENT = "#D97757";
 
 interface UpstepContextValue {
   client: UpstepApiClient;

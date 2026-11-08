@@ -33,7 +33,7 @@ class UpstepController extends ChangeNotifier {
   bool get showBranding => _showBranding;
   bool get isOpen => _isOpen;
   Object? get lastError => _lastError;
-  Color get accentColor => _config.accentColor ?? const Color(0xFF5B7168);
+  Color get accentColor => _config.accentColor ?? const Color(0xFFD97757);
   UpstepThemeMode get themeMode => _config.themeMode;
   String? get userId => _client.userId;
 

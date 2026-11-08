@@ -85,14 +85,14 @@ class _SheetScaffold extends StatelessWidget {
             surface: brightness == Brightness.dark
                 ? Colors.black
                 : Colors.white,
-          ),
+          ).copyWith(primary: controller.accentColor),
           textTheme: inherited.textTheme.apply(
             bodyColor: brightness == Brightness.dark
-                ? const Color(0xFFE5EAE6)
-                : const Color(0xFF354239),
+                ? const Color(0xFFE5E5E5)
+                : const Color(0xFF404040),
             displayColor: brightness == Brightness.dark
-                ? const Color(0xFFE5EAE6)
-                : const Color(0xFF354239),
+                ? const Color(0xFFE5E5E5)
+                : const Color(0xFF404040),
           ),
         );
         final support = controller.supportConfig;

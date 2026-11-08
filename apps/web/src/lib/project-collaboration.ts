@@ -12,7 +12,11 @@ export async function collaborationTransaction<T>(work: (tx: Prisma.TransactionC
   for (let attempt = 0; ; attempt++) {
     try { return await client.$transaction(work, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }); }
     catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 3) continue;
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && attempt < 5) {
+        // Give concurrent writers time to commit before trying the same transaction again.
+        await new Promise(resolve => setTimeout(resolve, Math.min(200, 10 * 2 ** attempt) + Math.floor(Math.random() * 10)));
+        continue;
+      }
       throw error;
     }
   }

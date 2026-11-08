@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Restore the original accent and apply the configured theme color to support actions.
+- Compact text and action cards pinned near the composer, with two-step contact collection and expandable optional details.
+
 ## 0.2.0
 
 - Native AI and team chat inside the existing feedback sheet.

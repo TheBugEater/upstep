@@ -38,7 +38,7 @@ interface Palette {
 
 const LIGHT: Palette = {
   bg: "#ffffff",
-  bgSoft: "#f4f6f4",
+  bgSoft: "#f5f5f5",
   text: "#1a1915",
   textSoft: "#56544d",
   textFaint: "#9b9890",
@@ -48,7 +48,7 @@ const LIGHT: Palette = {
 
 const DARK: Palette = {
   bg: "#000000",
-  bgSoft: "#191d1b",
+  bgSoft: "#171717",
   text: "#f5f4f0",
   textSoft: "#b4b1a8",
   textFaint: "#7d7a72",
@@ -209,6 +209,7 @@ export function FeedbackSheet() {
                   key={supportRevision}
                   client={client.support}
                   config={supportConfig}
+                  accentColor={accentColor}
                   dark={isDark}
                 />
               )}

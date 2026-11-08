@@ -76,7 +76,7 @@ Same idea as the web and React Native SDKs: one package, one project API key, on
 
 ## Native support chat
 
-Version 0.2.0 includes a native Support tab in the existing feedback sheet. Enable Customer support for a paid project in UpStep. No WebView or second widget is needed.
+Version 0.2.1 includes a native Support tab in the existing feedback sheet. Enable Customer support for a paid project in UpStep. No WebView or second widget is needed.
 
 ```dart
 Upstep(
@@ -89,4 +89,4 @@ Upstep(
 
 For signed-in customers, generate a short-lived project-scoped JWT on your authenticated backend with the signing secret from Support settings. Never ship that secret in the mobile app. Update `supportIdentityToken` when the customer changes and set it to `null` on logout, or call `Upstep.of(context).identifySupport(token)`. Feedback `userId` does not grant private chat access. Anonymous sessions persist in SharedPreferences; signed identity tokens are never persisted.
 
-Chat supports quick replies, issue details and resolution confirmations. After AI understands an issue it cannot solve, the customer can ask the team by entering their name and email. A private ticket records the issue and provides a reference and business contact email. AI help does not require contact details.
+Chat supports compact quick replies, issue details and resolution confirmations near the composer. Contact details use two short steps and optional issue fields start collapsed. After AI understands an issue it cannot solve, the customer can ask the team by entering their name and email. A private ticket records the issue and provides a reference and business contact email. AI help does not require contact details.

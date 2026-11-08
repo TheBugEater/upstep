@@ -79,6 +79,11 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF3366CC),
+            ).copyWith(primary: const Color(0xFF3366CC)),
+          ),
           home: Scaffold(
             body: SupportChat(
               client: client,
@@ -91,11 +96,19 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<IconButton>(find.byType(IconButton))
+            .style
+            ?.backgroundColor
+            ?.resolve({}),
+        const Color(0xFF3366CC),
+      );
       expect(find.text('Acme'), findsOneWidget);
       expect(find.text('Ask the team'), findsNothing);
       expect(
         tester.widget<TextField>(find.byType(TextField)).style?.fontSize,
-        16,
+        15,
       );
       await tester.pumpWidget(const SizedBox());
       client.dispose();
@@ -109,6 +122,15 @@ void main() {
       'id': 'one',
       'state': 'AI',
       'messages': [
+        ...List.generate(
+          25,
+          (i) => {
+            'id': 'old-$i',
+            'role': 'CUSTOMER',
+            'authorName': 'Visitor',
+            'content': 'Earlier message $i.',
+          },
+        ),
         {
           'id': 'answer',
           'role': 'ASSISTANT',
@@ -162,8 +184,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ask the team'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Send to the team'));
-    await tester.tap(find.text('Send to the team'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(handoffs, 0);
     expect(find.text('Please enter Your name'), findsOneWidget);
@@ -171,6 +192,8 @@ void main() {
       find.widgetWithText(TextFormField, 'Your name'),
       'Taylor Customer',
     );
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Email address'),
       'businesscodepulse@gmail.com',

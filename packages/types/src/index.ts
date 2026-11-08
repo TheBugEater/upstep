@@ -100,7 +100,7 @@ export interface UpstepConfig {
   baseUrl?: string;
   /**
    * Accent color for the widget button, tabs, and highlights.
-   * Any CSS color string. Defaults to "#5B7168".
+   * Any CSS color string. Defaults to "#D97757".
    */
   accentColor?: string;
   /**
