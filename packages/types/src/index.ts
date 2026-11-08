@@ -92,6 +92,8 @@ export interface UpstepConfig {
    * instead of waiting — see the docs.
    */
   userId?: string;
+  /** Server-signed customer identity JWT for private support conversations. */
+  supportIdentityToken?: string;
   /** Base URL of your Upstep backend. Defaults to https://upstep.dev */
   baseUrl?: string;
   /**

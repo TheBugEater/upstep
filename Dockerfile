@@ -18,6 +18,7 @@ ARG NEXT_PUBLIC_UPSTEP_BASE_URL
 ENV NEXT_PUBLIC_ONRAMP_API_KEY=$NEXT_PUBLIC_ONRAMP_API_KEY \
     NEXT_PUBLIC_UPSTEP_API_KEY=$NEXT_PUBLIC_UPSTEP_API_KEY \
     NEXT_PUBLIC_UPSTEP_BASE_URL=$NEXT_PUBLIC_UPSTEP_BASE_URL
+RUN pnpm --filter @upstep/js build
 RUN pnpm --filter @upstep/web exec prisma generate
 RUN DATABASE_URL=postgresql://build:build@localhost:5432/build \
     DIRECT_URL=postgresql://build:build@localhost:5432/build \

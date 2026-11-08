@@ -45,6 +45,13 @@ const Upstep = {
     _client?.setUserId(userId);
   },
 
+  /** Change or clear verified support identity after login/logout. */
+  identifySupport(token: string | undefined) {
+    if (_client) _client.supportIdentityToken = token;
+    const frame = document.querySelector<HTMLIFrameElement>("#upstep-support-frame");
+    if (frame && _client) frame.contentWindow?.postMessage({type: "upstep:support:identity", token}, new URL(_client.baseUrl).origin);
+  },
+
   get client(): UpstepApiClient {
     if (!_client) throw new Error("Upstep.init() must be called first");
     return _client;

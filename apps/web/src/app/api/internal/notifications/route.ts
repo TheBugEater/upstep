@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { processSupportJobs } from "@/lib/support/worker";
 import { processNotificationJobs } from "@/lib/notification-queue";
 
 export async function POST(req: NextRequest) {
@@ -10,5 +11,7 @@ export async function POST(req: NextRequest) {
   const valid = supplied.length === secret.length && timingSafeEqual(Buffer.from(supplied), Buffer.from(secret));
   if (!valid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  return NextResponse.json(await processNotificationJobs(50));
+  const notifications = await processNotificationJobs(50);
+  const support = await processSupportJobs(25_000);
+  return NextResponse.json({ ...notifications, support });
 }

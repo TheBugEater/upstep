@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FeedbackType, Label } from "@upstep/types";
 import type { BoardFilters, ProjectBoard, ProjectStatus, WorkspaceItem } from "@/types/dashboard";
+import { SupportPanel } from "@/components/support/SupportPanel";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import { IntegrationsTab } from "@/components/dashboard/IntegrationsTab";
 import { McpCard } from "@/components/dashboard/McpCard";
@@ -20,7 +21,7 @@ import {
 } from "./modals";
 import { TYPES, TYPE_LABELS, TYPE_COLORS } from "./ui";
 
-type Tab = "feedback" | "completed" | "pending" | "mcp" | "integrations" | "settings";
+type Tab = "support" | "feedback" | "completed" | "pending" | "mcp" | "integrations" | "settings";
 type View = "board" | "list";
 type SortMode = "newest" | "votes";
 
@@ -134,7 +135,7 @@ export function ProjectWorkspace({
 
   useEffect(() => {
     const nextTab = searchParams.get("tab");
-    if (nextTab === "feedback" || nextTab === "mcp" || nextTab === "integrations" || nextTab === "settings" || nextTab === "pending" || nextTab === "completed") setTab(nextTab);
+    if (nextTab === "support" || nextTab === "feedback" || nextTab === "mcp" || nextTab === "integrations" || nextTab === "settings" || nextTab === "pending" || nextTab === "completed") setTab(nextTab);
     else setTab("feedback");
 
     const panel = searchParams.get("panel");
@@ -606,6 +607,8 @@ export function ProjectWorkspace({
       )}
 
       {tab === "pending" && <div><SectionHeader title="Pending review" description="Approve feedback before it reaches your board" /><PendingList items={pending} onDecide={decidePending} /></div>}
+
+      {tab === "support" && <SupportPanel key={projectId} projectId={projectId} apiKey={apiKey} baseUrl={baseUrl} teamMembers={teamMembers} currentUserId={currentUserId} isOwner={isOwner} />}
 
       {tab === "mcp" && (
         <div className="max-w-3xl"><SectionHeader title="MCP & agents" description="Give your coding agents controlled access to this feedback workspace" />

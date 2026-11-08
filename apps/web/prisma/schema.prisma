@@ -74,6 +74,9 @@ model User {
   assignedFeedback Feedback[] @relation("FeedbackAssignee")
   comments Comment[] @relation("CommentAuthor")
   mcpCredentials McpCredential[]
+  supportPresence SupportPresence[]
+  supportAssignments SupportConversation[] @relation("SupportAssignee")
+  supportUsage SupportUsage[]
 }
 
 model Project {
@@ -101,6 +104,12 @@ model Project {
   statuses     Status[]
   boards       Board[]
   mcpCredentials McpCredential[]
+  supportConfig SupportConfig?
+  supportCustomers SupportCustomer[]
+  supportSessions SupportSession[]
+  supportConversations SupportConversation[]
+  supportPresence SupportPresence[]
+  knowledgePages SupportKnowledgePage[]
 
   @@index([ownerId, updatedAt])
 }
@@ -146,6 +155,7 @@ model Feedback {
   comments    Comment[]
   labels      Label[]
   assignee    User? @relation("FeedbackAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  supportConversation SupportConversation?
 
   @@index([projectId, createdAt])
   @@index([projectId, status, createdAt])
@@ -388,4 +398,122 @@ model RateLimitBucket {
   updatedAt DateTime @updatedAt
 
   @@index([expiresAt])
+}
+
+// Private customer support. These records never pass through the public feedback API.
+model SupportConfig {
+  projectId String @id
+  enabled Boolean @default(false)
+  domain String
+  businessName String
+  mode String @default("AI_FIRST")
+  welcomeMessage String @default("Hi! How can we help you today?")
+  crawlState String @default("QUEUED")
+  crawlQueue Json @default("[]")
+  crawlVisited Json @default("[]")
+  crawlGeneration Int @default(1)
+  crawlLock String?
+  crawlLockedAt DateTime?
+  crawlError String?
+  crawledAt DateTime?
+  updatedAt DateTime @updatedAt
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model SupportKnowledgePage {
+  id String @id @default(cuid())
+  projectId String
+  generation Int
+  url String
+  title String
+  content String @db.Text
+  indexedAt DateTime @default(now())
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@unique([projectId, generation, url])
+  @@index([projectId, generation])
+}
+
+model SupportCustomer {
+  id String @id @default(cuid())
+  projectId String
+  externalId String?
+  name String?
+  email String?
+  verified Boolean @default(false)
+  createdAt DateTime @default(now())
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sessions SupportSession[]
+  conversations SupportConversation[]
+  @@unique([projectId, externalId])
+}
+
+model SupportSession {
+  id String @id @default(cuid())
+  projectId String
+  customerId String
+  tokenHash String @unique
+  expiresAt DateTime
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  customer SupportCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  @@index([projectId, customerId])
+}
+
+model SupportConversation {
+  id String @id @default(cuid())
+  projectId String
+  customerId String
+  state String @default("AI")
+  humanRequested Boolean @default(false)
+  assignedToId String?
+  ticketId String? @unique
+  revision Int @default(0)
+  aiPending Boolean @default(false)
+  aiLock String?
+  aiLockedAt DateTime?
+  aiAttempts Int @default(0)
+  aiError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  customer SupportCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  assignee User? @relation("SupportAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  ticket Feedback? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  messages SupportMessage[]
+  @@index([projectId, updatedAt])
+  @@index([aiPending, aiLockedAt])
+}
+
+model SupportMessage {
+  id String @id @default(cuid())
+  conversationId String
+  clientMessageId String
+  role String
+  authorName String
+  content String @db.Text
+  metadata Json?
+  createdAt DateTime @default(now())
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  @@unique([conversationId, clientMessageId])
+  @@index([conversationId, createdAt])
+}
+
+model SupportPresence {
+  id String @id @default(cuid())
+  projectId String
+  userId String
+  available Boolean @default(false)
+  lastSeenAt DateTime @default(now())
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([projectId, userId])
+}
+
+// Shared across an owner's projects: limits cannot be multiplied by creating projects.
+model SupportUsage {
+  id String @id @default(cuid())
+  ownerId String
+  month String
+  aiReplies Int @default(0)
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  @@unique([ownerId, month])
 }

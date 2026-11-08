@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import type { Comment, Feedback, FeedbackType, FeedbackWithComments, UpstepConfig } from "@upstep/types";
@@ -32,7 +33,7 @@ const LIGHT: Palette = {
   border: "#e8e6df", overlay: "rgba(26,25,21,.45)",
 };
 const DARK: Palette = {
-  bg: "#1c1b19", bgSoft: "#262522", bgHover: "#302e2a",
+  bg: "#000000", bgSoft: "#262522", bgHover: "#302e2a",
   text: "#f5f4f0", textSoft: "#b4b1a8", textFaint: "#7d7a72",
   border: "#33312c", overlay: "rgba(0,0,0,.6)",
 };
@@ -114,6 +115,11 @@ export function UpstepProvider({
     client.setUserId(config.userId);
   }, [client, config.userId]);
 
+  useEffect(() => {
+    client.supportIdentityToken = config.supportIdentityToken;
+    document.querySelectorAll<HTMLIFrameElement>("iframe[data-upstep-support]").forEach(frame => frame.contentWindow?.postMessage({type: "upstep:support:identity", token: config.supportIdentityToken}, new URL(client.baseUrl).origin));
+  }, [client, config.supportIdentityToken]);
+
   const loadFeed = useCallback(async () => {
     try {
       const data = await client.listFeedback({ sort: "votes", limit: 20 });
@@ -182,7 +188,7 @@ interface FeedbackWidgetProps {
   hideLauncher?: boolean;
 }
 
-type Screen = "list" | "detail" | "create";
+type Screen = "list" | "detail" | "create" | "support";
 
 export function FeedbackWidget({
   position = "bottom-right",
@@ -195,6 +201,8 @@ export function FeedbackWidget({
   const p = usePalette(theme ?? ctx.theme);
   const { isOpen: open, open: openWidget, close: closeWidget, showBranding } = ctx;
   const [screen, setScreen] = useState<Screen>("list");
+  const [hasSupport, setHasSupport] = useState(false);
+  useEffect(() => { let active = true; void ctx.client.supportEnabled().then(value => {if(active) setHasSupport(value);}); return () => {active = false;}; }, [ctx.client]);
   const [detailId, setDetailId] = useState<string | null>(null);
   // Same SSR-safe rule as usePalette above: start deterministic (false) so
   // hydration never mismatches, and let the effect below drive the real
@@ -295,8 +303,10 @@ export function FeedbackWidget({
               </div>
             </div>
 
+            {hasSupport && <div style={{display: "flex", gap: 4, padding: "12px 20px 0"}}>{[["list", "Feedback"], ["support", "Support"]].map(([value, label]) => <button key={value} onClick={() => setScreen(value as Screen)} style={{flex: 1, padding: 8, border: `1px solid ${p.border}`, borderRadius: 9, background: screen === value ? p.bgSoft : p.bg, color: p.text, cursor: "pointer", fontSize: 12}}>{label}</button>)}</div>}
             {/* Body */}
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 24px" }}>
+              {screen === "support" && <SupportFrame client={ctx.client} theme={p.bg === "#000000" ? "dark" : "light"} />}
               {screen === "list" && (
                 <FeedList
                   onSelect={goToDetail}
@@ -337,6 +347,12 @@ export function FeedbackWidget({
       )}
     </>
   );
+}
+
+function SupportFrame({client, theme}: {client: UpstepApiClient; theme: string}) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  useEffect(() => { if(ref.current) return client.connectSupportFrame(ref.current); }, [client]);
+  return <iframe ref={ref} data-upstep-support title="Customer support" src={client.supportFrameUrl(theme)} style={{width: "100%", height: 480, border: 0, display: "block", borderRadius: 12}} />;
 }
 
 // ─── FeedList ─────────────────────────────────────────────────────────────────

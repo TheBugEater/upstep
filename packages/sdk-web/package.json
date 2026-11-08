@@ -30,7 +30,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.embed.config.ts",
     "dev": "vite build --watch",
     "type-check": "tsc --noEmit"
   },

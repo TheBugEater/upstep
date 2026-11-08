@@ -43,3 +43,7 @@ marketing/backlinks/
 .flutter-plugins-dependencies
 .packages
 pubspec.lock
+
+# Generated self-hosted browser embed
+apps/web/public/sdk/
+output/playwright/

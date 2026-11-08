@@ -104,7 +104,7 @@ export function DashboardShell({ children, email, name, plan, projects }: Props)
   const setupGuideOpen = searchParams.get("setup") === "1";
   const panelExpanded = expanded || mobileOpen;
   const pageTitle = currentProject
-    ? (setupGuideOpen ? "Setup guide" : ({ feedback: "Feedback", completed: "Completed", pending: "Pending review", mcp: "MCP", integrations: "Integrations", settings: "Settings" }[activeTab] ?? "Feedback"))
+    ? (setupGuideOpen ? "Setup guide" : ({ support: "Customer support", feedback: "Feedback", completed: "Completed", pending: "Pending review", mcp: "MCP", integrations: "Integrations", settings: "Settings" }[activeTab] ?? "Feedback"))
     : pathname.startsWith("/dashboard/billing") ? "Billing" : pathname.startsWith("/dashboard/projects/new") ? "New project" : "Overview";
 
   const projectHref = (tab: string, panel?: string) => currentProject ? `/dashboard/projects/${currentProject.id}?tab=${tab}${panel ? `&panel=${panel}` : ""}` : "/dashboard";
@@ -153,6 +153,7 @@ export function DashboardShell({ children, email, name, plan, projects }: Props)
               <>
                 <NavGroup label="Workspace" expanded={panelExpanded}>
                   <NavItem href={projectHref("feedback")} label="Feedback" icon="inbox" active={activeTab === "feedback"} count={currentProject.activeCount} expanded={panelExpanded} />
+                  <NavItem href={projectHref("support")} label="Customer support" icon="inbox" active={activeTab === "support"} expanded={panelExpanded} />
                   <NavItem href={projectHref("completed")} label="Completed" icon="check" active={activeTab === "completed"} count={currentProject.completedCount} expanded={panelExpanded} />
                   <NavItem href={projectHref("pending")} label="Pending review" icon="clock" active={activeTab === "pending"} count={currentProject.pendingCount} attention={currentProject.pendingCount > 0} expanded={panelExpanded} />
                 </NavGroup>

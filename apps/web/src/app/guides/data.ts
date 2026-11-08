@@ -19,6 +19,42 @@ export type Guide = {
 };
 
 export const GUIDES: Record<string, Guide> = {
+  "customer-support": {
+    slug: "customer-support",
+    title: "Add AI and live customer support",
+    description: "Start with your business domain, add one embed, and answer customers with AI and your team.",
+    category: "Customer support", minutes: 8,
+    intro: "UpStep combines an AI assistant, a shared inbox and private support tickets in your existing widget. Visitors can start anonymously; customer email is optional.",
+    prerequisites: ["An UpStep Pro or Business project", "A public HTTPS business website", "Access to add a script to your website"],
+    sections: [
+      { title: "Start with your domain", body: "Open Customer support → Settings in your project. Enter the business domain and name, choose who replies first, and enable support. UpStep discovers public pages through the sitemap and links, respects robots.txt, and refreshes weekly. Review the indexed pages in Knowledge. It does not crawl private dashboards or import customer account data." },
+      { title: "Add the hosted widget", body: "Copy the embed from Customer support → Settings and paste it before your closing body tag. Replace YOUR_PROJECT_KEY with the public project key. The Support tab appears automatically when support is enabled for a paid project. Existing npm installations need the updated SDK; the hosted embed is the simplest way to use the first release.", code: '<script defer src="https://upstep.dev/sdk/upstep.js" data-api-key="YOUR_PROJECT_KEY"></script>' },
+      { title: "Make your team available", body: "Open the support inbox and toggle Available. Availability expires when the inbox stops sending heartbeats. AI-first answers immediately. Human-first queues for an available teammate, falling back to AI after a minute if nobody takes over. Customers explicitly asking for a person remain queued. A reply or Take over pauses AI. Private notes are only visible to your team." },
+      { title: "Create a ticket from a conversation", body: "AI offers a Create private ticket button for unresolved issues. The customer or a teammate confirms creation. UpStep creates one private board issue linked to the conversation; repeated clicks reuse it. Public feedback APIs never expose support conversations or these internal tickets. A ticket does not automatically resolve the conversation." },
+      { title: "Optional signed-in customer identity", body: "Anonymous visitors use a private browser session. For signed-in customers, the owner can copy a project-specific signing secret from Support settings. Store it only on your backend. Sign an HS256 JWT with sub = your stable customer ID, aud = UpStep project ID, iat = current Unix seconds, exp no more than 15 minutes after iat, and optional name and email. Email alone never grants conversation access. Do not place the signing secret in frontend code.", code: `// Run only on your authenticated backend (Node.js).
+import { createHmac } from "node:crypto";
+const now = Math.floor(Date.now() / 1000);
+const header = Buffer.from(JSON.stringify({alg:"HS256",typ:"JWT"})).toString("base64url");
+const payload = Buffer.from(JSON.stringify({
+  sub: authenticatedCustomer.id, aud: process.env.UPSTEP_PROJECT_ID,
+  name: authenticatedCustomer.name, email: authenticatedCustomer.email,
+  iat: now, exp: now + 300
+})).toString("base64url");
+const signature = createHmac("sha256", process.env.UPSTEP_IDENTITY_SECRET)
+  .update(header + "." + payload).digest("base64url");
+const token = header + "." + payload + "." + signature;
+// Return token only to this authenticated customer.
+// In the browser after the embed has loaded:
+// window.Upstep.identifySupport(token);
+// On logout: window.Upstep.identifySupport(undefined);` },
+      { title: "Understand the first release", body: "AI searches the project's indexed website pages and links its sources. It cannot access accounts, process refunds or make business changes. Optional contact details are visible to your support team; automatic email replies and replies by inbound email are not included in this release. AI reply attempts are limited per account per UTC calendar month: 300 on Pro or 1,500 on Business, shared across projects. Human chat remains available at the AI limit. Pro indexes up to 40 pages per project; Business up to 150." },
+    ],
+    troubleshooting: [
+      {issue: "No pages were indexed", answer: "Check HTTPS, robots.txt and whether the website renders readable HTML without a login. JavaScript-only sites may need a separate public documentation site as the business domain."},
+      {issue: "AI could not reply", answer: "Check the server's OpenAI API key, model access, and monthly allowance. The customer message remains saved in the inbox for a teammate."},
+      {issue: "Conversation history disappeared", answer: "Anonymous history depends on browser storage and a 30-day private session. Cross-device history requires a valid signed customer identity token. Never identify a different person by typing their email."},
+    ],
+  },
   "feedback-widget-nextjs": {
     slug: "feedback-widget-nextjs",
     title: "Add a feedback widget to a Next.js app",

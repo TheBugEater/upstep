@@ -31,14 +31,16 @@ function getOrCreateAnonymousId(): string | undefined {
 }
 
 export class UpstepApiClient {
-  private readonly baseUrl: string;
-  private readonly apiKey: string;
+  readonly baseUrl: string;
+  readonly apiKey: string;
   userId: string | undefined;
+  supportIdentityToken: string | undefined;
   readonly anonymousId: string | undefined;
 
   constructor(config: UpstepConfig) {
     this.baseUrl = (config.baseUrl ?? "https://upstep.dev").replace(/\/$/, "");
     this.apiKey = config.apiKey;
+    this.supportIdentityToken = config.supportIdentityToken;
     if (config.userId !== undefined) this.userId = config.userId;
     this.anonymousId = getOrCreateAnonymousId();
   }
@@ -53,6 +55,23 @@ export class UpstepApiClient {
       "Content-Type": "application/json",
       "x-api-key": this.apiKey,
     };
+  }
+
+  async supportEnabled(): Promise<boolean> {
+    try { const response = await fetch(`${this.baseUrl}/api/sdk/support`, {headers: this.headers()}); return response.ok && (await response.json()).enabled === true; } catch { return false; }
+  }
+
+  supportFrameUrl(theme: string): string {
+    return `${this.baseUrl}/support/${encodeURIComponent(this.apiKey)}?theme=${encodeURIComponent(theme)}`;
+  }
+
+  connectSupportFrame(frame: HTMLIFrameElement) {
+    const target = new URL(this.baseUrl).origin;
+    const send = () => frame.contentWindow?.postMessage({type: "upstep:support:identity", token: this.supportIdentityToken}, target);
+    const receive = (event: MessageEvent) => { if (event.origin === target && event.source === frame.contentWindow && event.data?.type === "upstep:support:ready") send(); };
+    frame.addEventListener("load", send);
+    window.addEventListener("message", receive);
+    return () => { frame.removeEventListener("load", send); window.removeEventListener("message", receive); };
   }
 
   async listFeedback(params?: {

@@ -42,6 +42,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 
 
+  if (parsed.data.internal === false && await db.supportConversation.count({ where: { ticketId: fid, projectId: id } })) return NextResponse.json({ error: "Support tickets contain private conversations and must remain internal." }, { status: 400 });
+
   // When moving via statusId, resolve the Status record to sync the enum field
   let resolvedStatusEnum = parsed.data.status;
   let resolvedStatusId = parsed.data.statusId;

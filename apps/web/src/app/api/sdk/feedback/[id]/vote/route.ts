@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   try {
     const result = await serializable(async (tx) => {
-      const feedback = await tx.feedback.findFirst({ where: { id, projectId: project.id } });
+      const feedback = await tx.feedback.findFirst({ where: { id, projectId: project.id, internal: false, supportConversation: null } });
       if (!feedback) return null;
 
       const existing = endUserId
@@ -112,7 +112,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   const removed = await serializable(async (tx) => {
-    const feedback = await tx.feedback.findFirst({ where: { id, projectId: project.id }, select: { id: true } });
+    const feedback = await tx.feedback.findFirst({ where: { id, projectId: project.id, internal: false, supportConversation: null }, select: { id: true } });
     if (!feedback) return false;
     const vote = endUserId
       ? await tx.vote.findUnique({ where: { feedbackId_endUserId: { feedbackId: id, endUserId } } })

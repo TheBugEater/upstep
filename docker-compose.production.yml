@@ -66,7 +66,13 @@
         "STRIPE_SECRET_KEY": "${API_STRIPE_SECRET_KEY}",
         "STRIPE_WEBHOOK_SECRET": "${API_STRIPE_WEBHOOK_SECRET}",
         "NODE_ENV": "${API_NODE_ENV}",
-        "PORT": "${API_PORT}"
+        "PORT": "${API_PORT}",
+        "OPENAI_API_KEY": "${API_OPENAI_API_KEY:-}",
+        "SUPPORT_AI_PROVIDER": "${API_SUPPORT_AI_PROVIDER:-openai}",
+        "SUPPORT_AI_MODEL": "${API_SUPPORT_AI_MODEL:-gpt-6-luna}",
+        "SUPPORT_AI_BASE_URL": "${API_SUPPORT_AI_BASE_URL:-}",
+        "SUPPORT_AI_API_KEY": "${API_SUPPORT_AI_API_KEY:-}",
+        "SUPPORT_IDENTITY_SECRET": "${API_SUPPORT_IDENTITY_SECRET:-}"
       },
       "healthcheck": {
         "test": [

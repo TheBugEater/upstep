@@ -40,7 +40,7 @@ async function getData(slug: string) {
   const items = await db.feedback.findMany({
     where: {
       projectId: project.id,
-      internal: false,
+      internal: false, supportConversation: null,
       statusId: { in: statusIds },
     },
     orderBy: { upvotes: "desc" },

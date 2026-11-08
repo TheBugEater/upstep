@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       // If caller explicitly filters by status, honour it.
       // Otherwise hide PENDING - unless the item belongs to the requesting user.
       // Also exclude items whose custom board status is marked as done.
-      internal: false,
+      internal: false, supportConversation: null,
       NOT: { boardStatus: { isDone: true } },
       ...(status
         ? { status: status as never }

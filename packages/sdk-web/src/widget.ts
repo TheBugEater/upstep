@@ -28,7 +28,7 @@ const LIGHT: Palette = {
 };
 
 const DARK: Palette = {
-  bg: "#1c1b19",
+  bg: "#000000",
   bgSoft: "#262522",
   bgHover: "#302e2a",
   text: "#f5f4f0",
@@ -117,7 +117,7 @@ function buildStyles(accent: string, position: "left" | "right", p: Palette): st
 const CHAT_ICON =
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 
-type Tab = "submit" | "feed";
+type Tab = "submit" | "feed" | "support";
 
 export interface WidgetOptions {
   accentColor?: string;
@@ -141,6 +141,8 @@ export class UpstepWidget {
   private themeMode: ThemeMode;
   private palette: Palette;
   private dragMoved = false;
+  private hasSupport = false;
+  private disconnectSupport: (() => void) | null = null;
 
   constructor(client: UpstepApiClient, options: WidgetOptions = {}) {
     this.client = client;
@@ -154,6 +156,7 @@ export class UpstepWidget {
   mount() {
     this.injectStyles();
     if (this.showLauncher) this.renderButton();
+    void this.client.supportEnabled().then(enabled => { this.hasSupport = enabled; if (enabled) { const label = document.querySelector("#upstep-btn span"); if(label) label.textContent = "Help & feedback"; if(this.isOpen) this.renderModal(); } });
   }
 
   /** Open the feedback modal programmatically (e.g. from your own button). */
@@ -177,6 +180,7 @@ export class UpstepWidget {
   private renderButton() {
     const btn = document.createElement("button");
     btn.id = "upstep-btn";
+    btn.setAttribute("aria-label", "Open help and feedback");
     btn.innerHTML = `${CHAT_ICON}<span>Feedback</span>`;
     btn.addEventListener("click", () => {
       if (!this.dragMoved) this.openModal();
@@ -272,6 +276,7 @@ export class UpstepWidget {
   }
 
   private closeModal() {
+    this.disconnectSupport?.(); this.disconnectSupport = null;
     this.isOpen = false;
     document.getElementById("upstep-backdrop")?.remove();
   }
@@ -287,6 +292,7 @@ export class UpstepWidget {
   }
 
   private renderModal() {
+    this.disconnectSupport?.(); this.disconnectSupport = null;
     const backdrop = document.createElement("div");
     backdrop.id = "upstep-backdrop";
     backdrop.addEventListener("click", (e) => {
@@ -297,17 +303,18 @@ export class UpstepWidget {
       <div id="upstep-modal">
         <div id="upstep-header">
           <div>
-            <h2>Share your feedback</h2>
-            <p>Tell us what to build next, or vote on ideas.</p>
+            <h2>${this.tab === "support" ? "Customer support" : "Share your feedback"}</h2>
+            <p>${this.tab === "support" ? "Ask AI, or talk with the team." : "Tell us what to build next, or vote on ideas."}</p>
           </div>
           <button id="upstep-close" aria-label="Close">✕</button>
         </div>
         <div id="upstep-tabs">
+          ${this.hasSupport ? `<button class="upstep-tab ${this.tab === "support" ? "active" : ""}" data-tab="support">Support</button>` : ""}
           <button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Give feedback</button>
           <button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Vote on ideas</button>
         </div>
         <div id="upstep-body">
-          ${this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
+          ${this.tab === "support" ? `<iframe id="upstep-support-frame" title="Customer support" src="${this.client.supportFrameUrl(this.palette.bg === "#000000" ? "dark" : "light")}" style="width:100%;height:480px;border:0;display:block;border-radius:12px"></iframe>` : this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
         </div>
       </div>
     `;
@@ -323,6 +330,8 @@ export class UpstepWidget {
       });
     });
 
+    const frame = backdrop.querySelector<HTMLIFrameElement>("#upstep-support-frame");
+    if (frame) this.disconnectSupport = this.client.connectSupportFrame(frame);
     this.bindSubmitForm();
     this.bindVoteButtons();
   }
