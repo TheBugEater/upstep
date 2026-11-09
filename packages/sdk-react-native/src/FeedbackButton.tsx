@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function FeedbackButton({ position = "bottom-right", label = "Feedback", icon }: Props) {
-  const { openSheet, accentColor } = useUpstep();
+  const { openSheet, accentColor, supportUnread } = useUpstep();
 
   return (
     <TouchableOpacity
@@ -20,9 +20,22 @@ export function FeedbackButton({ position = "bottom-right", label = "Feedback", 
         position === "bottom-left" ? styles.left : styles.right,
       ]}
       activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={
+        supportUnread > 0
+          ? `${label}, ${supportUnread} unread ${supportUnread === 1 ? "message" : "messages"}`
+          : label
+      }
     >
       {icon ?? <ChatIcon />}
       <Text style={styles.label}>{label}</Text>
+      {supportUnread > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {supportUnread > 9 ? "9+" : supportUnread}
+          </Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -56,6 +69,21 @@ const styles = StyleSheet.create({
   right: { right: 20 },
   left: { left: 20 },
   label: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  badge: {
+    position: "absolute",
+    top: -7,
+    right: -5,
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 11,
+    backgroundColor: "#171717",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: { color: "#ffffff", fontSize: 12, fontWeight: "700" },
   iconWrap: { width: 16, height: 16, position: "relative" },
   iconBubble: {
     position: "absolute",

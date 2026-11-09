@@ -10,11 +10,15 @@ import { BusinessAvatar } from "./BusinessAvatar";
 import { SupportWidgets } from "./SupportWidgets";
 import type { SupportWidget } from "@upstep/types";
 import { SupportIcon } from "./SupportIcons";
+import { useSupportUnread } from "./useSupportUnread";
+import { playChime } from "@/lib/support/chime";
+import { preview } from "@/lib/support/unread";
 type Message = {
   id: string;
   role: string;
   authorName: string;
   content: string;
+  createdAt?: string;
   metadata?: {
     citations?: { url: string; title: string }[];
     offerTicket?: boolean;
@@ -45,6 +49,7 @@ type Config = {
   domain?: string;
   online: { name: string }[];
 };
+const noMessages: Message[] = [];
 const control =
   "rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs text-black disabled:opacity-50 dark:border-neutral-800 dark:bg-black dark:text-white";
 export function SupportChat({ apiKey }: { apiKey: string }) {
@@ -75,6 +80,84 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
   const pendingMessage = useRef<{ id: string; content: string } | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const storageKey = `upstep-support:${apiKey}`;
+  const soundKey = `upstep-support-sound:${apiKey}`;
+  // The host page tells us when the chat is on screen. A page with no host counts as visible.
+  const [shown, setShown] = useState(true);
+  const [atBottom, setAtBottom] = useState(true);
+  const [tabVisible, setTabVisible] = useState(true);
+  const [sound, setSound] = useState(true);
+  const framed = useRef(false);
+  const parentOrigin = useRef<string | null>(null);
+  const handshake = useRef(false);
+  const soundOn = useRef(true);
+  const lastIncoming = useRef<Message | null>(null);
+  const posted = useRef(0);
+  const viewing = shown && atBottom && tabVisible;
+  const { count, firstUnread, clearDivider } = useSupportUnread({
+    storageKey: `upstep-support-seen:${apiKey}`,
+    chatId: chat?.id ?? null,
+    messages: chat?.messages ?? noMessages,
+    viewing,
+    onIncoming: (latest, wasViewing) => {
+      lastIncoming.current = latest;
+      // AI replies the customer is already watching stay quiet; team replies always ping.
+      if (wasViewing && latest.role !== "AGENT") return;
+      // The host page plays the sound when the chat is closed, since only it can.
+      if (soundOn.current && (!framed.current || shown)) playChime();
+    },
+  });
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(soundKey) !== "off";
+      soundOn.current = saved;
+      setSound(saved);
+    } catch {}
+    framed.current = window.parent !== window;
+    // A framed chat stays "hidden" until the host page says otherwise.
+    let fallback: ReturnType<typeof setTimeout> | undefined;
+    if (framed.current) {
+      setShown(false);
+      // Previews that never hear from a host page still behave like a visible chat.
+      fallback = setTimeout(() => {
+        if (!handshake.current) setShown(true);
+      }, 4000);
+    }
+    const visibility = () => setTabVisible(!document.hidden);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      clearTimeout(fallback);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [soundKey]);
+  function toggleSound() {
+    const next = !sound;
+    setSound(next);
+    soundOn.current = next;
+    try {
+      localStorage.setItem(soundKey, next ? "on" : "off");
+    } catch {}
+    if (next) playChime();
+  }
+  useEffect(() => {
+    // Tell the host page about unread messages so its launcher can show a count.
+    if (!framed.current || !parentOrigin.current) return;
+    const incoming = lastIncoming.current;
+    window.parent.postMessage(
+      {
+        type: "upstep:support:unread",
+        count,
+        newMessage: count > posted.current,
+        author:
+          incoming?.role === "ASSISTANT"
+            ? `${config?.businessName || "Support"} AI`
+            : incoming?.authorName,
+        preview: incoming && count ? preview(incoming.content) : "",
+        sound,
+      },
+      parentOrigin.current,
+    );
+    posted.current = count;
+  }, [count, sound, config?.businessName]);
   const request = useCallback(
     async (path: string, method = "GET", body?: unknown) => {
       const requestEpoch = epoch.current;
@@ -174,7 +257,8 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
     const receive = (event: MessageEvent) => {
       if (
         event.source !== window.parent ||
-        event.data?.type !== "upstep:support:identity"
+        (event.data?.type !== "upstep:support:identity" &&
+          event.data?.type !== "upstep:support:visible")
       )
         return;
       // Only the business domain (or the UpStep dashboard preview) may set identity.
@@ -190,6 +274,12 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             ["localhost", "127.0.0.1"].includes(origin.hostname));
       } catch {}
       if (!allowed) return;
+      parentOrigin.current = event.origin;
+      handshake.current = true;
+      // Hosts that predate visibility updates never send it, so treat them as visible.
+      if (typeof event.data.visible === "boolean") setShown(event.data.visible);
+      else setShown(true);
+      if (event.data.type === "upstep:support:visible") return;
       const accent = event.data.accentColor;
       if (
         typeof accent === "string" &&
@@ -246,13 +336,21 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
     }, 2500);
     return () => clearInterval(timer);
   }, [chat?.id, refresh]);
+  const lastRole = chat?.messages.at(-1)?.role;
   useEffect(() => {
     if (!chat?.messages.length) return;
+    // Do not yank the thread away from someone reading older messages.
+    if (!atBottom && lastRole !== "CUSTOMER") return;
     list.current?.scrollTo({
       top: list.current.scrollHeight,
       behavior: "smooth",
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chat?.messages.length, chat?.aiPending]);
+  useEffect(() => {
+    // Reopening the chat lands on the latest message.
+    if (shown) list.current?.scrollTo({ top: list.current.scrollHeight });
+  }, [shown]);
   async function act(action: string, extra = {}) {
     if (!chat) return;
     setBusy(true);
@@ -289,6 +387,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
       });
       if (snapshot !== epoch.current) return false;
       pendingMessage.current = null;
+      clearDivider();
       if (!quickText) setMessage("");
       await refresh(c.id);
       const items = await request("/conversations");
@@ -341,250 +440,333 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
     setMessage(text);
     input.current?.focus();
   }
+  const ink =
+    "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900";
+  const soft =
+    "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100";
+  function clock(iso?: string) {
+    if (!iso) return "";
+    const date = new Date(iso);
+    return Number.isNaN(date.getTime())
+      ? ""
+      : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
   return (
     <main
       style={{ "--support-accent": accentColor } as CSSProperties}
       className="mx-auto flex h-[100dvh] w-full max-w-[480px] flex-col overflow-hidden bg-white text-neutral-950 antialiased dark:bg-black dark:text-white"
     >
-      <header className="relative shrink-0 border-b border-neutral-100 px-5 py-4 dark:border-neutral-900">
-        <div className="flex items-center gap-3">
-          <div className="relative h-10 w-10 shrink-0">
-            <BusinessAvatar name={business} logoUrl={config?.logoUrl ?? null} />
+      <header className="relative shrink-0 border-b border-neutral-100 px-3 py-2.5 dark:border-neutral-900 sm:px-4 sm:py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="relative h-9 w-9 shrink-0">
+            <BusinessAvatar
+              name={business}
+              logoUrl={config?.logoUrl ?? null}
+              size={36}
+            />
             <span
               className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-black ${config?.online.length || isHuman ? "bg-emerald-500" : "bg-[var(--support-accent)]"}`}
             />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold tracking-tight">
-              {business}{" "}
-              <span className="ml-2 text-sm font-normal text-neutral-400">
-                Support
-              </span>
+              {business}
             </h1>
-            <p className="mt-1 truncate text-sm text-neutral-500 dark:text-neutral-400">
-              {subtitle}
+            <p className="flex min-w-0 items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+              <span className="truncate">{subtitle}</span>
+              {chat?.ticketReference && (
+                <button
+                  type="button"
+                  title="Copy ticket reference"
+                  aria-label={`Copy ticket reference ${chat.ticketReference}`}
+                  className="shrink-0 rounded-md border border-neutral-200 bg-neutral-100 px-1.5 font-mono text-[11px] font-semibold text-neutral-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(chat.ticketReference!)
+                      .then(() => setNotice("Reference copied."))
+                      .catch(() => setNotice("Use the reference above."))
+                  }
+                >
+                  {chat.ticketReference}
+                </button>
+              )}
             </p>
           </div>
-          {history.length > 1 && (
-            <button
-              className="grid h-8 w-8 place-items-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white"
-              aria-label="Conversation history"
-              aria-expanded={showHistory}
-              onClick={() => setShowHistory(!showHistory)}
-            >
-              <SupportIcon name="history" />
-            </button>
-          )}
+          <button
+            type="button"
+            aria-pressed={sound}
+            aria-label={sound ? "Mute message sound" : "Turn on message sound"}
+            title={sound ? "Sound on" : "Sound off"}
+            onClick={toggleSound}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white sm:h-8 sm:w-8"
+          >
+            <SupportIcon
+              name={sound ? "bell" : "mute"}
+              className="h-[18px] w-[18px]"
+            />
+          </button>
+          <button
+            type="button"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white sm:h-8 sm:w-8"
+            aria-label="Conversation options"
+            aria-expanded={showHistory}
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            <SupportIcon name="more" className="h-[18px] w-[18px]" />
+          </button>
         </div>
         {showHistory && (
-          <select
-            aria-label="Choose conversation"
-            value={chat?.id || ""}
-            className={`${control} mt-3 w-full`}
-            onChange={(e) => {
-              void refresh(e.target.value);
-              setShowHistory(false);
-            }}
-          >
-            <option disabled value="">
-              Your conversations
-            </option>
-            {history.map((c, i) => (
-              <option key={c.id} value={c.id}>
-                Conversation {history.length - i} · {c.state.toLowerCase()}
-              </option>
-            ))}
-          </select>
+          <div className="mt-3 space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-xs dark:border-neutral-800 dark:bg-neutral-950">
+            {history.length > 1 && (
+              <select
+                aria-label="Choose conversation"
+                value={chat?.id || ""}
+                className={`${control} w-full`}
+                onChange={(e) => {
+                  void refresh(e.target.value);
+                  setShowHistory(false);
+                }}
+              >
+                <option disabled value="">
+                  Your conversations
+                </option>
+                {history.map((c, i) => (
+                  <option key={c.id} value={c.id}>
+                    Conversation {history.length - i} · {c.state.toLowerCase()}
+                  </option>
+                ))}
+              </select>
+            )}
+            {chat?.supportEmail && (
+              <a
+                className="block truncate text-neutral-600 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-300"
+                href={`mailto:${chat.supportEmail}${chat.ticketReference ? `?subject=${encodeURIComponent(`Support ${chat.ticketReference}`)}` : ""}`}
+              >
+                Email {chat.supportEmail}
+              </a>
+            )}
+            {chat?.humanRequested && !chat.customer.verified && (
+              <button
+                type="button"
+                className="font-semibold text-neutral-700 underline underline-offset-2 dark:text-neutral-200"
+                onClick={() => {
+                  setName(chat.customer.name || "");
+                  setEmail(chat.customer.email || "");
+                  setShowContact(!showContact);
+                  setShowHistory(false);
+                }}
+              >
+                Your contact details
+              </button>
+            )}
+            <p className="text-neutral-400">
+              {config?.showBranding !== false ? (
+                <>
+                  Powered by{" "}
+                  <a
+                    href="https://upstep.dev"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-neutral-500 dark:text-neutral-400"
+                  >
+                    UpStep
+                  </a>
+                </>
+              ) : (
+                `${business} support`
+              )}
+            </p>
+          </div>
         )}
       </header>
-      {chat?.ticketReference && (
-        <section
-          aria-label="Support ticket"
-          className="shrink-0 border-b border-neutral-200 bg-[#fafafa] px-5 py-3 dark:border-neutral-800 dark:bg-neutral-950"
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={list}
+          role="log"
+          aria-label="Support conversation"
+          aria-live="polite"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 48);
+          }}
+          className="h-full space-y-1 overflow-y-auto px-3 py-4 [scrollbar-width:thin] sm:px-4 sm:py-5"
         >
-          <div className="flex items-center gap-2">
-            <SupportIcon
-              name="ticket"
-              className="h-3.5 w-3.5 text-[#8c7565] dark:text-neutral-300"
-            />
-            <span className="text-sm text-neutral-500">Ticket</span>
-            <strong className="font-mono text-sm font-semibold tracking-wide">
-              {chat.ticketReference}
-            </strong>
-            <button
-              aria-label="Copy ticket reference"
-              className="ml-auto rounded-md p-1 text-neutral-400 transition hover:text-neutral-950 dark:hover:text-white"
-              onClick={() =>
-                void navigator.clipboard
-                  .writeText(chat.ticketReference!)
-                  .then(() => setNotice("Reference copied."))
-                  .catch(() => setNotice("Use the reference above."))
-              }
-            >
-              <SupportIcon name="copy" className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          {chat.supportEmail && (
-            <a
-              className="mt-1.5 block truncate text-xs text-neutral-500 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-400"
-              href={`mailto:${chat.supportEmail}?subject=${encodeURIComponent(`Support ${chat.ticketReference}`)}`}
-            >
-              {chat.supportEmail}
-            </a>
+          {!chat && (
+            <div className="mx-auto max-w-sm pt-3">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-neutral-200 px-2.5 py-1 text-xs font-medium text-neutral-500 dark:border-neutral-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--support-accent)]" />
+                {business} help desk
+              </div>
+              <h2 className="text-[26px] font-semibold leading-[1.13] tracking-[-0.045em]">
+                Hi there.
+                <br />
+                <span className="text-neutral-400 dark:text-neutral-500">
+                  How can we help?
+                </span>
+              </h2>
+              <p className="mt-4 text-base leading-6 text-neutral-500 dark:text-neutral-400">
+                {config?.welcomeMessage ||
+                  "Ask a question about the business. We're here to help."}
+              </p>
+              <div className="mt-7 space-y-2">
+                {suggestions.map((text, i) => (
+                  <button
+                    key={text}
+                    onClick={() => suggest(text)}
+                    className="group flex min-h-11 w-full items-center gap-3 rounded-xl border border-neutral-200/80 bg-white px-3.5 py-3 text-left text-sm transition hover:border-neutral-400 hover:bg-[#fafafa] dark:border-neutral-800 dark:bg-black dark:hover:border-neutral-600 dark:hover:bg-neutral-950"
+                  >
+                    <SupportIcon
+                      name={i === 2 ? "person" : "message"}
+                      className="h-3.5 w-3.5 shrink-0 text-neutral-400"
+                    />
+                    <span className="flex-1">{text}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-5 text-xs text-neutral-400">
+                No account or email needed to start.
+              </p>
+            </div>
           )}
-        </section>
-      )}
-      <div
-        ref={list}
-        role="log"
-        aria-label="Support conversation"
-        aria-live="polite"
-        className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-6 [scrollbar-width:thin]"
-      >
-        {!chat && (
-          <div className="mx-auto max-w-sm pt-3">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-neutral-200 px-2.5 py-1 text-xs font-medium text-neutral-500 dark:border-neutral-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--support-accent)]" />
-              {business} help desk
-            </div>
-            <h2 className="text-[26px] font-semibold leading-[1.13] tracking-[-0.045em]">
-              Hi there.
-              <br />
-              <span className="text-neutral-400 dark:text-neutral-500">
-                How can we help?
-              </span>
-            </h2>
-            <p className="mt-4 text-base leading-6 text-neutral-500 dark:text-neutral-400">
-              {config?.welcomeMessage ||
-                "Ask a question about the business. We're here to help."}
-            </p>
-            <div className="mt-7 space-y-2">
-              {suggestions.map((text, i) => (
-                <button
-                  key={text}
-                  onClick={() => suggest(text)}
-                  className="group flex w-full items-center gap-3 rounded-xl border border-neutral-200/80 bg-white px-3.5 py-3 text-left text-sm transition hover:border-orange-300 hover:bg-[#fafafa] dark:border-neutral-800 dark:bg-black dark:hover:border-orange-800 dark:hover:bg-orange-950/10"
-                >
-                  <SupportIcon
-                    name={i === 2 ? "person" : "message"}
-                    className="h-3.5 w-3.5 shrink-0 text-neutral-400"
-                  />
-                  <span className="flex-1">{text}</span>
-                  <span className="text-neutral-300 transition group-hover:translate-x-0.5 group-hover:text-orange-500">
-                    ↗
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="mt-5 text-xs text-neutral-400">
-              No account or email needed to start.
-            </p>
-          </div>
-        )}
-        {chat?.messages.map((m, i) => {
-          const customer = m.role === "CUSTOMER";
-          if (m.role === "SYSTEM")
-            return m.metadata?.ticketReference ? (
-              <details
-                key={m.id}
-                className="rounded-xl border border-neutral-200 bg-[#fafafa] px-3.5 py-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400"
-              >
-                <summary className="cursor-pointer font-medium text-neutral-700 dark:text-neutral-300">
-                  ✓ Ticket {m.metadata.ticketReference} opened
-                </summary>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-5">
-                  {m.content}
-                </p>
-              </details>
-            ) : (
+          {chat?.messages.map((m, i) => {
+            const customer = m.role === "CUSTOMER";
+            const previous = chat.messages[i - 1];
+            const next = chat.messages[i + 1];
+            const divider = m.id === firstUnread && (
               <div
-                key={m.id}
-                className="flex items-start gap-2 px-1 text-xs leading-5 text-neutral-400"
+                role="separator"
+                className="flex items-center gap-3 py-3 text-[11px] font-bold uppercase tracking-[0.05em] text-[color:color-mix(in_srgb,var(--support-accent)_62%,#171717)] dark:text-[color:color-mix(in_srgb,var(--support-accent)_55%,white)]"
               >
-                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-neutral-300 dark:bg-neutral-700" />
-                <p>{m.content}</p>
+                <span className="h-px flex-1 bg-[color:color-mix(in_srgb,var(--support-accent)_50%,transparent)]" />
+                New
+                <span className="h-px flex-1 bg-[color:color-mix(in_srgb,var(--support-accent)_50%,transparent)]" />
               </div>
             );
-          const previous = chat.messages[i - 1];
-          return (
-            <div
-              key={m.id}
-              className={`flex flex-col ${customer ? "items-end" : "items-start"}`}
-            >
-              {(!previous ||
-                previous.role !== m.role ||
-                previous.authorName !== m.authorName) && (
+            if (m.role === "SYSTEM")
+              return (
+                <div key={m.id}>
+                  {divider}
+                  {m.metadata?.ticketReference ? (
+                    <details className="my-3 rounded-xl border border-neutral-200 bg-[#fafafa] px-3.5 py-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400">
+                      <summary className="cursor-pointer font-medium text-neutral-700 dark:text-neutral-300">
+                        ✓ Ticket {m.metadata.ticketReference} opened
+                      </summary>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-5">
+                        {m.content}
+                      </p>
+                    </details>
+                  ) : (
+                    <div className="my-3 flex items-center justify-center gap-2 text-center text-xs leading-5 text-neutral-400">
+                      <span className="h-px w-5 bg-neutral-200 dark:bg-neutral-800" />
+                      <p>{m.content}</p>
+                      <span className="h-px w-5 bg-neutral-200 dark:bg-neutral-800" />
+                    </div>
+                  )}
+                </div>
+              );
+            const firstOfRun =
+              !previous ||
+              previous.role === "SYSTEM" ||
+              previous.role !== m.role ||
+              previous.authorName !== m.authorName;
+            const lastOfRun =
+              !next ||
+              next.role === "SYSTEM" ||
+              next.role !== m.role ||
+              next.authorName !== m.authorName;
+            return (
+              <div key={m.id}>
+                {divider}
                 <div
-                  className={`mb-1.5 flex items-center gap-1.5 text-xs font-medium text-neutral-400 ${customer ? "pr-1" : "pl-1"}`}
+                  className={`flex flex-col ${customer ? "items-end" : "items-start"}`}
                 >
-                  {!customer && (
-                    <span
-                      className={`grid h-4 w-4 place-items-center rounded-md text-[8px] font-semibold ${m.role === "ASSISTANT" ? "bg-[#f5f5f5] text-[#8c7565] dark:bg-[#262626] dark:text-neutral-300" : "bg-neutral-100 text-neutral-500 dark:bg-neutral-900"}`}
-                    >
-                      {m.role === "ASSISTANT" ? "AI" : m.authorName.charAt(0)}
+                  {firstOfRun && !customer && (
+                    <div className="mb-1 ml-0.5 mt-3 flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                      {m.role === "ASSISTANT" ? `${business} AI` : m.authorName}
+                      <span
+                        className={`rounded px-1.5 py-px text-[10px] font-bold uppercase tracking-wide ${m.role === "AGENT" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" : "border border-neutral-200 bg-neutral-100 text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400"}`}
+                      >
+                        {m.role === "ASSISTANT" ? "AI" : "Team"}
+                      </span>
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-6 ${customer ? `${ink} ${firstOfRun ? "mt-3" : ""} rounded-br-md` : `${soft} rounded-tl-md`}`}
+                  >
+                    <div className="space-y-3">
+                      {m.content.split(/\n\s*\n/).map((paragraph, n) => (
+                        <p key={n} className="whitespace-pre-wrap break-words">
+                          {paragraph}
+                        </p>
+                      ))}
+                    </div>
+                    {!!m.metadata?.citations?.length && (
+                      <div className="mt-3 flex flex-wrap gap-1.5 border-t border-neutral-300/60 pt-2.5 dark:border-neutral-700">
+                        {m.metadata.citations.map((s) => (
+                          <a
+                            key={s.url}
+                            href={s.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex max-w-full items-center gap-1 rounded-md border border-neutral-200 bg-white px-1.5 py-1 text-xs leading-4 text-neutral-500 transition hover:text-neutral-900 dark:border-neutral-800 dark:bg-black dark:text-neutral-400"
+                          >
+                            <SupportIcon
+                              name="link"
+                              className="h-2.5 w-2.5 shrink-0"
+                            />
+                            <span className="max-w-[180px] truncate">
+                              {s.title}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {lastOfRun && clock(m.createdAt) && (
+                    <span className="mx-1 mt-1 text-[11px] tabular-nums text-neutral-400">
+                      {clock(m.createdAt)}
                     </span>
                   )}
-                  {customer ? "You" : m.authorName}
                 </div>
-              )}
-              <div
-                className={`max-w-[94%] rounded-2xl px-3 py-2.5 text-[15px] leading-6 ${customer ? "rounded-tr-md bg-[#f0f0f0] text-neutral-800 dark:bg-[#202020] dark:text-neutral-100" : "rounded-tl-md border border-neutral-100 bg-[#fafafa] text-neutral-700 dark:border-neutral-900 dark:bg-neutral-950 dark:text-neutral-200"}`}
-              >
-                <div className="space-y-3">
-                  {m.content.split(/\n\s*\n/).map((paragraph, n) => (
-                    <p key={n} className="whitespace-pre-wrap break-words">
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-                {!!m.metadata?.citations?.length && (
-                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-neutral-200/60 pt-2.5 dark:border-neutral-800">
-                    {m.metadata.citations.map((s) => (
-                      <a
-                        key={s.url}
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex max-w-full items-center gap-1 rounded-md border border-neutral-200 bg-white px-1.5 py-1 text-xs leading-4 text-neutral-500 transition hover:text-[#8c7565] dark:border-neutral-800 dark:bg-black dark:text-neutral-400"
-                      >
-                        <SupportIcon
-                          name="link"
-                          className="h-2.5 w-2.5 shrink-0"
-                        />
-                        <span className="max-w-[180px] truncate">
-                          {s.title}
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                )}
               </div>
-            </div>
-          );
-        })}
-        {chat?.aiPending && (
-          <div
-            role="status"
-            className="flex items-center gap-2 pl-1 text-xs text-neutral-400"
-          >
-            <span className="flex gap-1">
+            );
+          })}
+          {chat?.aiPending && (
+            <div
+              role="status"
+              aria-label={`${business} AI is typing`}
+              className="mt-3 inline-flex gap-1 rounded-2xl rounded-tl-md bg-neutral-100 px-3.5 py-3.5 dark:bg-neutral-900"
+            >
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className="h-1 w-1 animate-pulse rounded-full bg-[var(--support-accent)]"
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-neutral-400"
                   style={{ animationDelay: `${i * 150}ms` }}
                 />
               ))}
-            </span>
-            {business} AI is typing
-          </div>
+            </div>
+          )}
+        </div>
+        {!atBottom && count > 0 && shown && (
+          <button
+            type="button"
+            onClick={() => {
+              list.current?.scrollTo({
+                top: list.current.scrollHeight,
+                behavior: "smooth",
+              });
+            }}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-neutral-900 px-4 py-2 text-xs font-bold text-white shadow-lg dark:bg-neutral-100 dark:text-neutral-900"
+          >
+            {count} new ↓
+          </button>
         )}
       </div>
-      <footer className="shrink-0 bg-white px-4 pb-3 pt-2 dark:bg-black">
+      <footer className="shrink-0 bg-white px-3 pb-3 pt-1.5 dark:bg-black sm:px-4">
         {chat && widgets.length > 0 && (
           <section
             aria-label="Suggested next step"
-            className="mb-2 max-h-[38dvh] overflow-y-auto"
+            className="mb-2 max-h-[42dvh] overflow-y-auto"
           >
             <SupportWidgets
               key={chat.activeWidgetMessageId || chat.id}
@@ -673,7 +855,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
         )}
         {chat?.state === "RESOLVED" ? (
           <button
-            className={`${control} w-full`}
+            className={`${control} min-h-11 w-full`}
             onClick={() => {
               setChat(null);
               activeConversation.current = null;
@@ -684,7 +866,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
           </button>
         ) : (
           <form
-            className="flex items-end gap-2 rounded-2xl border border-neutral-200 bg-white p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.035)] transition focus-within:border-neutral-400 dark:border-neutral-800 dark:bg-black dark:focus-within:border-neutral-600"
+            className="flex items-end gap-2 rounded-3xl border-[1.5px] border-neutral-200 bg-white py-1 pl-4 pr-1 transition focus-within:border-neutral-900 dark:border-neutral-800 dark:bg-black dark:focus-within:border-neutral-300"
             onSubmit={(e) => {
               e.preventDefault();
               void send();
@@ -707,52 +889,17 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
               maxLength={4000}
               rows={1}
               placeholder={`Message ${business}…`}
-              className="block max-h-28 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-base leading-6 outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+              className="block max-h-28 min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base leading-6 outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
             />
-            <div className="flex items-center gap-1">
-              {chat?.humanRequested && !chat.customer.verified && (
-                <button
-                  type="button"
-                  aria-label="Your contact details"
-                  title="Your contact details"
-                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-900"
-                  onClick={() => {
-                    setName(chat.customer.name || "");
-                    setEmail(chat.customer.email || "");
-                    setShowContact(!showContact);
-                  }}
-                >
-                  <SupportIcon name="person" className="h-3.5 w-3.5" />
-                </button>
-              )}
-              <button
-                aria-label="Send message"
-                disabled={busy || !message.trim() || !config}
-                className="ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[var(--support-accent)] text-white transition hover:brightness-95 disabled:bg-neutral-100 disabled:text-neutral-300 dark:bg-[var(--support-accent)] dark:text-white dark:disabled:bg-neutral-900 dark:disabled:text-neutral-700"
-              >
-                <SupportIcon name="arrow" className="h-4 w-4" />
-              </button>
-            </div>
+            <button
+              aria-label="Send message"
+              disabled={busy || !message.trim() || !config}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--support-accent)] text-white transition hover:brightness-95 disabled:bg-neutral-100 disabled:text-neutral-300 dark:disabled:bg-neutral-900 dark:disabled:text-neutral-700"
+            >
+              <SupportIcon name="arrow" className="h-4 w-4" />
+            </button>
           </form>
         )}
-        <div className="mt-2.5 flex items-center justify-center gap-1 text-xs text-neutral-400">
-          {config?.showBranding !== false ? (
-            <>
-              <span className="h-1 w-1 rounded-full bg-[var(--support-accent)]" />
-              Powered by{" "}
-              <a
-                href="https://upstep.dev"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-neutral-500 dark:text-neutral-400"
-              >
-                UpStep
-              </a>
-            </>
-          ) : (
-            <span>{business} support</span>
-          )}
-        </div>
       </footer>
     </main>
   );

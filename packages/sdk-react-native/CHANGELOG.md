@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Redesigned support chat: neutral message bubbles with AI and team tags, a labelled quick-reply tray with accent-tinted chips, and follow-up forms that open from "Talk to a person" or "Add details" only when the AI offers them.
+- Compact one-row header. Ticket reference moves into the status line, and email, branding and alert settings move into a "•••" panel.
+- Unread replies: a count badge on `FeedbackButton`, a "NEW" divider and "N new" jump pill in the chat, a short vibration for new messages, and `useUpstep().supportUnread` for custom launchers.
+- New `onSupportMessage` option on `FeedbackProvider`, called when a reply arrives while the chat is closed. Use it to play a sound or schedule a local notification.
+
 ## 0.7.2
 
 - Show the business icon selected during website-based support setup.

@@ -13,7 +13,11 @@ export function SupportIcon({
     | "check"
     | "history"
     | "close"
-    | "message";
+    | "message"
+    | "bell"
+    | "mute"
+    | "more"
+    | "reply";
   className?: string;
   style?: CSSProperties;
 }) {
@@ -51,6 +55,31 @@ export function SupportIcon({
       </>
     ),
     close: <path d="m6 6 12 12M18 6 6 18" />,
+    bell: (
+      <>
+        <path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2Z" />
+        <path d="M10 21h4" />
+      </>
+    ),
+    mute: (
+      <>
+        <path d="M6 16v-5a6 6 0 0 1 9.5-4.8M18 11v5l2 2H4l2-2M10 21h4" />
+        <path d="m4 4 16 16" />
+      </>
+    ),
+    more: (
+      <>
+        <circle cx="5" cy="12" r="1" />
+        <circle cx="12" cy="12" r="1" />
+        <circle cx="19" cy="12" r="1" />
+      </>
+    ),
+    reply: (
+      <>
+        <path d="M9 14 4 9l5-5" />
+        <path d="M4 9h10a6 6 0 0 1 6 6v3" />
+      </>
+    ),
     message: (
       <>
         <path d="M20 15a3 3 0 0 1-3 3H8l-5 3V6a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v9Z" />

@@ -30,6 +30,17 @@ function getOrCreateAnonymousId(): string | undefined {
   }
 }
 
+/** Unread chat messages reported by the support chat while it is closed or scrolled away. */
+export interface SupportUnread {
+  count: number;
+  /** True when this report was triggered by a message that just arrived. */
+  newMessage: boolean;
+  author: string;
+  preview: string;
+  /** Whether the customer wants a sound for new messages. */
+  sound: boolean;
+}
+
 export class UpstepApiClient {
   readonly baseUrl: string;
   readonly apiKey: string;
@@ -75,7 +86,14 @@ export class UpstepApiClient {
     return `${this.baseUrl}/support/${encodeURIComponent(this.apiKey)}?theme=${encodeURIComponent(theme)}&accent=${encodeURIComponent(accentColor)}`;
   }
 
-  connectSupportFrame(frame: HTMLIFrameElement) {
+  connectSupportFrame(
+    frame: HTMLIFrameElement,
+    options: {
+      /** Whether the chat is currently on screen. Lets the chat know when messages are unseen. */
+      isVisible?: () => boolean;
+      onUnread?: (unread: SupportUnread) => void;
+    } = {},
+  ) {
     const target = new URL(this.baseUrl).origin;
     const send = () =>
       frame.contentWindow?.postMessage(
@@ -83,16 +101,25 @@ export class UpstepApiClient {
           type: "upstep:support:identity",
           token: this.supportIdentityToken,
           accentColor: getComputedStyle(frame).color,
+          ...(options.isVisible ? { visible: options.isVisible() } : {}),
         },
         target,
       );
     const receive = (event: MessageEvent) => {
-      if (
-        event.origin === target &&
-        event.source === frame.contentWindow &&
-        event.data?.type === "upstep:support:ready"
-      )
-        send();
+      if (event.origin !== target || event.source !== frame.contentWindow)
+        return;
+      const data = event.data as Record<string, unknown> | null;
+      if (data?.type === "upstep:support:ready") send();
+      else if (data?.type === "upstep:support:unread" && options.onUnread) {
+        const count = Number(data["count"]);
+        options.onUnread({
+          count: Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0,
+          newMessage: data["newMessage"] === true,
+          author: String(data["author"] ?? "").slice(0, 80),
+          preview: String(data["preview"] ?? "").slice(0, 200),
+          sound: data["sound"] !== false,
+        });
+      }
     };
     frame.addEventListener("load", send);
     window.addEventListener("message", receive);
@@ -100,6 +127,14 @@ export class UpstepApiClient {
       frame.removeEventListener("load", send);
       window.removeEventListener("message", receive);
     };
+  }
+
+  /** Tell the chat whether it is on screen so it can track unread messages. */
+  notifySupportVisibility(frame: HTMLIFrameElement, visible: boolean) {
+    frame.contentWindow?.postMessage(
+      { type: "upstep:support:visible", visible },
+      new URL(this.baseUrl).origin,
+    );
   }
 
   async listFeedback(params?: {

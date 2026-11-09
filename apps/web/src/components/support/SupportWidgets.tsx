@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import type { SupportWidget } from "@upstep/types";
+import { SupportIcon } from "./SupportIcons";
 type Details = {
   widgetId: string;
   summary: string;
@@ -25,41 +26,86 @@ const button =
   "min-h-10 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[13px] font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:bg-black dark:text-neutral-200";
 const primary = `${button} !border-transparent !bg-[var(--support-accent)] !text-white`;
 const label = "block text-[13px] text-neutral-600 dark:text-neutral-400";
-function tabName(widget: SupportWidget) {
-  return widget.type === "quick_replies"
-    ? "Quick replies"
-    : widget.type === "issue_details"
-      ? "Issue details"
-      : widget.type === "confirmation"
-        ? "Did this help?"
-        : "Team follow-up";
+/** Accent fills are reserved for things the customer can tap. Replies get a tinted pill. */
+const chip =
+  "inline-flex min-h-[42px] shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-[color:color-mix(in_srgb,var(--support-accent)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--support-accent)_12%,transparent)] py-0 pl-3 pr-4 text-sm font-semibold text-[color:color-mix(in_srgb,var(--support-accent)_62%,#171717)] transition hover:border-[var(--support-accent)] hover:bg-[var(--support-accent)] hover:text-white disabled:opacity-50 dark:text-[color:color-mix(in_srgb,var(--support-accent)_55%,white)] sm:min-h-9";
+const textAction =
+  "inline-flex min-h-8 items-center gap-1.5 rounded-md px-1.5 text-xs font-semibold text-neutral-500 transition hover:text-neutral-950 hover:underline disabled:opacity-50 dark:text-neutral-400 dark:hover:text-white";
+const isChoice = (w: SupportWidget) =>
+  w.type === "quick_replies" || w.type === "confirmation";
+function actionLabel(widget: SupportWidget) {
+  return widget.type === "contact_form" ? "Talk to a person" : "Add details";
 }
 export function SupportWidgets(props: Props) {
-  const [selected, setSelected] = useState(
-    props.widgets.find((w) => w.type === "quick_replies")?.id ??
-      props.widgets[0]?.id,
-  );
-  const widget =
-    props.widgets.find((w) => w.id === selected) || props.widgets[0];
-  if (!widget) return null;
+  const choice = props.widgets.find(isChoice);
+  const others = props.widgets.filter((w) => !isChoice(w));
+  const [opened, setOpened] = useState<string | null>(null);
+  const [answered, setAnswered] = useState(false);
+  const expanded = others.find((w) => w.id === opened);
+  // Without choices, the follow-up card is the only thing to show, so open it directly.
+  const direct = choice ? [] : others;
   return (
-    <div className="space-y-2">
-      {props.widgets.length > 1 && (
-        <div className="flex gap-2" role="tablist" aria-label="Reply options">
-          {props.widgets.map((w) => (
-            <button
-              key={w.id}
-              role="tab"
-              aria-selected={widget.id === w.id}
-              className={`${button} !min-h-8 !py-1 ${widget.id === w.id ? "!bg-neutral-100 dark:!bg-neutral-900" : ""}`}
-              onClick={() => setSelected(w.id)}
-            >
-              {tabName(w)}
-            </button>
-          ))}
+    <div className="space-y-2.5">
+      {choice && !answered && (
+        <div className="rounded-2xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800 dark:bg-black sm:p-3">
+          <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+            <p className="truncate text-[11px] font-bold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
+              {choice.title || "Quick replies"}
+            </p>
+            <div className="flex shrink-0 items-center gap-1">
+              {others.map((w) => (
+                <button
+                  key={w.id}
+                  type="button"
+                  disabled={props.busy}
+                  aria-expanded={opened === w.id}
+                  className={textAction}
+                  onClick={() => setOpened(opened === w.id ? null : w.id)}
+                >
+                  {w.type === "contact_form" && (
+                    <SupportIcon name="person" className="h-3.5 w-3.5" />
+                  )}
+                  {actionLabel(w)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div
+            className="-mx-2.5 flex gap-2 overflow-x-auto px-2.5 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] max-sm:[mask-image:linear-gradient(90deg,#000_calc(100%-28px),transparent)] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden"
+            role="group"
+            aria-label={choice.title || "Quick replies"}
+          >
+            {"options" in choice &&
+              choice.options.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  disabled={props.busy}
+                  className={chip}
+                  onClick={() =>
+                    void props.onReply(option).then((ok) => {
+                      if (ok) setAnswered(true);
+                    })
+                  }
+                >
+                  <SupportIcon name="reply" className="h-3.5 w-3.5 shrink-0" />
+                  {option}
+                </button>
+              ))}
+          </div>
         </div>
       )}
-      <SupportWidgetCard key={widget.id} {...props} widget={widget} />
+      {expanded && !direct.length && (
+        <SupportWidgetCard
+          key={expanded.id}
+          {...props}
+          widget={expanded}
+          startOpen
+        />
+      )}
+      {direct.map((w) => (
+        <SupportWidgetCard key={w.id} {...props} widget={w} />
+      ))}
     </div>
   );
 }
@@ -70,229 +116,222 @@ function SupportWidgetCard({
   email,
   verified,
   online,
-  onReply,
+  startOpen = false,
   onDetails,
   onContact,
-}: Omit<Props, "widgets"> & { widget: SupportWidget }) {
+}: Omit<Props, "widgets" | "onReply"> & {
+  widget: SupportWidget;
+  startOpen?: boolean;
+}) {
   const [fullName, setFullName] = useState(name),
     [address, setAddress] = useState(email);
   const [summary, setSummary] = useState(""),
     [details, setDetails] = useState(""),
     [reference, setReference] = useState("");
   const [done, setDone] = useState(false),
-    [step, setStep] = useState(0),
-    [issueOpen, setIssueOpen] = useState(false),
+    [step, setStep] = useState(startOpen ? 1 : 0),
+    [issueOpen, setIssueOpen] = useState(startOpen),
     [more, setMore] = useState(false);
   const id = useRef(crypto.randomUUID());
   if (done)
     return (
-      <p role="status" className="py-2 text-[13px] text-neutral-500">
-        ✓{" "}
+      <p
+        role="status"
+        className="flex items-center gap-1.5 py-2 text-[13px] text-neutral-500"
+      >
+        <SupportIcon name="check" className="h-3.5 w-3.5" />
         {widget.type === "contact_form"
           ? "Your request is with the team."
           : "Details sent."}
       </p>
     );
-  if (widget.type === "quick_replies" || widget.type === "confirmation")
-    return (
-      <div>
-        <p className="mb-2 text-[13px] text-neutral-500">{widget.title}</p>
-        <div className="flex flex-wrap gap-2">
-          {widget.options.map((option) => (
-            <button
-              key={option}
-              disabled={busy}
-              className={button}
-              onClick={() =>
-                void onReply(option).then((ok) => {
-                  if (ok) setDone(true);
-                })
-              }
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
+  if (isChoice(widget)) return null;
   const shell =
-    "rounded-xl border border-neutral-200 bg-neutral-50/70 p-3 dark:border-neutral-800 dark:bg-neutral-950";
+    "overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-black";
+  const head = (title: string, aside?: string) => (
+    <div className="flex items-center gap-2 border-b border-[color:color-mix(in_srgb,var(--support-accent)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--support-accent)_12%,transparent)] px-3 py-2 text-xs font-bold text-[color:color-mix(in_srgb,var(--support-accent)_62%,#171717)] dark:text-[color:color-mix(in_srgb,var(--support-accent)_55%,white)]">
+      <SupportIcon
+        name={widget.type === "contact_form" ? "person" : "message"}
+        className="h-3.5 w-3.5"
+      />
+      <span className="flex-1 truncate">{title}</span>
+      {aside && <span className="font-medium opacity-80">{aside}</span>}
+    </div>
+  );
   if (widget.type === "contact_form")
     return (
       <div className={shell}>
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">
-            {online ? "Connect with the team" : widget.title}
-          </h3>
-          {step > 0 && (
-            <span className="text-xs text-neutral-500">{step} of 2</span>
+        {head(
+          online ? "Connect with the team" : widget.title,
+          step > 0 ? `${step} of 2` : undefined,
+        )}
+        <div className="p-3">
+          {step === 0 ? (
+            <>
+              <p className="line-clamp-2 text-[13px] leading-5 text-neutral-500 dark:text-neutral-400">
+                {widget.summary}
+              </p>
+              <button
+                disabled={busy}
+                className={`${primary} mt-2.5 w-full`}
+                onClick={() => setStep(1)}
+              >
+                Talk to a person
+              </button>
+            </>
+          ) : (
+            <form
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (step === 1) {
+                  if (fullName.trim()) setStep(2);
+                  return;
+                }
+                void onContact(fullName, address).then((ok) => {
+                  if (ok) setDone(true);
+                });
+              }}
+            >
+              {step === 1 ? (
+                <label className={label}>
+                  Your name
+                  <input
+                    required
+                    autoFocus
+                    autoComplete="name"
+                    maxLength={100}
+                    className={field}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </label>
+              ) : (
+                <label className={label}>
+                  Email for support follow-up
+                  <input
+                    required
+                    autoFocus
+                    type="email"
+                    autoComplete="email"
+                    maxLength={254}
+                    readOnly={verified && !!email}
+                    className={field}
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </label>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={button}
+                  disabled={busy}
+                  onClick={() => setStep(step - 1)}
+                >
+                  Back
+                </button>
+                <button
+                  disabled={
+                    busy || !fullName.trim() || (step === 2 && !address.trim())
+                  }
+                  className={`${primary} flex-1`}
+                >
+                  {step === 1
+                    ? "Continue"
+                    : busy
+                      ? "Sending…"
+                      : online
+                        ? "Request transfer"
+                        : "Send to the team"}
+                </button>
+              </div>
+            </form>
           )}
         </div>
-        {step === 0 ? (
-          <>
-            <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-neutral-500">
-              {widget.summary}
-            </p>
-            <button
-              disabled={busy}
-              className={`${button} mt-2`}
-              onClick={() => setStep(1)}
-            >
-              Ask the team
-            </button>
-          </>
-        ) : (
-          <form
-            className="mt-2 space-y-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (step === 1) {
-                if (fullName.trim()) setStep(2);
-                return;
-              }
-              void onContact(fullName, address).then((ok) => {
-                if (ok) setDone(true);
-              });
-            }}
-          >
-            {step === 1 ? (
-              <label className={label}>
-                Your name
-                <input
-                  required
-                  autoFocus
-                  autoComplete="name"
-                  maxLength={100}
-                  className={field}
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-              </label>
-            ) : (
-              <label className={label}>
-                Email for support follow-up
-                <input
-                  required
-                  autoFocus
-                  type="email"
-                  autoComplete="email"
-                  maxLength={254}
-                  readOnly={verified && !!email}
-                  className={field}
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
-              </label>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className={button}
-                disabled={busy}
-                onClick={() => setStep(step - 1)}
-              >
-                Back
-              </button>
-              <button
-                disabled={
-                  busy || !fullName.trim() || (step === 2 && !address.trim())
-                }
-                className={`${primary} flex-1`}
-              >
-                {step === 1
-                  ? "Continue"
-                  : busy
-                    ? "Sending…"
-                    : online
-                      ? "Request transfer"
-                      : "Send to the team"}
-              </button>
-            </div>
-          </form>
-        )}
       </div>
     );
   return (
     <div className={shell}>
-      <h3 className="text-[15px] font-semibold text-neutral-800 dark:text-neutral-100">
-        {widget.title}
-      </h3>
-      {!issueOpen ? (
-        <button
-          className={`${button} mt-2`}
-          disabled={busy}
-          onClick={() => setIssueOpen(true)}
-        >
-          Add issue details
-        </button>
-      ) : (
-        <form
-          className="mt-2 space-y-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void onDetails({
-              widgetId: widget.id,
-              summary,
-              details,
-              reference,
-              clientMessageId: id.current,
-            }).then((ok) => {
-              if (ok) setDone(true);
-            });
-          }}
-        >
-          <label className={label}>
-            What is happening?
-            <input
-              required
-              autoFocus
-              maxLength={160}
-              className={field}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-            />
-          </label>
+      {head(widget.title)}
+      <div className="p-3">
+        {!issueOpen ? (
           <button
-            type="button"
-            className="text-[13px] text-neutral-500 underline underline-offset-2"
-            aria-expanded={more}
-            onClick={() => setMore(!more)}
+            className={`${primary} w-full`}
+            disabled={busy}
+            onClick={() => setIssueOpen(true)}
           >
-            {more
-              ? "Hide optional details"
-              : "Add notes or a reference (optional)"}
+            Add issue details
           </button>
-          {more && (
-            <>
-              <label className={label}>
-                What have you tried?
-                <textarea
-                  maxLength={2000}
-                  rows={2}
-                  className={field}
-                  value={details}
-                  onChange={(e) => setDetails(e.target.value)}
-                />
-              </label>
-              <label className={label}>
-                Order or issue reference
-                <input
-                  maxLength={100}
-                  className={field}
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                />
-              </label>
-            </>
-          )}
-          <button
-            disabled={busy || !summary.trim()}
-            className={`${button} w-full`}
+        ) : (
+          <form
+            className="space-y-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void onDetails({
+                widgetId: widget.id,
+                summary,
+                details,
+                reference,
+                clientMessageId: id.current,
+              }).then((ok) => {
+                if (ok) setDone(true);
+              });
+            }}
           >
-            Send details
-          </button>
-        </form>
-      )}
+            <label className={label}>
+              What is happening?
+              <input
+                required
+                autoFocus
+                maxLength={160}
+                className={field}
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="text-[13px] text-neutral-500 underline underline-offset-2"
+              aria-expanded={more}
+              onClick={() => setMore(!more)}
+            >
+              {more
+                ? "Hide optional details"
+                : "Add notes or a reference (optional)"}
+            </button>
+            {more && (
+              <>
+                <label className={label}>
+                  What have you tried?
+                  <textarea
+                    maxLength={2000}
+                    rows={2}
+                    className={field}
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
+                  />
+                </label>
+                <label className={label}>
+                  Order or issue reference
+                  <input
+                    maxLength={100}
+                    className={field}
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                  />
+                </label>
+              </>
+            )}
+            <button
+              disabled={busy || !summary.trim()}
+              className={`${primary} w-full`}
+            >
+              Send details
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

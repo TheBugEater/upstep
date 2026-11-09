@@ -1,16 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   AppState,
+  Image,
   Linking,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  Vibration,
   View,
   useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { SupportClient, supportMessageId } from "@upstep/js/support";
 import type {
@@ -18,6 +22,62 @@ import type {
   SupportConversation,
   SupportWidget,
 } from "@upstep/types";
+import { useSupportUnread } from "./useSupportUnread";
+
+type Colors = {
+  bg: string;
+  soft: string;
+  text: string;
+  muted: string;
+  line: string;
+  ink: string;
+  onInk: string;
+  /** Accent tint for tappable surfaces: replies and follow-up cards. */
+  tint: string;
+  tintLine: string;
+  accentInk: string;
+};
+
+function hex(color: string) {
+  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(color);
+  const value = short
+    ? `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`
+    : color;
+  return /^#[0-9a-f]{6}$/i.test(value) ? value : null;
+}
+function alpha(color: string, amount: number) {
+  const value = hex(color);
+  if (!value) return null;
+  return (
+    value +
+    Math.round(amount * 255)
+      .toString(16)
+      .padStart(2, "0")
+  );
+}
+function mix(color: string, toward: string, amount: number) {
+  const a = hex(color);
+  const b = hex(toward);
+  if (!a || !b) return color;
+  const part = (i: number) =>
+    Math.round(
+      parseInt(a.slice(i, i + 2), 16) * (1 - amount) +
+        parseInt(b.slice(i, i + 2), 16) * amount,
+    )
+      .toString(16)
+      .padStart(2, "0");
+  return `#${part(1)}${part(3)}${part(5)}`;
+}
+function clock(iso?: string) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+const isChoice = (w: SupportWidget) =>
+  w.type === "quick_replies" || w.type === "confirmation";
+
 export function SupportView({
   client,
   config,
@@ -36,16 +96,53 @@ export function SupportView({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showInfo, setShowInfo] = useState(false);
+  const [sound, setSound] = useState(true);
+  const [atBottom, setAtBottom] = useState(true);
+  const [appActive, setAppActive] = useState(
+    AppState.currentState === "active",
+  );
   const list = useRef<React.ElementRef<typeof ScrollView>>(null);
   const active = useRef(true);
+  const soundOn = useRef(true);
   const pending = useRef<{ text: string; id: string } | null>(null);
-  const colors = {
+  const colors: Colors = {
     bg: dark ? "#000000" : "#ffffff",
-    soft: dark ? "#171717" : "#f5f5f5",
-    text: dark ? "#e5e5e5" : "#404040",
-    muted: dark ? "#a3a3a3" : "#737373",
-    line: dark ? "#404040" : "#e5e5e5",
+    soft: dark ? "#1b1b1b" : "#f2f2f2",
+    text: dark ? "#ececec" : "#262626",
+    muted: dark ? "#a3a3a3" : "#6b6b6b",
+    line: dark ? "#333333" : "#e5e5e5",
+    ink: dark ? "#f2f2f2" : "#171717",
+    onInk: dark ? "#111111" : "#ffffff",
+    tint:
+      alpha(accentColor, dark ? 0.18 : 0.12) ?? (dark ? "#1b1b1b" : "#f2f2f2"),
+    tintLine: alpha(accentColor, 0.55) ?? accentColor,
+    accentInk: mix(
+      accentColor,
+      dark ? "#ffffff" : "#171717",
+      dark ? 0.45 : 0.4,
+    ),
   };
+  useEffect(() => {
+    void client.soundEnabled().then((value) => {
+      soundOn.current = value;
+      if (active.current) setSound(value);
+    });
+    const subscription = AppState.addEventListener("change", (state) =>
+      setAppActive(state === "active"),
+    );
+    return () => subscription.remove();
+  }, [client]);
+  const { count, firstUnread, clearDivider } = useSupportUnread({
+    client,
+    chat,
+    viewing: atBottom && appActive,
+    onIncoming: (latest, wasViewing) => {
+      // AI replies the customer is watching stay quiet; team replies always buzz.
+      if (wasViewing && latest.role !== "AGENT") return;
+      if (soundOn.current) Vibration.vibrate(30);
+    },
+  });
   async function refresh(id: string) {
     const next = await client.conversation(id);
     if (active.current) setChat(next);
@@ -98,9 +195,23 @@ export function SupportView({
         pending.current = { text: value, id: supportMessageId() };
       await client.send(c.id, value, pending.current.id);
       pending.current = null;
+      clearDivider();
       if (active.current) setText("");
       await refresh(c.id);
     });
+  }
+  function toggleSound() {
+    const next = !sound;
+    setSound(next);
+    soundOn.current = next;
+    void client.setSoundEnabled(next);
+    if (next) Vibration.vibrate(30);
+  }
+  function onScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+    setAtBottom(
+      contentOffset.y + layoutMeasurement.height >= contentSize.height - 48,
+    );
   }
   const widgets: SupportWidget[] = chat?.activeWidgetMessageId
     ? (
@@ -117,149 +228,342 @@ export function SupportView({
           },
         ]
       : [];
+  const business = config.businessName;
+  const isHuman = chat?.state === "HUMAN";
+  const subtitle = isHuman
+    ? `${chat?.messages.filter((m) => m.role === "AGENT").at(-1)?.authorName || "The team"} is here to help`
+    : chat?.state === "WAITING"
+      ? "Your message is with the team"
+      : chat?.state === "RESOLVED"
+        ? "Conversation resolved"
+        : config.online.length
+          ? "AI and our team are here for you"
+          : "AI is here. The team can join when needed.";
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <View style={[styles.heading, { borderColor: colors.line }]}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          {config.logoUrl && !logoFailed && (
-            <Image
-              accessibilityLabel={`${config.businessName} logo`}
-              source={{ uri: config.logoUrl }}
-              resizeMode="contain"
-              onError={() => setLogoFailed(true)}
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 8,
-                backgroundColor: "white",
-              }}
-            />
-          )}
-          <Text style={[styles.title, { color: colors.text, flex: 1 }]}>
-            {config.businessName}
-          </Text>
-        </View>
-        <Text style={[styles.meta, { color: colors.muted }]}>
-          {chat?.state === "HUMAN"
-            ? "The team is here to help"
-            : "AI support for your questions"}
-        </Text>
-      </View>
-      {chat?.ticketReference && (
-        <View style={[styles.ticket, { backgroundColor: colors.soft }]}>
-          <Text selectable style={[styles.label, { color: colors.text }]}>
-            Ticket {chat.ticketReference}
-          </Text>
-          {chat.supportEmail && (
-            <TouchableOpacity
-              onPress={() =>
-                void Linking.openURL(
-                  `mailto:${chat.supportEmail}?subject=${encodeURIComponent(chat.ticketReference || "")}`,
-                )
-              }
-            >
-              <Text style={[styles.meta, { color: colors.muted }]}>
-                {chat.supportEmail}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-      <ScrollView
-        ref={list}
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, gap: 16 }}
-        keyboardShouldPersistTaps="handled"
-        onContentSizeChange={() => {
-          if (chat) list.current?.scrollToEnd({ animated: true });
-        }}
-      >
-        {!chat && (
-          <View style={{ gap: 16, paddingVertical: 12 }}>
-            <Text style={[styles.hero, { color: colors.text }]}>
-              How can we help?
-            </Text>
-            <Text style={[styles.body, { color: colors.muted }]}>
-              {config.welcomeMessage}
-            </Text>
-            {[
-              "What can you help me with?",
-              `I need help using ${config.businessName}`,
-            ].map((q) => (
-              <TouchableOpacity
-                key={q}
-                style={[styles.option, { borderColor: colors.line }]}
-                onPress={() => setText(q)}
-              >
-                <Text style={[styles.body, { color: colors.text }]}>{q}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        {chat?.messages.map((m) => (
-          <View
-            key={m.id}
-            style={{
-              alignSelf: m.role === "CUSTOMER" ? "flex-end" : "stretch",
-              maxWidth: m.role === "CUSTOMER" ? "94%" : "100%",
-            }}
-          >
-            <Text
-              style={[styles.meta, { color: colors.muted, marginBottom: 6 }]}
-            >
-              {m.role === "CUSTOMER" ? "You" : m.authorName}
-            </Text>
+        <View style={styles.headingRow}>
+          <View style={styles.avatarWrap}>
+            {config.logoUrl && !logoFailed ? (
+              <Image
+                accessibilityLabel={`${business} logo`}
+                source={{ uri: config.logoUrl }}
+                resizeMode="contain"
+                onError={() => setLogoFailed(true)}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: colors.ink }]}>
+                <Text style={{ color: colors.onInk, fontWeight: "700" }}>
+                  {business.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
             <View
               style={[
-                styles.bubble,
+                styles.dot,
                 {
+                  borderColor: colors.bg,
                   backgroundColor:
-                    m.role === "SYSTEM" ? "transparent" : colors.soft,
+                    config.online.length || isHuman ? "#22c55e" : accentColor,
                 },
               ]}
+            />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              numberOfLines={1}
+              style={[styles.title, { color: colors.text }]}
             >
-              {m.content.split(/\n\s*\n/).map((paragraph, i) => (
+              {business}
+            </Text>
+            <View style={styles.statusRow}>
+              <Text
+                numberOfLines={1}
+                style={[styles.status, { color: colors.muted, flexShrink: 1 }]}
+              >
+                {subtitle}
+              </Text>
+              {chat?.ticketReference && (
                 <Text
-                  key={i}
                   selectable
-                  style={[styles.body, { color: colors.text, marginBottom: 8 }]}
+                  style={[
+                    styles.ticket,
+                    {
+                      color: colors.text,
+                      backgroundColor: colors.soft,
+                      borderColor: colors.line,
+                    },
+                  ]}
                 >
-                  {paragraph}
+                  {chat.ticketReference}
                 </Text>
-              ))}
-              {m.metadata?.citations?.map((c) => (
-                <TouchableOpacity
-                  key={c.url}
-                  onPress={() => void Linking.openURL(c.url)}
+              )}
+            </View>
+          </View>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Conversation options"
+            accessibilityState={{ expanded: showInfo }}
+            onPress={() => setShowInfo(!showInfo)}
+            style={styles.more}
+          >
+            <Text
+              style={{ color: colors.muted, fontSize: 18, letterSpacing: 1 }}
+            >
+              •••
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {showInfo && (
+          <View
+            style={[
+              styles.info,
+              { backgroundColor: colors.soft, borderColor: colors.line },
+            ]}
+          >
+            <TouchableOpacity
+              accessibilityRole="switch"
+              accessibilityState={{ checked: sound }}
+              onPress={toggleSound}
+              style={styles.infoRow}
+            >
+              <Text style={[styles.status, { color: colors.text }]}>
+                New message alerts
+              </Text>
+              <Text
+                style={[
+                  styles.status,
+                  { color: colors.accentInk, fontWeight: "700" },
+                ]}
+              >
+                {sound ? "On" : "Off"}
+              </Text>
+            </TouchableOpacity>
+            {chat?.supportEmail && (
+              <TouchableOpacity
+                onPress={() =>
+                  void Linking.openURL(
+                    `mailto:${chat.supportEmail}${chat.ticketReference ? `?subject=${encodeURIComponent(`Support ${chat.ticketReference}`)}` : ""}`,
+                  )
+                }
+              >
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.status,
+                    { color: colors.text, textDecorationLine: "underline" },
+                  ]}
                 >
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.meta, { color: colors.muted, marginTop: 8 }]}
-                  >
-                    ↗ {c.title}
-                  </Text>
+                  Email {chat.supportEmail}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <Text style={[styles.status, { color: colors.muted }]}>
+              {config.showBranding !== false
+                ? "Powered by UpStep"
+                : `${business} support`}
+            </Text>
+          </View>
+        )}
+      </View>
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          ref={list}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 12, paddingBottom: 8 }}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={100}
+          onScroll={onScroll}
+          onContentSizeChange={() => {
+            if (chat && (atBottom || chat.messages.at(-1)?.role === "CUSTOMER"))
+              list.current?.scrollToEnd({ animated: true });
+          }}
+        >
+          {!chat && (
+            <View style={{ gap: 14, paddingVertical: 12 }}>
+              <Text style={[styles.hero, { color: colors.text }]}>
+                How can we help?
+              </Text>
+              <Text style={[styles.body, { color: colors.muted }]}>
+                {config.welcomeMessage}
+              </Text>
+              {[
+                "What can you help me with?",
+                `I need help using ${business}`,
+              ].map((q) => (
+                <TouchableOpacity
+                  key={q}
+                  accessibilityRole="button"
+                  style={[styles.option, { borderColor: colors.line }]}
+                  onPress={() => setText(q)}
+                >
+                  <Text style={[styles.body, { color: colors.text }]}>{q}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
-        ))}
-        {chat?.aiPending && (
-          <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-            <ActivityIndicator color={accentColor} />
-            <Text style={[styles.meta, { color: colors.muted }]}>
-              Thinking…
+          )}
+          {chat?.messages.map((m, i) => {
+            const customer = m.role === "CUSTOMER";
+            const previous = chat.messages[i - 1];
+            const next = chat.messages[i + 1];
+            const divider = m.id === firstUnread && (
+              <View style={styles.newRow} accessibilityRole="text">
+                <View
+                  style={[styles.rule, { backgroundColor: colors.tintLine }]}
+                />
+                <Text style={[styles.newText, { color: colors.accentInk }]}>
+                  NEW
+                </Text>
+                <View
+                  style={[styles.rule, { backgroundColor: colors.tintLine }]}
+                />
+              </View>
+            );
+            if (m.role === "SYSTEM")
+              return (
+                <View key={m.id}>
+                  {divider}
+                  <Text
+                    style={[
+                      styles.status,
+                      {
+                        color: colors.muted,
+                        textAlign: "center",
+                        marginVertical: 10,
+                      },
+                    ]}
+                  >
+                    {m.content}
+                  </Text>
+                </View>
+              );
+            const firstOfRun =
+              !previous ||
+              previous.role === "SYSTEM" ||
+              previous.role !== m.role ||
+              previous.authorName !== m.authorName;
+            const lastOfRun =
+              !next ||
+              next.role === "SYSTEM" ||
+              next.role !== m.role ||
+              next.authorName !== m.authorName;
+            return (
+              <View key={m.id}>
+                {divider}
+                <View
+                  style={{ alignItems: customer ? "flex-end" : "flex-start" }}
+                >
+                  {firstOfRun && !customer && (
+                    <View style={styles.whoRow}>
+                      <Text style={[styles.who, { color: colors.muted }]}>
+                        {m.role === "ASSISTANT"
+                          ? `${business} AI`
+                          : m.authorName}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.tag,
+                          m.role === "AGENT"
+                            ? { color: "#15803d", backgroundColor: "#dcfce7" }
+                            : {
+                                color: colors.muted,
+                                backgroundColor: colors.soft,
+                              },
+                        ]}
+                      >
+                        {m.role === "ASSISTANT" ? "AI" : "TEAM"}
+                      </Text>
+                    </View>
+                  )}
+                  <View
+                    style={[
+                      styles.bubble,
+                      customer
+                        ? {
+                            backgroundColor: colors.ink,
+                            borderBottomRightRadius: 5,
+                            marginTop: firstOfRun ? 10 : 0,
+                          }
+                        : {
+                            backgroundColor: colors.soft,
+                            borderTopLeftRadius: 5,
+                          },
+                    ]}
+                  >
+                    {m.content.split(/\n\s*\n/).map((paragraph, n, all) => (
+                      <Text
+                        key={n}
+                        selectable
+                        style={[
+                          styles.body,
+                          {
+                            color: customer ? colors.onInk : colors.text,
+                            marginBottom: n === all.length - 1 ? 0 : 8,
+                          },
+                        ]}
+                      >
+                        {paragraph}
+                      </Text>
+                    ))}
+                    {m.metadata?.citations?.map((c) => (
+                      <TouchableOpacity
+                        key={c.url}
+                        onPress={() => void Linking.openURL(c.url)}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            styles.status,
+                            { color: colors.muted, marginTop: 8 },
+                          ]}
+                        >
+                          ↗ {c.title}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {lastOfRun && !!clock(m.createdAt) && (
+                    <Text style={[styles.stamp, { color: colors.muted }]}>
+                      {clock(m.createdAt)}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+          {chat?.aiPending && (
+            <View
+              accessibilityLiveRegion="polite"
+              style={[styles.typing, { backgroundColor: colors.soft }]}
+            >
+              <ActivityIndicator size="small" color={colors.muted} />
+              <Text style={[styles.status, { color: colors.muted }]}>
+                {business} AI is typing
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+        {!atBottom && count > 0 && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${count} new messages, jump to latest`}
+            onPress={() => list.current?.scrollToEnd({ animated: true })}
+            style={[styles.jump, { backgroundColor: colors.ink }]}
+          >
+            <Text
+              style={{ color: colors.onInk, fontSize: 12, fontWeight: "700" }}
+            >
+              {count} new ↓
             </Text>
-          </View>
+          </Pressable>
         )}
-      </ScrollView>
+      </View>
       {chat && widgets.length > 0 && (
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          style={{
-            maxHeight: height * 0.38,
-            flexGrow: 0,
-            marginHorizontal: 12,
-          }}
+          style={{ maxHeight: height * 0.42, flexGrow: 0 }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 6 }}
         >
           <NativeSupportActions
             key={chat.activeWidgetMessageId || chat.id}
@@ -302,7 +606,7 @@ export function SupportView({
       )}
       {chat?.state === "RESOLVED" ? (
         <TouchableOpacity
-          style={[styles.send, { backgroundColor: accentColor }]}
+          style={[styles.resolved, { backgroundColor: accentColor }]}
           onPress={() => setChat(null)}
         >
           <Text style={styles.sendText}>Start a new conversation</Text>
@@ -314,7 +618,7 @@ export function SupportView({
             multiline
             value={text}
             onChangeText={setText}
-            placeholder="Type your message…"
+            placeholder={`Message ${business}…`}
             placeholderTextColor={colors.muted}
             maxLength={4000}
             style={[styles.input, { color: colors.text }]}
@@ -327,24 +631,20 @@ export function SupportView({
             style={[
               styles.send,
               {
-                backgroundColor: accentColor,
-                opacity: busy || !text.trim() ? 0.45 : 1,
+                backgroundColor: text.trim() ? accentColor : colors.soft,
               },
             ]}
           >
-            <Text style={styles.sendText}>Send</Text>
+            <Text
+              style={[
+                styles.sendText,
+                { color: text.trim() ? "#ffffff" : colors.muted },
+              ]}
+            >
+              ↑
+            </Text>
           </TouchableOpacity>
         </View>
-      )}
-      {config.showBranding !== false && (
-        <Text
-          style={[
-            styles.meta,
-            { color: colors.muted, textAlign: "center", padding: 10 },
-          ]}
-        >
-          Powered by UpStep
-        </Text>
       )}
     </View>
   );
@@ -352,7 +652,7 @@ export function SupportView({
 type ActionProps = {
   online: boolean;
   busy: boolean;
-  color: { soft: string; text: string; muted: string; line: string };
+  color: Colors;
   accentColor: string;
   name: string;
   email: string;
@@ -367,37 +667,98 @@ type ActionProps = {
     clientMessageId: string;
   }) => Promise<boolean>;
 };
+/** Replies get their own tray. Follow-up forms open from quiet text actions beside it. */
 function NativeSupportActions({
   widgets,
   ...props
 }: ActionProps & { widgets: SupportWidget[] }) {
-  const [selected, setSelected] = useState(
-    widgets.find((w) => w.type === "quick_replies")?.id || widgets[0]?.id,
-  );
-  const widget = widgets.find((w) => w.id === selected) || widgets[0];
+  const choice = widgets.find(isChoice);
+  const others = widgets.filter((w) => !isChoice(w));
+  const [opened, setOpened] = useState<string | null>(null);
+  const [answered, setAnswered] = useState(false);
+  const expanded = others.find((w) => w.id === opened);
+  const direct = choice ? [] : others;
+  const { color } = props;
   return (
-    <View style={{ gap: 8, paddingBottom: 4 }}>
-      {widgets.length > 1 && (
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {widgets.map((w) => (
-            <TouchableOpacity
-              key={w.id}
-              onPress={() => setSelected(w.id)}
-              style={[
-                styles.option,
-                { borderColor: props.color.line, padding: 8 },
-              ]}
+    <View style={{ gap: 10 }}>
+      {choice && !answered && "options" in choice && (
+        <View
+          style={[
+            styles.tray,
+            { borderColor: color.line, backgroundColor: color.bg },
+          ]}
+        >
+          <View style={styles.trayHead}>
+            <Text
+              numberOfLines={1}
+              style={[styles.trayLabel, { color: color.muted, flex: 1 }]}
             >
-              <Text style={{ fontSize: 13, color: props.color.text }}>
-                {w.type === "quick_replies" ? "Quick replies" : "Issue details"}
-              </Text>
-            </TouchableOpacity>
-          ))}
+              {(choice.title || "Quick replies").toUpperCase()}
+            </Text>
+            {others.map((w) => (
+              <TouchableOpacity
+                key={w.id}
+                disabled={props.busy}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: opened === w.id }}
+                onPress={() => setOpened(opened === w.id ? null : w.id)}
+                style={styles.textAction}
+              >
+                <Text style={[styles.textActionLabel, { color: color.muted }]}>
+                  {w.type === "contact_form"
+                    ? "Talk to a person"
+                    : "Add details"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ gap: 8, paddingRight: 24 }}
+          >
+            {choice.options.map((option) => (
+              <TouchableOpacity
+                key={option}
+                accessibilityRole="button"
+                disabled={props.busy}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: color.tint,
+                    borderColor: color.tintLine,
+                    opacity: props.busy ? 0.5 : 1,
+                  },
+                ]}
+                onPress={() =>
+                  void props.onReply(option).then((ok) => {
+                    if (ok) setAnswered(true);
+                  })
+                }
+              >
+                <Text style={[styles.chipIcon, { color: color.accentInk }]}>
+                  {"↩︎"}
+                </Text>
+                <Text style={[styles.chipText, { color: color.accentInk }]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
-      {widget && (
-        <NativeSupportWidget key={widget.id} {...props} widget={widget} />
+      {expanded && !direct.length && (
+        <NativeSupportWidget
+          key={expanded.id}
+          {...props}
+          widget={expanded}
+          startOpen
+        />
       )}
+      {direct.map((w) => (
+        <NativeSupportWidget key={w.id} {...props} widget={w} />
+      ))}
     </View>
   );
 }
@@ -410,51 +771,47 @@ function NativeSupportWidget({
   email,
   verified,
   online,
-  onReply,
+  startOpen = false,
   onContact,
   onDetails,
-}: ActionProps & { widget: SupportWidget }) {
-  const [step, setStep] = useState(0),
-    [issueOpen, setIssueOpen] = useState(false),
-    [more, setMore] = useState(false);
+}: ActionProps & { widget: SupportWidget; startOpen?: boolean }) {
+  const [step, setStep] = useState(startOpen ? 1 : 0),
+    [issueOpen, setIssueOpen] = useState(startOpen),
+    [more, setMore] = useState(false),
+    [done, setDone] = useState(false);
   const [fullName, setName] = useState(name),
     [address, setEmail] = useState(email),
     [summary, setSummary] = useState(""),
     [details, setDetails] = useState(""),
     [reference, setReference] = useState("");
   const id = useRef(supportMessageId());
+  if (done)
+    return (
+      <Text
+        accessibilityRole="alert"
+        style={[styles.status, { color: color.muted, paddingVertical: 8 }]}
+      >
+        ✓{" "}
+        {widget.type === "contact_form"
+          ? "Your request is with the team."
+          : "Details sent."}
+      </Text>
+    );
+  if (isChoice(widget)) return null;
   const action = (title: string, press: () => void, disabled = false) => (
     <TouchableOpacity
+      accessibilityRole="button"
       disabled={disabled || busy}
       style={[
         styles.send,
+        styles.wide,
         { backgroundColor: accentColor, opacity: disabled || busy ? 0.5 : 1 },
       ]}
       onPress={press}
     >
-      <Text style={styles.sendText}>{title}</Text>
+      <Text style={[styles.sendText, { color: "#ffffff" }]}>{title}</Text>
     </TouchableOpacity>
   );
-  if (widget.type === "quick_replies" || widget.type === "confirmation")
-    return (
-      <View style={{ gap: 8 }}>
-        <Text style={[styles.meta, { color: color.muted }]}>
-          {widget.title}
-        </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {widget.options.map((option) => (
-            <TouchableOpacity
-              key={option}
-              disabled={busy}
-              style={[styles.option, { borderColor: color.line }]}
-              onPress={() => void onReply(option)}
-            >
-              <Text style={{ fontSize: 13, color: color.text }}>{option}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    );
   const field = (
     label: string,
     value: string,
@@ -464,7 +821,7 @@ function NativeSupportWidget({
     maxLength = 160,
   ) => (
     <View style={{ gap: 4 }}>
-      <Text style={[styles.meta, { color: color.muted }]}>{label}</Text>
+      <Text style={[styles.status, { color: color.muted }]}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
         value={value}
@@ -480,146 +837,300 @@ function NativeSupportWidget({
       />
     </View>
   );
+  const title =
+    widget.type === "contact_form" && online
+      ? "Connect with the team"
+      : widget.title;
   return (
     <View
       style={[
-        styles.form,
-        { backgroundColor: color.soft, borderColor: color.line },
+        styles.card,
+        { borderColor: color.line, backgroundColor: color.bg },
       ]}
     >
       <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          gap: 8,
-        }}
+        style={[
+          styles.cardHead,
+          { backgroundColor: color.tint, borderColor: color.tintLine },
+        ]}
       >
-        <Text style={[styles.label, { color: color.text }]}>
-          {widget.title}
+        <Text
+          numberOfLines={1}
+          style={[styles.cardTitle, { color: color.accentInk, flex: 1 }]}
+        >
+          {title}
         </Text>
         {widget.type === "contact_form" && step > 0 && (
-          <Text style={[styles.meta, { color: color.muted }]}>{step} of 2</Text>
+          <Text style={[styles.status, { color: color.accentInk }]}>
+            {step} of 2
+          </Text>
         )}
       </View>
-      {widget.type === "contact_form" ? (
-        step === 0 ? (
-          <>
-            <Text
-              numberOfLines={2}
-              style={[styles.meta, { color: color.muted }]}
-            >
-              {widget.summary}
-            </Text>
-            {action("Ask the team", () => setStep(1))}
-          </>
+      <View style={{ padding: 12, gap: 8 }}>
+        {widget.type === "contact_form" ? (
+          step === 0 ? (
+            <>
+              <Text
+                numberOfLines={2}
+                style={[styles.status, { color: color.muted }]}
+              >
+                {widget.summary}
+              </Text>
+              {action("Talk to a person", () => setStep(1))}
+            </>
+          ) : (
+            <>
+              {step === 1
+                ? field("Your name", fullName, setName, false, false, 100)
+                : field(
+                    "Email for support follow-up",
+                    address,
+                    setEmail,
+                    true,
+                    verified && !!email,
+                    254,
+                  )}
+              <View
+                style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.option,
+                    { borderColor: color.line, minHeight: 44 },
+                  ]}
+                  disabled={busy}
+                  onPress={() => setStep(step - 1)}
+                >
+                  <Text style={{ color: color.text, fontSize: 13 }}>Back</Text>
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  {action(
+                    step === 1
+                      ? "Continue"
+                      : online
+                        ? "Request transfer"
+                        : "Send to the team",
+                    () => {
+                      if (step === 1) setStep(2);
+                      else
+                        void onContact(fullName, address).then((ok) => {
+                          if (ok) setDone(true);
+                        });
+                    },
+                    !fullName.trim() || (step === 2 && !address.trim()),
+                  )}
+                </View>
+              </View>
+            </>
+          )
+        ) : !issueOpen ? (
+          action("Add issue details", () => setIssueOpen(true))
         ) : (
           <>
-            {step === 1
-              ? field("Your name", fullName, setName, false, false, 100)
-              : field(
-                  "Email for support follow-up",
-                  address,
-                  setEmail,
-                  true,
-                  verified && !!email,
-                  254,
-                )}
-            <View
-              style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
-            >
-              <TouchableOpacity
-                style={styles.option}
-                disabled={busy}
-                onPress={() => setStep(step - 1)}
+            {field("What is happening?", summary, setSummary)}
+            <TouchableOpacity onPress={() => setMore(!more)}>
+              <Text
+                style={[
+                  styles.status,
+                  { color: color.muted, textDecorationLine: "underline" },
+                ]}
               >
-                <Text style={{ color: color.text, fontSize: 13 }}>Back</Text>
-              </TouchableOpacity>
-              <View style={{ flex: 1 }}>
-                {action(
-                  step === 1
-                    ? "Continue"
-                    : online
-                      ? "Request transfer"
-                      : "Send to the team",
-                  () => {
-                    if (step === 1) setStep(2);
-                    else void onContact(fullName, address);
-                  },
-                  !fullName.trim() || (step === 2 && !address.trim()),
+                {more
+                  ? "Hide optional details"
+                  : "Add notes or a reference (optional)"}
+              </Text>
+            </TouchableOpacity>
+            {more && (
+              <>
+                {field(
+                  "What have you tried?",
+                  details,
+                  setDetails,
+                  false,
+                  false,
+                  2000,
                 )}
-              </View>
-            </View>
+                {field(
+                  "Order or issue reference",
+                  reference,
+                  setReference,
+                  false,
+                  false,
+                  100,
+                )}
+              </>
+            )}
+            {action(
+              "Send details",
+              () =>
+                void onDetails({
+                  widgetId: widget.id,
+                  summary,
+                  details,
+                  reference,
+                  clientMessageId: id.current,
+                }).then((ok) => {
+                  if (ok) setDone(true);
+                }),
+              !summary.trim(),
+            )}
           </>
-        )
-      ) : !issueOpen ? (
-        action("Add issue details", () => setIssueOpen(true))
-      ) : (
-        <>
-          {field("What is happening?", summary, setSummary)}
-          <TouchableOpacity onPress={() => setMore(!more)}>
-            <Text
-              style={[
-                styles.meta,
-                { color: color.muted, textDecorationLine: "underline" },
-              ]}
-            >
-              {more
-                ? "Hide optional details"
-                : "Add notes or a reference (optional)"}
-            </Text>
-          </TouchableOpacity>
-          {more && (
-            <>
-              {field(
-                "What have you tried?",
-                details,
-                setDetails,
-                false,
-                false,
-                2000,
-              )}
-              {field(
-                "Order or issue reference",
-                reference,
-                setReference,
-                false,
-                false,
-                100,
-              )}
-            </>
-          )}
-          {action(
-            "Send details",
-            () =>
-              void onDetails({
-                widgetId: widget.id,
-                summary,
-                details,
-                reference,
-                clientMessageId: id.current,
-              }),
-            !summary.trim(),
-          )}
-        </>
-      )}
+        )}
+      </View>
     </View>
   );
 }
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  heading: { padding: 16, borderBottomWidth: StyleSheet.hairlineWidth },
-  title: { fontSize: 18, fontWeight: "600" },
-  hero: { fontSize: 28, fontWeight: "600" },
-  body: { fontSize: 15, lineHeight: 23 },
-  meta: { fontSize: 13, lineHeight: 19 },
-  label: { fontSize: 15, fontWeight: "600" },
-  bubble: { padding: 12, borderRadius: 16 },
-  ticket: { padding: 12, gap: 4 },
-  composer: {
-    margin: 12,
+  heading: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  avatarWrap: { width: 36, height: 36 },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dot: {
+    position: "absolute",
+    right: -3,
+    bottom: -3,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    borderWidth: 2,
+  },
+  title: { fontSize: 15, fontWeight: "600" },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  status: { fontSize: 13, lineHeight: 18 },
+  ticket: {
+    fontSize: 11,
+    fontWeight: "600",
+    fontFamily: undefined,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 10,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    overflow: "hidden",
+  },
+  more: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  info: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  infoRow: {
+    minHeight: 32,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  hero: { fontSize: 28, fontWeight: "600" },
+  body: { fontSize: 15, lineHeight: 22 },
+  bubble: {
+    maxWidth: "88%",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
+  },
+  whoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    marginBottom: 4,
+    marginLeft: 2,
+  },
+  who: { fontSize: 12, fontWeight: "600" },
+  tag: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    paddingHorizontal: 5,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  stamp: { fontSize: 11, marginTop: 3, marginHorizontal: 2 },
+  newRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+  },
+  rule: { flex: 1, height: StyleSheet.hairlineWidth },
+  newText: { fontSize: 11, fontWeight: "700", letterSpacing: 0.6 },
+  typing: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
+    borderTopLeftRadius: 5,
+  },
+  jump: {
+    position: "absolute",
+    bottom: 10,
+    alignSelf: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 999,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  tray: { borderWidth: 1, borderRadius: 16, padding: 10, gap: 8 },
+  trayHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  trayLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.7 },
+  textAction: { minHeight: 32, justifyContent: "center", paddingHorizontal: 4 },
+  textActionLabel: { fontSize: 12, fontWeight: "600" },
+  chip: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingLeft: 12,
+    paddingRight: 16,
+    borderRadius: 999,
+    borderWidth: 1.5,
+  },
+  chipIcon: { fontSize: 15, fontWeight: "700" },
+  chipText: { fontSize: 14, fontWeight: "600" },
+  card: { borderWidth: 1, borderRadius: 16, overflow: "hidden" },
+  cardHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+  },
+  cardTitle: { fontSize: 12, fontWeight: "700" },
+  composer: {
+    marginHorizontal: 10,
+    marginBottom: 10,
+    marginTop: 4,
+    borderWidth: 1.5,
+    borderRadius: 26,
+    paddingLeft: 14,
+    paddingRight: 4,
+    paddingVertical: 4,
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 8,
@@ -627,28 +1138,33 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    lineHeight: 24,
-    minHeight: 44,
+    lineHeight: 22,
+    minHeight: 40,
     maxHeight: 120,
-    padding: 8,
+    paddingVertical: 9,
   },
   send: {
-    minHeight: 44,
-
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
-  sendText: { fontSize: 14, fontWeight: "600", color: "white" },
-  option: { minHeight: 44, borderWidth: 1, borderRadius: 12, padding: 12 },
-  form: {
-    marginTop: 0,
+  wide: { width: "100%", borderRadius: 12, height: undefined, minHeight: 44 },
+  resolved: {
+    margin: 12,
+    minHeight: 48,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sendText: { fontSize: 15, fontWeight: "700", color: "white" },
+  option: {
+    minHeight: 44,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 12,
-    gap: 8,
+    justifyContent: "center",
   },
   formInput: {
     borderWidth: 1,

@@ -89,3 +89,20 @@ Version 0.7.2 adds a native Support tab to the existing feedback sheet. Enable C
 Chat includes compact text, neutral message bubbles, quick replies, issue detail cards and resolution confirmations. Active actions stay near the composer, and contact details use two short steps. The team contact form appears after AI understands an unresolved issue, and requires name/email before handoff. Tickets include a reference and the business contact email.
 
 Business branding comes from Customer support → Settings in UpStep. Website learning detects a business icon for review; you can replace it with an upload or public image URL. The approved icon is shared by the web and native chat widgets. Setup questions offer suggested choices when appropriate, with a custom answer field.
+
+### Unread replies and sounds
+
+While the chat is closed, the SDK checks for replies every 20 seconds (only when the app is active and the customer already has a conversation). `FeedbackButton` shows a count badge, and the phone vibrates briefly for a new reply unless the customer turns off "New message alerts" in the chat.
+
+React Native has no built-in audio, so for a sound or a local notification use `onSupportMessage`:
+
+```tsx
+<FeedbackProvider
+  apiKey="YOUR_PROJECT_KEY"
+  onSupportMessage={({ author, preview, count }) => {
+    playChime(); // your own sound or notification library
+  }}
+>
+```
+
+Building your own launcher? Read the count from `useUpstep().supportUnread`.

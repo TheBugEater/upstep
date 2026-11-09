@@ -4,9 +4,16 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
-import { LayoutAnimation, Platform, UIManager } from "react-native";
+import {
+  AppState,
+  LayoutAnimation,
+  Platform,
+  UIManager,
+  Vibration,
+} from "react-native";
 import type {
   Feedback,
   FeedbackType,
@@ -48,6 +55,8 @@ interface UpstepContextValue {
   showBranding: boolean;
   supportConfig: SupportConfiguration | null;
   supportRevision: number;
+  /** Unread support replies while the chat is closed. Use it to badge your own launcher. */
+  supportUnread: number;
 }
 
 const UpstepContext = createContext<UpstepContextValue | null>(null);
@@ -64,6 +73,52 @@ export function FeedbackProvider({
     useState<SupportConfiguration | null>(null);
   const [supportRevision, setSupportRevision] = useState(0);
   const [showBranding, setShowBranding] = useState(true);
+  const [supportUnread, setSupportUnread] = useState(0);
+  const previousUnread = useRef(0);
+  const isOpenRef = useRef(false);
+  const onSupportMessage = useRef(config.onSupportMessage);
+  onSupportMessage.current = config.onSupportMessage;
+  isOpenRef.current = isOpen;
+
+  const checkSupport = useCallback(async () => {
+    try {
+      const unread = await client.support.unread();
+      if (isOpenRef.current) return;
+      setSupportUnread(unread.count);
+      if (unread.count > previousUnread.current && unread.latest) {
+        if (await client.support.soundEnabled()) Vibration.vibrate(40);
+        onSupportMessage.current?.({
+          author: unread.latest.author,
+          preview: unread.latest.preview,
+          count: unread.count,
+        });
+      }
+      previousUnread.current = unread.count;
+    } catch {
+      // checking for replies is best effort
+    }
+  }, [client]);
+
+  // While the chat is closed, look for replies so the launcher can show a count.
+  useEffect(() => {
+    if (!supportConfig?.enabled) return;
+    if (isOpen) {
+      previousUnread.current = 0;
+      setSupportUnread(0);
+      return;
+    }
+    void checkSupport();
+    const timer = setInterval(() => {
+      if (AppState.currentState === "active") void checkSupport();
+    }, 20000);
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void checkSupport();
+    });
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, [supportConfig?.enabled, isOpen, supportRevision, checkSupport]);
 
   useEffect(() => {
     client.setUserId(config.userId);
@@ -186,6 +241,7 @@ export function FeedbackProvider({
         showBranding,
         supportConfig,
         supportRevision,
+        supportUnread,
       }}
     >
       {children}

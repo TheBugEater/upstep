@@ -8,6 +8,28 @@ export interface SupportStorage {
   setItem(key: string, value: string): Promise<void>;
   removeItem(key: string): Promise<void>;
 }
+/** What a customer has not read yet in their latest conversation. */
+export interface SupportUnreadSummary {
+  count: number;
+  chatId: string | null;
+  latest?: { author: string; role: string; preview: string };
+}
+type SeenRecord = { chat: string; id: string };
+/** Incoming AI or team messages after the given message. System notes and the customer's own messages never count. */
+export function unreadSupportMessages<T extends { id: string; role: string }>(
+  messages: T[],
+  seenId: string | null,
+): T[] {
+  if (seenId === null) return [];
+  const readable = messages.filter((m) => m.role !== "SYSTEM");
+  const index = readable.findIndex((m) => m.id === seenId);
+  if (index < 0) return [];
+  return readable.slice(index + 1).filter((m) => m.role !== "CUSTOMER");
+}
+export function supportPreview(text: string, max = 120) {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
+}
 export class SupportApiError extends Error {
   constructor(
     message: string,
@@ -31,6 +53,8 @@ export class SupportClient {
   private readonly baseUrl: string;
   private readonly key: string;
   private readonly storageKey: string;
+  private readonly seenKey: string;
+  private readonly soundKey: string;
   constructor(
     config: Pick<UpstepConfig, "apiKey" | "baseUrl" | "supportIdentityToken">,
     private storage?: SupportStorage,
@@ -40,6 +64,8 @@ export class SupportClient {
     this.key = config.apiKey;
     this.identityToken = config.supportIdentityToken;
     this.storageKey = `upstep:support:${this.baseUrl}:${this.key}`;
+    this.seenKey = `upstep:support-seen:${this.baseUrl}:${this.key}`;
+    this.soundKey = `upstep:support-sound:${this.baseUrl}:${this.key}`;
   }
   async identify(token: string | undefined) {
     if (token === this.identityToken) return;
@@ -184,5 +210,86 @@ export class SupportClient {
       name,
       email,
     });
+  }
+  /** True when this customer already has a support session, so checking for replies creates nothing new. */
+  async hasSession() {
+    if (this.token || this.identityToken) return true;
+    try {
+      return !!(await this.storage?.getItem(this.storageKey));
+    } catch {
+      return false;
+    }
+  }
+  /** The last message the customer has read in a conversation, if one was recorded. */
+  async seenId(chatId: string): Promise<string | null> {
+    try {
+      const saved: SeenRecord | null = JSON.parse(
+        (await this.storage?.getItem(this.seenKey)) || "null",
+      );
+      return saved?.chat === chatId ? saved.id : null;
+    } catch {
+      return null;
+    }
+  }
+  /** Record that the customer has read everything in this conversation. */
+  async markSeen(conversation: SupportConversation) {
+    const last = conversation.messages
+      .filter((m) => m.role !== "SYSTEM")
+      .at(-1);
+    if (!last) return;
+    const record: SeenRecord = { chat: conversation.id, id: last.id };
+    await this.storage
+      ?.setItem(this.seenKey, JSON.stringify(record))
+      .catch(() => {});
+  }
+  /**
+   * Unread AI or team messages in the latest conversation. A conversation with
+   * no saved record counts as read, so returning customers never see a stale count.
+   */
+  async unread(): Promise<SupportUnreadSummary> {
+    const none = { count: 0, chatId: null };
+    if (!(await this.hasSession())) return none;
+    const first = (await this.conversations())[0];
+    if (!first) return none;
+    const chat = await this.conversation(first.id);
+    const last = chat.messages.filter((m) => m.role !== "SYSTEM").at(-1);
+    if (!last) return { count: 0, chatId: chat.id };
+    let saved: SeenRecord | null = null;
+    try {
+      saved = JSON.parse((await this.storage?.getItem(this.seenKey)) || "null");
+    } catch {
+      saved = null;
+    }
+    if (saved?.chat !== chat.id) {
+      await this.markSeen(chat);
+      return { count: 0, chatId: chat.id };
+    }
+    const unread = unreadSupportMessages(chat.messages, saved.id);
+    const latest = unread.at(-1);
+    return {
+      count: unread.length,
+      chatId: chat.id,
+      ...(latest
+        ? {
+            latest: {
+              author: latest.role === "ASSISTANT" ? "AI" : latest.authorName,
+              role: latest.role,
+              preview: supportPreview(latest.content),
+            },
+          }
+        : {}),
+    };
+  }
+  async soundEnabled() {
+    try {
+      return (await this.storage?.getItem(this.soundKey)) !== "off";
+    } catch {
+      return true;
+    }
+  }
+  async setSoundEnabled(enabled: boolean) {
+    await this.storage
+      ?.setItem(this.soundKey, enabled ? "on" : "off")
+      .catch(() => {});
   }
 }

@@ -49,7 +49,12 @@ const Upstep = {
   identifySupport(token: string | undefined) {
     if (_client) _client.supportIdentityToken = token;
     const frame = document.querySelector<HTMLIFrameElement>("#upstep-support-frame");
-    if (frame && _client) frame.contentWindow?.postMessage({type: "upstep:support:identity", token}, new URL(_client.baseUrl).origin);
+    if (frame && _client) frame.contentWindow?.postMessage({type: "upstep:support:identity", token, visible: _widget?.isChatVisible() ?? true}, new URL(_client.baseUrl).origin);
+  },
+
+  /** Subscribe to the number of unread support messages, e.g. to drive your own launcher badge. */
+  onUnread(listener: (count: number) => void) {
+    return _widget?.onUnread(listener) ?? (() => {});
   },
 
   get client(): UpstepApiClient {

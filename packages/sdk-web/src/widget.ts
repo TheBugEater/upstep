@@ -1,5 +1,5 @@
 import type { Feedback, FeedbackType } from "@upstep/types";
-import { UpstepApiClient } from "./api";
+import { UpstepApiClient, type SupportUnread } from "./api";
 
 const DEFAULT_ACCENT = "#D97757";
 
@@ -117,6 +117,14 @@ function buildStyles(
 .upstep-badge-feature{background:#e9f0fd;color:#3b76d6}
 .upstep-badge-general{background:${p.bgSoft};color:${p.textSoft}}
 .upstep-feedback-date{font-size:11px;color:${p.textFaint}}
+#upstep-btn{position:fixed}
+.upstep-unread{position:absolute;top:-7px;right:-5px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:${p.text};color:${p.bg};border:2px solid ${p.bg};font-size:12px;font-weight:700;line-height:18px;text-align:center;font-variant-numeric:tabular-nums;animation:upstep-pop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes upstep-pop{from{transform:scale(.4)}to{transform:scale(1)}}
+#upstep-toast{position:fixed;bottom:84px;right:24px;z-index:9998;max-width:min(300px,calc(100vw - 48px));display:grid;gap:2px;text-align:left;background:${p.bg};color:${p.text};border:1px solid ${p.border};border-radius:14px 14px 4px 14px;padding:10px 12px;box-shadow:0 10px 32px rgba(0,0,0,.2);cursor:pointer;animation:upstep-rise .26s cubic-bezier(.16,1,.3,1)}
+#upstep-toast b{font-size:12px}
+#upstep-toast span{font-size:14px;line-height:1.4;color:${p.textSoft};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#upstep-toast em{font-style:normal;font-size:11px;font-weight:600;color:${accent}}
+@media(prefers-reduced-motion:reduce){.upstep-unread,#upstep-toast{animation:none}}
 .upstep-empty{text-align:center;color:${p.textFaint};font-size:14px;padding:40px 0}
 .upstep-empty strong{display:block;color:${p.textSoft};font-size:15px;margin-bottom:4px}
 `;
@@ -150,6 +158,11 @@ export class UpstepWidget {
   private palette: Palette;
   private hasSupport = false;
   private disconnectSupport: (() => void) | null = null;
+  private unread = 0;
+  private toastTimer: ReturnType<typeof setTimeout> | undefined;
+  private audio: AudioContext | null = null;
+  private frameTheme: "light" | "dark" | null = null;
+  private unreadListeners = new Set<(count: number) => void>();
 
   constructor(client: UpstepApiClient, options: WidgetOptions = {}) {
     this.client = client;
@@ -169,6 +182,9 @@ export class UpstepWidget {
         const label = document.querySelector("#upstep-btn span");
         if (label) label.textContent = "Help & feedback";
         if (this.isOpen) this.renderModal();
+        // Visitors who have opened the chat before keep it loaded out of sight,
+        // so a reply can raise a badge while it is closed. Everyone else loads nothing extra.
+        else if (this.hasOpenedSupport()) this.preloadSupport();
       }
     });
   }
@@ -181,6 +197,20 @@ export class UpstepWidget {
   /** Close the feedback modal programmatically. */
   closeWidget() {
     this.closeModal();
+  }
+
+  /** Whether the chat window is currently on screen. */
+  isChatVisible() {
+    return this.isOpen;
+  }
+
+  /** Number of unread support messages. Subscribe to drive your own launcher or badge. */
+  onUnread(listener: (count: number) => void) {
+    this.unreadListeners.add(listener);
+    listener(this.unread);
+    return () => {
+      this.unreadListeners.delete(listener);
+    };
   }
 
   private injectStyles() {
@@ -202,22 +232,175 @@ export class UpstepWidget {
     document.body.appendChild(btn);
   }
 
+  private supportFrame() {
+    return document.querySelector<HTMLIFrameElement>("#upstep-support-frame");
+  }
+
+  private get usedKey() {
+    return `upstep:support-opened:${this.client.baseUrl}`;
+  }
+
+  private hasOpenedSupport() {
+    try {
+      return localStorage.getItem(this.usedKey) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  private preloadSupport() {
+    this.tab = "support";
+    this.renderModal(true);
+  }
+
   private openModal() {
-    if (!this.isOpen && this.hasSupport) this.tab = "support";
+    this.unlockAudio();
+    if (!this.isOpen && this.hasSupport) {
+      this.tab = "support";
+      try {
+        localStorage.setItem(this.usedKey, "1");
+      } catch {
+        /* storage can be blocked */
+      }
+    }
+    const theme = resolveTheme(this.themeMode);
+    const backdrop = document.getElementById("upstep-backdrop");
+    const frame = this.supportFrame();
+    // The chat was preloaded and hidden: show it as it is, with its conversation intact.
+    if (
+      !this.isOpen &&
+      backdrop &&
+      frame &&
+      backdrop.style.display === "none" &&
+      this.frameTheme === theme
+    ) {
+      this.isOpen = true;
+      backdrop.style.display = "";
+      this.client.notifySupportVisibility(frame, true);
+      this.setUnread(0);
+      this.fetchFeed();
+      return;
+    }
     this.isOpen = true;
     // Re-resolve "auto" on every open so a theme toggled mid-session (no
     // reload) is picked up instead of freezing at the theme seen at mount.
-    this.palette = resolveTheme(this.themeMode) === "dark" ? DARK : LIGHT;
+    this.palette = theme === "dark" ? DARK : LIGHT;
     this.injectStyles();
     this.fetchFeed();
     this.renderModal();
+    this.setUnread(0);
   }
 
   private closeModal() {
+    this.isOpen = false;
+    if (this.hasSupport) {
+      const frame = this.supportFrame();
+      const backdrop = document.getElementById("upstep-backdrop");
+      if (frame && backdrop) {
+        backdrop.style.display = "none";
+        this.client.notifySupportVisibility(frame, false);
+      } else {
+        this.preloadSupport();
+      }
+      return;
+    }
     this.disconnectSupport?.();
     this.disconnectSupport = null;
-    this.isOpen = false;
     document.getElementById("upstep-backdrop")?.remove();
+  }
+
+  private setUnread(count: number) {
+    this.unread = count;
+    const btn = document.getElementById("upstep-btn");
+    const badge = btn?.querySelector(".upstep-unread");
+    if (btn) {
+      if (count > 0) {
+        const el = badge ?? document.createElement("span");
+        el.className = "upstep-unread";
+        el.textContent = count > 9 ? "9+" : String(count);
+        if (!badge) btn.appendChild(el);
+      } else badge?.remove();
+      btn.setAttribute(
+        "aria-label",
+        count > 0
+          ? `Open help and feedback, ${count} unread ${count === 1 ? "message" : "messages"}`
+          : "Open help and feedback",
+      );
+    }
+    const base = document.title.replace(/^\(\d+\)\s/, "");
+    document.title = count > 0 ? `(${count}) ${base}` : base;
+    if (count === 0) this.hideToast();
+    this.unreadListeners.forEach((listener) => listener(count));
+  }
+
+  private onSupportUnread(unread: SupportUnread) {
+    if (this.isOpen) return this.setUnread(0);
+    this.setUnread(unread.count);
+    if (unread.newMessage && unread.count > 0) {
+      this.showToast(unread);
+      if (unread.sound) this.chime();
+    }
+  }
+
+  private showToast(unread: SupportUnread) {
+    this.hideToast();
+    const toast = document.createElement("button");
+    toast.id = "upstep-toast";
+    toast.type = "button";
+    toast.setAttribute("role", "status");
+    const who = document.createElement("b");
+    who.textContent = unread.author || "New message";
+    const text = document.createElement("span");
+    text.textContent = unread.preview;
+    const hint = document.createElement("em");
+    hint.textContent =
+      unread.count > 1 ? `${unread.count} new messages` : "Tap to reply";
+    toast.append(who, text, hint);
+    toast.addEventListener("click", () => this.openModal());
+    document.body.appendChild(toast);
+    this.toastTimer = setTimeout(() => this.hideToast(), 9000);
+  }
+
+  private hideToast() {
+    clearTimeout(this.toastTimer);
+    document.getElementById("upstep-toast")?.remove();
+  }
+
+  /** Browsers only allow sound after a click, so prepare audio when the chat is first opened. */
+  private unlockAudio() {
+    try {
+      const Context =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!Context) return;
+      this.audio = this.audio ?? new Context();
+      if (this.audio.state === "suspended") void this.audio.resume();
+    } catch {
+      /* sound is optional */
+    }
+  }
+
+  private chime() {
+    const ctx = this.audio;
+    if (!ctx || ctx.state !== "running") return;
+    const start = ctx.currentTime;
+    for (const [frequency, offset] of [
+      [880, 0],
+      [1318, 0.12],
+    ] as const) {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.0001, start + offset);
+      gain.gain.exponentialRampToValueAtTime(0.14, start + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + offset + 0.5);
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start(start + offset);
+      oscillator.stop(start + offset + 0.55);
+    }
   }
 
   private async fetchFeed() {
@@ -230,7 +413,7 @@ export class UpstepWidget {
     }
   }
 
-  private renderModal() {
+  private renderModal(hidden = false) {
     this.disconnectSupport?.();
     this.disconnectSupport = null;
     const backdrop = document.createElement("div");
@@ -249,6 +432,7 @@ export class UpstepWidget {
     `;
 
     document.getElementById("upstep-backdrop")?.remove();
+    if (hidden) backdrop.style.display = "none";
     document.body.appendChild(backdrop);
 
     backdrop
@@ -266,7 +450,11 @@ export class UpstepWidget {
     );
     if (frame) {
       frame.style.color = this.accent;
-      this.disconnectSupport = this.client.connectSupportFrame(frame);
+      this.frameTheme = this.palette.bg === "#000000" ? "dark" : "light";
+      this.disconnectSupport = this.client.connectSupportFrame(frame, {
+        isVisible: () => this.isOpen,
+        onUnread: (unread) => this.onSupportUnread(unread),
+      });
     }
     this.bindSubmitForm();
     this.bindVoteButtons();

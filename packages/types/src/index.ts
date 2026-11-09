@@ -94,6 +94,15 @@ export interface UpstepConfig {
   userId?: string;
   /** Server-signed customer identity JWT for private support conversations. */
   supportIdentityToken?: string;
+  /**
+   * React Native: called when a support reply arrives while the chat is closed.
+   * Use it to play a sound or raise a local notification. The SDK itself vibrates briefly.
+   */
+  onSupportMessage?: (message: {
+    author: string;
+    preview: string;
+    count: number;
+  }) => void;
   /** Show chat inside the existing widget when enabled for the project. Defaults to true. */
   chat?: boolean;
   /** Base URL of your Upstep backend. Defaults to https://upstep.dev */
