@@ -1,9 +1,14 @@
-import type { UpstepConfig } from "@upstep/types";
+import type { UpstepColorOverrides, UpstepConfig } from "@upstep/types";
 import { UpstepApiClient } from "./api";
 import { UpstepWidget, type WidgetOptions } from "./widget";
 
-export type { UpstepConfig };
+export type {
+  UpstepConfig,
+  UpstepColorOverrides,
+  UpstepThemeColors,
+} from "@upstep/types";
 export { UpstepApiClient };
+export { readableTextOn, buildWidgetPalette } from "./theme";
 
 let _client: UpstepApiClient | null = null;
 let _widget: UpstepWidget | null = null;
@@ -17,6 +22,9 @@ const Upstep = {
       if (config.position !== undefined) widgetOptions.position = config.position;
       if (config.theme !== undefined) widgetOptions.theme = config.theme;
       if (config.launcher !== undefined) widgetOptions.launcher = config.launcher;
+      if (config.colors !== undefined) widgetOptions.colors = config.colors;
+      if (config.radius !== undefined) widgetOptions.radius = config.radius;
+      if (config.fontFamily !== undefined) widgetOptions.fontFamily = config.fontFamily;
       const mount = () => {
         _widget = new UpstepWidget(_client!, widgetOptions);
         _widget.mount();
@@ -83,6 +91,20 @@ if (typeof document !== "undefined") {
     if (accentColor) config.accentColor = accentColor;
     if (position === "left" || position === "right") config.position = position;
     if (theme === "light" || theme === "dark" || theme === "auto") config.theme = theme;
+    // data-colors='{"background":"#0f172a"}', data-radius="8", data-font-family="Inter, sans-serif"
+    const colors = currentScript?.dataset["colors"];
+    if (colors) {
+      try {
+        const parsed: unknown = JSON.parse(colors);
+        if (parsed && typeof parsed === "object") config.colors = parsed as UpstepColorOverrides;
+      } catch {
+        console.warn("Upstep: data-colors must be JSON");
+      }
+    }
+    const radius = currentScript?.dataset["radius"];
+    if (radius && Number.isFinite(Number(radius))) config.radius = Number(radius);
+    const fontFamily = currentScript?.dataset["fontFamily"];
+    if (fontFamily) config.fontFamily = fontFamily;
     Upstep.init(config);
   }
 }

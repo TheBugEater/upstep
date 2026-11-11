@@ -81,6 +81,48 @@ export interface Vote {
   createdAt: string;
 }
 
+// ─── Theming ─────────────────────────────────────────────────────────────────
+
+/**
+ * Colors you can override in the Upstep widgets. Every key is optional: an
+ * unset key keeps the built-in light or dark palette.
+ *
+ * Use hex (`#1d4ed8`, `#1d4ed8cc`) or `rgb()` / `rgba()` values. The web
+ * widget also takes other CSS colors, but the hosted support chat ignores
+ * anything that is not hex or rgb, and shades derived from a color (hover
+ * fills, faint text) need hex or rgb to be computed.
+ */
+export interface UpstepThemeColors {
+  /** Panel background. */
+  background: string;
+  /** Inputs, tabs, chat bubbles and other soft fills. */
+  surface: string;
+  /** Hairlines and input borders. */
+  border: string;
+  /** Primary text. */
+  text: string;
+  /** Secondary text: hints, timestamps, placeholders. */
+  textMuted: string;
+  /**
+   * Text and icons drawn on the accent color (launcher, primary buttons).
+   * When unset it is picked automatically: white, unless white is hard to
+   * read on the accent, then near-black.
+   */
+  accentText: string;
+}
+
+/**
+ * Color overrides. Top-level keys apply in both light and dark mode;
+ * `light` / `dark` refine one mode and win over the top-level keys.
+ *
+ * @example
+ * colors: { border: "#e2e8f0", light: { background: "#f8fafc" }, dark: { background: "#0f172a" } }
+ */
+export type UpstepColorOverrides = Partial<UpstepThemeColors> & {
+  light?: Partial<UpstepThemeColors>;
+  dark?: Partial<UpstepThemeColors>;
+};
+
 // ─── SDK init options ─────────────────────────────────────────────────────────
 
 export interface UpstepConfig {
@@ -117,6 +159,22 @@ export interface UpstepConfig {
    * `prefers-color-scheme`. Defaults to "auto".
    */
   theme?: "light" | "dark" | "auto";
+  /**
+   * Override the widget's panel colors so it matches your brand. Unset keys
+   * keep the default palette. See {@link UpstepColorOverrides}.
+   */
+  colors?: UpstepColorOverrides;
+  /**
+   * Corner radius in px for cards, inputs and buttons. Defaults to 12. The
+   * panel and pills scale with it, and 0 gives square corners. Clamped to 0–32.
+   */
+  radius?: number;
+  /**
+   * Web only: CSS font-family for the widget, e.g. `"Inter, sans-serif"`.
+   * Defaults to the system UI font. The hosted support chat can only use
+   * fonts installed on the visitor's device, not web fonts your page loads.
+   */
+  fontFamily?: string;
   /** @deprecated Website launchers and panels are always anchored bottom-right. */
   position?: "left" | "right";
   /**

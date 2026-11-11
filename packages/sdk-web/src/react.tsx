@@ -12,47 +12,33 @@ import type {
   Feedback,
   FeedbackType,
   FeedbackWithComments,
+  UpstepColorOverrides,
   UpstepConfig,
 } from "@upstep/types";
 import { UpstepApiClient } from "./api";
+import {
+  DEFAULT_ACCENT,
+  buildWidgetPalette,
+  scaleRadius,
+  withAlpha,
+  type WidgetPalette,
+} from "./theme";
 
-const DEFAULT_ACCENT = "#D97757";
+const SYSTEM_FONT =
+  '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
 
 // ─── Theming ─────────────────────────────────────────────────────────────────
 
 type ThemeMode = "light" | "dark" | "auto";
+type Palette = WidgetPalette;
 
-interface Palette {
-  bg: string;
-  bgSoft: string;
-  bgHover: string;
-  text: string;
-  textSoft: string;
-  textFaint: string;
-  border: string;
-  overlay: string;
+/** Accent at a low opacity for selected fills. */
+function tint(accent: string, alpha: number) {
+  return (
+    withAlpha(accent, alpha) ??
+    `color-mix(in srgb, ${accent} ${Math.round(alpha * 100)}%, transparent)`
+  );
 }
-
-const LIGHT: Palette = {
-  bg: "#ffffff",
-  bgSoft: "#f5f5f5",
-  bgHover: "#ededed",
-  text: "#1a1915",
-  textSoft: "#56544d",
-  textFaint: "#9b9890",
-  border: "#e8e6df",
-  overlay: "rgba(26,25,21,.45)",
-};
-const DARK: Palette = {
-  bg: "#000000",
-  bgSoft: "#171717",
-  bgHover: "#262626",
-  text: "#f5f4f0",
-  textSoft: "#b4b1a8",
-  textFaint: "#7d7a72",
-  border: "#33312c",
-  overlay: "rgba(0,0,0,.6)",
-};
 
 /** Reads the `.dark` class / `data-theme="dark"` convention most apps toggle
  *  on <html> (Tailwind's `darkMode: "class"` and friends). Absence of that
@@ -70,7 +56,14 @@ function isHostDark(): boolean {
   );
 }
 
-function usePalette(mode: ThemeMode): Palette {
+function usePalette(
+  mode: ThemeMode,
+  look: {
+    accentColor: string;
+    colors: UpstepColorOverrides | undefined;
+    radius: number | undefined;
+  },
+): Palette {
   // Initial value must be SSR-safe (no `window`/`document` access) so it
   // matches the server-rendered markup exactly. React does not patch DOM
   // attributes that mismatch during hydration, so if this returned the real
@@ -98,7 +91,19 @@ function usePalette(mode: ThemeMode): Palette {
     return () => observer.disconnect();
   }, [mode]);
 
-  return isDark ? DARK : LIGHT;
+  const { accentColor, colors, radius } = look;
+  return React.useMemo(
+    () =>
+      buildWidgetPalette({
+        mode: isDark ? "dark" : "light",
+        accentColor,
+        colors,
+        radius,
+      }),
+    // `colors` is usually an inline object literal, so compare it by value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isDark, accentColor, JSON.stringify(colors ?? null), radius],
+  );
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -120,6 +125,9 @@ interface UpstepContextValue {
   identify: (userId: string | undefined) => void;
   accentColor: string;
   theme: ThemeMode;
+  colors: UpstepColorOverrides | undefined;
+  radius: number | undefined;
+  fontFamily: string | undefined;
   showBranding: boolean;
   chat: boolean;
 }
@@ -218,6 +226,9 @@ export function UpstepProvider({
         identify,
         accentColor: config.accentColor ?? DEFAULT_ACCENT,
         theme: config.theme ?? "auto",
+        colors: config.colors,
+        radius: config.radius,
+        fontFamily: config.fontFamily,
         showBranding,
         chat: config.chat !== false,
       }}
@@ -239,6 +250,12 @@ interface FeedbackWidgetProps {
   position?: "bottom-right" | "bottom-left";
   accentColor?: string;
   theme?: ThemeMode;
+  /** Override the provider's colors for this widget. */
+  colors?: UpstepColorOverrides;
+  /** Override the provider's corner radius for this widget. */
+  radius?: number;
+  /** Override the provider's font for this widget. */
+  fontFamily?: string;
   hideLauncher?: boolean;
   /** Override chat visibility for this widget. Project/plan access still applies. */
   chat?: boolean;
@@ -250,12 +267,24 @@ export function FeedbackWidget({
   position = "bottom-right",
   accentColor,
   theme,
+  colors,
+  radius,
+  fontFamily,
   hideLauncher = false,
   chat = true,
 }: FeedbackWidgetProps) {
   const ctx = useUpstep();
-  const accent = accentColor ?? ctx.accentColor;
-  const p = usePalette(theme ?? ctx.theme);
+  const p = usePalette(theme ?? ctx.theme, {
+    accentColor: accentColor ?? ctx.accentColor,
+    colors: colors ?? ctx.colors,
+    radius: radius ?? ctx.radius,
+  });
+  const accent = p.accent;
+  const appearance = {
+    colors: colors ?? ctx.colors,
+    radius: radius ?? ctx.radius,
+    fontFamily: fontFamily ?? ctx.fontFamily,
+  };
   const {
     isOpen: open,
     open: openWidget,
@@ -304,8 +333,7 @@ export function FeedbackWidget({
     right: 24,
   };
 
-  const font =
-    '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+  const font = appearance.fontFamily?.trim() || SYSTEM_FONT;
 
   function handleClose() {
     closeWidget();
@@ -330,9 +358,9 @@ export function FeedbackWidget({
             alignItems: "center",
             gap: 7,
             background: accent,
-            color: "#fff",
+            color: p.accentText,
             border: "none",
-            borderRadius: 9999,
+            borderRadius: scaleRadius(9999, p.radius),
             padding: isMobile ? "12px" : "12px 18px",
             fontSize: 14,
             fontWeight: 600,
@@ -366,7 +394,7 @@ export function FeedbackWidget({
             style={{
               background: p.bg,
               border: `1px solid ${p.border}`,
-              borderRadius: 20,
+              borderRadius: scaleRadius(20, p.radius),
               width: "100%",
               maxWidth: hasSupport && chat && ctx.chat ? 460 : 440,
               maxHeight: "calc(100dvh - 112px)",
@@ -399,7 +427,7 @@ export function FeedbackWidget({
                       style={{
                         flex: 1,
                         border: 0,
-                        borderRadius: 8,
+                        borderRadius: scaleRadius(8, p.radius),
                         padding: "9px 12px",
                         background: (
                           screen === "support"
@@ -498,9 +526,9 @@ export function FeedbackWidget({
                       onClick={() => setScreen("create")}
                       style={{
                         background: accent,
-                        color: "#fff",
+                        color: p.accentText,
                         border: "none",
-                        borderRadius: 20,
+                        borderRadius: scaleRadius(20, p.radius),
                         padding: "6px 14px",
                         fontSize: 14,
                         fontWeight: 700,
@@ -517,7 +545,7 @@ export function FeedbackWidget({
                       border: "none",
                       width: 28,
                       height: 28,
-                      borderRadius: 8,
+                      borderRadius: scaleRadius(8, p.radius),
                       fontSize: 14,
                       cursor: "pointer",
                       color: p.textSoft,
@@ -544,7 +572,8 @@ export function FeedbackWidget({
                 <SupportFrame
                   client={ctx.client}
                   accentColor={accent}
-                  theme={p.bg === "#000000" ? "dark" : "light"}
+                  theme={p.dark ? "dark" : "light"}
+                  appearance={appearance}
                 />
               )}
               {hasSupport && chat && ctx.chat && screen !== "support" && (
@@ -567,9 +596,9 @@ export function FeedbackWidget({
                         onClick={() => setScreen("create")}
                         style={{
                           border: 0,
-                          borderRadius: 8,
+                          borderRadius: scaleRadius(8, p.radius),
                           background: accent,
-                          color: "white",
+                          color: p.accentText,
                           fontSize: 14,
                           padding: "7px 10px",
                           cursor: "pointer",
@@ -648,10 +677,12 @@ function SupportFrame({
   client,
   theme,
   accentColor,
+  appearance,
 }: {
   client: UpstepApiClient;
   theme: string;
   accentColor: string;
+  appearance: Parameters<UpstepApiClient["supportFrameUrl"]>[2];
 }) {
   const ref = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
@@ -662,7 +693,7 @@ function SupportFrame({
       ref={ref}
       data-upstep-support
       title="Customer support"
-      src={client.supportFrameUrl(theme, accentColor)}
+      src={client.supportFrameUrl(theme, accentColor, appearance)}
       style={{
         color: accentColor,
         width: "100%",
@@ -724,7 +755,7 @@ function FeedList({
               gap: 12,
               padding: 14,
               border: `1px solid ${p.border}`,
-              borderRadius: 14,
+              borderRadius: scaleRadius(14, p.radius),
               marginBottom: 10,
               background: p.bg,
               cursor: "pointer",
@@ -743,11 +774,11 @@ function FeedList({
                 gap: 2,
                 minWidth: 46,
                 padding: "7px 0",
-                borderRadius: 11,
+                borderRadius: scaleRadius(11, p.radius),
                 cursor: "pointer",
                 flexShrink: 0,
                 border: `1px solid ${voted ? accent : p.border}`,
-                background: voted ? `${accent}1a` : p.bgSoft,
+                background: voted ? p.accentTint : p.bgSoft,
               }}
             >
               <UpArrowIcon color={accent} />
@@ -927,8 +958,8 @@ function FeedDetail({
           alignItems: "center",
           gap: 8,
           border: `1px solid ${item.userVote === "UP" ? accent : p.border}`,
-          background: item.userVote === "UP" ? `${accent}15` : p.bgSoft,
-          borderRadius: 12,
+          background: item.userVote === "UP" ? tint(accent, 0.08) : p.bgSoft,
+          borderRadius: scaleRadius(12, p.radius),
           padding: "10px 16px",
           cursor: "pointer",
           fontFamily: font,
@@ -986,7 +1017,7 @@ function CommentBubble({
       style={{
         background: p.bgSoft,
         border: `1px solid ${p.border}`,
-        borderRadius: 12,
+        borderRadius: scaleRadius(12, p.radius),
         padding: 14,
         marginBottom: 10,
       }}
@@ -1001,11 +1032,11 @@ function CommentBubble({
       >
         <span
           style={{
-            background: `${accent}20`,
+            background: tint(accent, 0.125),
             color: accent,
             fontSize: 11,
             fontWeight: 700,
-            borderRadius: 20,
+            borderRadius: scaleRadius(20, p.radius),
             padding: "2px 8px",
           }}
         >
@@ -1083,7 +1114,7 @@ function CreateForm({
   const inputStyle: React.CSSProperties = {
     width: "100%",
     border: `1px solid ${p.border}`,
-    borderRadius: 12,
+    borderRadius: scaleRadius(12, p.radius),
     padding: "10px 12px",
     fontSize: 16,
     lineHeight: 1.6,
@@ -1120,12 +1151,12 @@ function CreateForm({
               justifyContent: "center",
               gap: 5,
               padding: "8px 10px",
-              borderRadius: 9,
+              borderRadius: scaleRadius(9, p.radius),
               fontSize: 14,
               fontWeight: 600,
               cursor: "pointer",
               background: type === t ? accent : p.bg,
-              color: type === t ? "#fff" : p.textSoft,
+              color: type === t ? p.accentText : p.textSoft,
               border: `1px solid ${type === t ? accent : p.border}`,
               fontFamily: font,
             }}
@@ -1195,9 +1226,9 @@ function CreateForm({
           width: "100%",
           padding: 12,
           background: accent,
-          color: "#fff",
+          color: p.accentText,
           border: "none",
-          borderRadius: 11,
+          borderRadius: scaleRadius(11, p.radius),
           fontSize: 14,
           fontWeight: 600,
           cursor: "pointer",
@@ -1280,7 +1311,7 @@ function TypeBadge({ type, p }: { type: FeedbackType; p: Palette }) {
     <span
       style={{
         padding: "2px 8px",
-        borderRadius: 9999,
+        borderRadius: scaleRadius(9999, p.radius),
         fontSize: 10.5,
         fontWeight: 700,
         letterSpacing: ".02em",
@@ -1348,7 +1379,7 @@ function StatusBadge({
         gap: 5,
         background: p.bgSoft,
         border: `1px solid ${p.border}`,
-        borderRadius: 6,
+        borderRadius: scaleRadius(6, p.radius),
         padding: "2px 8px",
         fontSize: 10,
         fontWeight: 600,

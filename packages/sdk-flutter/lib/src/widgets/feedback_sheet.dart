@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controller.dart';
 import '../config.dart';
+import '../theme.dart';
 import '../models.dart';
 import '../provider.dart';
 import 'support_chat.dart';
@@ -77,23 +78,34 @@ class _SheetScaffold extends StatelessWidget {
           UpstepThemeMode.dark => Brightness.dark,
           UpstepThemeMode.auto => inherited.brightness,
         };
+        final look = controller.themeFor(brightness);
+        // Only overridden colors replace Material's seeded ones, so defaults stay as they were.
+        final custom =
+            controller.colors?.resolve(brightness) ?? const UpstepColors();
         final theme = ThemeData(
           brightness: brightness,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: controller.accentColor,
-            brightness: brightness,
-            surface: brightness == Brightness.dark
-                ? Colors.black
-                : Colors.white,
-          ).copyWith(primary: controller.accentColor),
+          colorScheme:
+              ColorScheme.fromSeed(
+                seedColor: controller.accentColor,
+                brightness: brightness,
+                surface: look.background,
+              ).copyWith(
+                primary: controller.accentColor,
+                onPrimary: look.accentText,
+                onSurface: custom.text,
+                onSurfaceVariant: custom.textMuted,
+                outline: custom.border,
+                outlineVariant: custom.border,
+                surfaceContainerLowest: custom.surface,
+                surfaceContainerLow: custom.surface,
+                surfaceContainerHighest: custom.surface,
+              ),
           textTheme: inherited.textTheme.apply(
-            bodyColor: brightness == Brightness.dark
-                ? const Color(0xFFE5E5E5)
-                : const Color(0xFF404040),
-            displayColor: brightness == Brightness.dark
-                ? const Color(0xFFE5E5E5)
-                : const Color(0xFF404040),
+            bodyColor: look.text,
+            displayColor: look.text,
           ),
+          dividerColor: custom.border,
+          extensions: <ThemeExtension<dynamic>>[look],
         );
         final support = controller.supportConfig;
         final chat = support != null && support['enabled'] == true;
@@ -258,13 +270,15 @@ class _FeedbackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final look = theme.extension<UpstepThemeData>();
+    final corners = look?.corners(18) ?? BorderRadius.circular(18);
     final voted = item.userVote == VoteValue.up;
 
     return Material(
       color: theme.colorScheme.surfaceContainerLowest,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: corners,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: corners,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -274,7 +288,9 @@ class _FeedbackCard extends StatelessWidget {
               FilledButton.tonal(
                 style: FilledButton.styleFrom(
                   backgroundColor: voted ? accentColor : null,
-                  foregroundColor: voted ? Colors.white : null,
+                  foregroundColor: voted
+                      ? look?.accentText ?? Colors.white
+                      : null,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 10,
@@ -518,7 +534,9 @@ class _SubmitTabState extends State<_SubmitTab> {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: widget.controller.accentColor,
-              foregroundColor: Colors.white,
+              foregroundColor:
+                  Theme.of(context).extension<UpstepThemeData>()?.accentText ??
+                  Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: _submitting ? null : _submit,

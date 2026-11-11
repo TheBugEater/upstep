@@ -1,42 +1,15 @@
 import type { Feedback, FeedbackType } from "@upstep/types";
+import type { UpstepColorOverrides } from "@upstep/types";
 import { UpstepApiClient, type SupportUnread } from "./api";
-
-const DEFAULT_ACCENT = "#D97757";
+import { buildWidgetPalette, scaleRadius, type WidgetPalette } from "./theme";
 
 type ThemeMode = "light" | "dark" | "auto";
 
-interface Palette {
-  bg: string; // panel background
-  bgSoft: string; // inputs / subtle fills
-  bgHover: string; // hover fills
-  text: string; // primary text
-  textSoft: string; // secondary text
-  textFaint: string; // tertiary text
-  border: string; // hairlines
-  overlay: string; // backdrop
+/** A host-supplied font-family, or "" when unset or unsafe to write into a CSS rule. */
+function safeFontFamily(font: string | undefined): string {
+  const value = font?.trim();
+  return value && /^[\w\s,"'.-]{1,200}$/.test(value) ? value : "";
 }
-
-const LIGHT: Palette = {
-  bg: "#ffffff",
-  bgSoft: "#f5f5f5",
-  bgHover: "#ededed",
-  text: "#1a1915",
-  textSoft: "#56544d",
-  textFaint: "#9b9890",
-  border: "#e8e6df",
-  overlay: "rgba(26,25,21,.45)",
-};
-
-const DARK: Palette = {
-  bg: "#000000",
-  bgSoft: "#171717",
-  bgHover: "#262626",
-  text: "#f5f4f0",
-  textSoft: "#b4b1a8",
-  textFaint: "#7d7a72",
-  border: "#33312c",
-  overlay: "rgba(0,0,0,.6)",
-};
 
 /** "auto" follows the host page's own theme (the `.dark` class / `data-theme`
  *  attribute convention most apps toggle on <html>, e.g. Tailwind's
@@ -62,16 +35,15 @@ function resolveTheme(mode: ThemeMode): "light" | "dark" {
   return "light";
 }
 
-/** Builds the widget stylesheet using the host app's accent, position & theme. */
-function buildStyles(
-  accent: string,
-  position: "left" | "right",
-  p: Palette,
-): string {
+/** Builds the widget stylesheet from the resolved palette, radius and font. */
+function buildStyles(p: WidgetPalette, font: string): string {
   const side = "right:24px;left:auto";
+  const accent = p.accent;
+  const on = p.accentText;
+  const r = (designed: number) => `${scaleRadius(designed, p.radius)}px`;
   return `
-#upstep-root *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-#upstep-btn{position:fixed;bottom:24px;${side};z-index:9998;display:inline-flex;align-items:center;gap:7px;background:${accent};color:#fff;border:none;border-radius:9999px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(26,25,21,.18);transition:transform .15s,box-shadow .15s}
+#upstep-root *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}${font ? `\n#upstep-btn,#upstep-btn *,#upstep-backdrop,#upstep-backdrop *,#upstep-toast,#upstep-toast *{font-family:${font}}` : ""}
+#upstep-btn{position:fixed;bottom:24px;${side};z-index:9998;display:inline-flex;align-items:center;gap:7px;background:${accent};color:${on};border:none;border-radius:${r(9999)};padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(26,25,21,.18);transition:transform .15s,box-shadow .15s}
 #upstep-btn svg{width:16px;height:16px;flex-shrink:0}
 #upstep-btn:hover{transform:translateY(-1px);box-shadow:0 8px 26px rgba(26,25,21,.24)}
 @media(max-width:639px){#upstep-btn{padding:12px}#upstep-btn span{display:none}}
@@ -79,40 +51,40 @@ function buildStyles(
 #upstep-backdrop{position:fixed;inset:0;background:transparent;z-index:9999;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 24px 88px;animation:upstep-fade .2s ease}
 @keyframes upstep-fade{from{opacity:0}to{opacity:1}}
 @keyframes upstep-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-#upstep-modal{background:${p.bg};border:1px solid ${p.border};border-radius:20px;width:100%;max-width:440px;max-height:calc(100dvh - 112px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);animation:upstep-rise .26s cubic-bezier(.16,1,.3,1)}
+#upstep-modal{background:${p.bg};border:1px solid ${p.border};border-radius:${r(20)};width:100%;max-width:440px;max-height:calc(100dvh - 112px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.28);animation:upstep-rise .26s cubic-bezier(.16,1,.3,1)}
 #upstep-header{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 20px 0}
 #upstep-header h2{margin:0;font-size:16px;font-weight:700;color:${p.text};letter-spacing:-.01em}
 #upstep-header p{margin:2px 0 0;font-size:14px;color:${p.textFaint}}
-#upstep-close{background:${p.bgSoft};border:none;width:28px;height:28px;border-radius:8px;font-size:14px;cursor:pointer;color:${p.textSoft};line-height:1;display:flex;align-items:center;justify-content:center;transition:background .15s}
+#upstep-close{background:${p.bgSoft};border:none;width:28px;height:28px;border-radius:${r(8)};font-size:14px;cursor:pointer;color:${p.textSoft};line-height:1;display:flex;align-items:center;justify-content:center;transition:background .15s}
 #upstep-close:hover{background:${p.bgHover};color:${p.text}}
-#upstep-tabs{display:flex;gap:4px;margin:16px 20px 0;padding:4px;background:${p.bgSoft};border-radius:11px}
-.upstep-tab{flex:1;padding:8px;background:none;border:none;border-radius:8px;font-size:14px;font-weight:600;color:${p.textSoft};cursor:pointer;transition:all .15s}
+#upstep-tabs{display:flex;gap:4px;margin:16px 20px 0;padding:4px;background:${p.bgSoft};border-radius:${r(11)}}
+.upstep-tab{flex:1;padding:8px;background:none;border:none;border-radius:${r(8)};font-size:14px;font-weight:600;color:${p.textSoft};cursor:pointer;transition:all .15s}
 .upstep-mode .upstep-tab.active{background:${p.bgSoft};box-shadow:none}
 .upstep-tab.active{background:${p.bg};color:${p.text};box-shadow:0 1px 3px rgba(0,0,0,.08)}
 #upstep-body{flex:1;overflow-y:auto;padding:18px 20px 22px}
-.upstep-form textarea{width:100%;min-height:104px;border:1px solid ${p.border};border-radius:12px;padding:12px;font-size:16px;line-height:1.6;resize:vertical;outline:none;background:${p.bgSoft};color:${p.text};transition:border-color .15s}
+.upstep-form textarea{width:100%;min-height:104px;border:1px solid ${p.border};border-radius:${r(12)};padding:12px;font-size:16px;line-height:1.6;resize:vertical;outline:none;background:${p.bgSoft};color:${p.text};transition:border-color .15s}
 .upstep-form textarea::placeholder{color:${p.textFaint}}
 .upstep-form textarea:focus{border-color:${accent};background:${p.bg}}
 .upstep-type-row{display:flex;gap:7px;margin:12px 0 4px}
-.upstep-type-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 10px;border-radius:9px;border:1px solid ${p.border};background:${p.bg};color:${p.textSoft};font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.upstep-type-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 10px;border-radius:${r(9)};border:1px solid ${p.border};background:${p.bg};color:${p.textSoft};font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
 .upstep-type-btn svg{width:12px;height:12px;flex-shrink:0}
 .upstep-type-btn:hover{border-color:${p.textFaint}}
-.upstep-type-btn.selected{background:${accent};color:#fff;border-color:${accent}}
-.upstep-submit{width:100%;padding:12px;background:${accent};color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;transition:filter .15s}
+.upstep-type-btn.selected{background:${accent};color:${on};border-color:${accent}}
+.upstep-submit{width:100%;padding:12px;background:${accent};color:${on};border:none;border-radius:${r(11)};font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;transition:filter .15s}
 .upstep-submit:hover{filter:brightness(.94)}
 .upstep-submit:disabled{opacity:.5;cursor:not-allowed}
 #upstep-form-msg{font-size:14px;text-align:center;margin-top:12px;color:${accent};font-weight:500}
-.upstep-feedback-item{display:flex;gap:12px;padding:14px;border:1px solid ${p.border};border-radius:14px;margin-bottom:10px;background:${p.bg};transition:border-color .15s}
+.upstep-feedback-item{display:flex;gap:12px;padding:14px;border:1px solid ${p.border};border-radius:${r(14)};margin-bottom:10px;background:${p.bg};transition:border-color .15s}
 .upstep-feedback-item:hover{border-color:${p.textFaint}}
-.upstep-vote{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:46px;padding:7px 0;border-radius:11px;border:1px solid ${p.border};background:${p.bgSoft};cursor:pointer;transition:all .15s}
+.upstep-vote{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:46px;padding:7px 0;border-radius:${r(11)};border:1px solid ${p.border};background:${p.bgSoft};cursor:pointer;transition:all .15s}
 .upstep-vote:hover{border-color:${accent}}
-.upstep-vote.voted{border-color:${accent};background:${accent}1a}
+.upstep-vote.voted{border-color:${accent};background:${p.accentTint}}
 .upstep-vote-arrow{font-size:11px;line-height:1;color:${accent}}
 .upstep-vote-count{font-size:14px;font-weight:700;color:${p.text};line-height:1.1}
 .upstep-feedback-main{flex:1;min-width:0}
 .upstep-feedback-content{font-size:16px;line-height:1.5;color:${p.text};margin:0 0 8px;word-break:break-word}
 .upstep-feedback-meta{display:flex;align-items:center;gap:7px}
-.upstep-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:9999px;font-size:10.5px;font-weight:700;letter-spacing:.02em}
+.upstep-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:${r(9999)};font-size:10.5px;font-weight:700;letter-spacing:.02em}
 .upstep-badge-bug{background:#fdecec;color:#d6453d}
 .upstep-badge-feature{background:#e9f0fd;color:#3b76d6}
 .upstep-badge-general{background:${p.bgSoft};color:${p.textSoft}}
@@ -120,7 +92,7 @@ function buildStyles(
 #upstep-btn{position:fixed}
 .upstep-unread{position:absolute;top:-7px;right:-5px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:${p.text};color:${p.bg};border:2px solid ${p.bg};font-size:12px;font-weight:700;line-height:18px;text-align:center;font-variant-numeric:tabular-nums;animation:upstep-pop .45s cubic-bezier(.3,1.6,.5,1)}
 @keyframes upstep-pop{from{transform:scale(.4)}to{transform:scale(1)}}
-#upstep-toast{position:fixed;bottom:84px;right:24px;z-index:9998;max-width:min(300px,calc(100vw - 48px));display:grid;gap:2px;text-align:left;background:${p.bg};color:${p.text};border:1px solid ${p.border};border-radius:14px 14px 4px 14px;padding:10px 12px;box-shadow:0 10px 32px rgba(0,0,0,.2);cursor:pointer;animation:upstep-rise .26s cubic-bezier(.16,1,.3,1)}
+#upstep-toast{position:fixed;bottom:84px;right:24px;z-index:9998;max-width:min(300px,calc(100vw - 48px));display:grid;gap:2px;text-align:left;background:${p.bg};color:${p.text};border:1px solid ${p.border};border-radius:${r(14)} ${r(14)} ${r(4)} ${r(14)};padding:10px 12px;box-shadow:0 10px 32px rgba(0,0,0,.2);cursor:pointer;animation:upstep-rise .26s cubic-bezier(.16,1,.3,1)}
 #upstep-toast b{font-size:12px}
 #upstep-toast span{font-size:14px;line-height:1.4;color:${p.textSoft};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #upstep-toast em{font-style:normal;font-size:11px;font-weight:600;color:${accent}}
@@ -137,6 +109,12 @@ type Tab = "submit" | "feed" | "support";
 
 export interface WidgetOptions {
   accentColor?: string;
+  /** Panel color overrides. Unset keys keep the default palette. */
+  colors?: UpstepColorOverrides;
+  /** Base corner radius in px. Defaults to 12. */
+  radius?: number;
+  /** CSS font-family for the widget. */
+  fontFamily?: string;
   position?: "left" | "right";
   /** Color theme. "auto" follows the OS preference. Defaults to "auto". */
   theme?: ThemeMode;
@@ -151,11 +129,11 @@ export class UpstepWidget {
   private feedItems: Feedback[] = [];
   private selectedType: FeedbackType = "GENERAL";
   private loading = false;
-  private accent: string;
   private position: "left" | "right";
   private showLauncher: boolean;
   private themeMode: ThemeMode;
-  private palette: Palette;
+  private options: WidgetOptions;
+  private palette: WidgetPalette;
   private hasSupport = false;
   private disconnectSupport: (() => void) | null = null;
   private unread = 0;
@@ -166,11 +144,36 @@ export class UpstepWidget {
 
   constructor(client: UpstepApiClient, options: WidgetOptions = {}) {
     this.client = client;
-    this.accent = options.accentColor ?? DEFAULT_ACCENT;
+    this.options = options;
     this.position = "right";
     this.showLauncher = options.launcher !== false;
     this.themeMode = options.theme ?? "auto";
-    this.palette = resolveTheme(this.themeMode) === "dark" ? DARK : LIGHT;
+    this.palette = this.buildPalette(resolveTheme(this.themeMode));
+  }
+
+  private buildPalette(mode: "light" | "dark") {
+    return buildWidgetPalette({
+      mode,
+      accentColor: this.options.accentColor,
+      colors: this.options.colors,
+      radius: this.options.radius,
+    });
+  }
+
+  private get accent() {
+    return this.palette.accent;
+  }
+
+  private supportFrameSrc() {
+    return this.client.supportFrameUrl(
+      this.palette.dark ? "dark" : "light",
+      this.accent,
+      {
+        colors: this.options.colors,
+        radius: this.options.radius,
+        fontFamily: this.options.fontFamily,
+      },
+    );
   }
 
   mount() {
@@ -217,7 +220,10 @@ export class UpstepWidget {
     document.getElementById("upstep-styles")?.remove();
     const style = document.createElement("style");
     style.id = "upstep-styles";
-    style.textContent = buildStyles(this.accent, this.position, this.palette);
+    style.textContent = buildStyles(
+      this.palette,
+      safeFontFamily(this.options.fontFamily),
+    );
     document.head.appendChild(style);
   }
 
@@ -284,7 +290,7 @@ export class UpstepWidget {
     this.isOpen = true;
     // Re-resolve "auto" on every open so a theme toggled mid-session (no
     // reload) is picked up instead of freezing at the theme seen at mount.
-    this.palette = theme === "dark" ? DARK : LIGHT;
+    this.palette = this.buildPalette(theme);
     this.injectStyles();
     this.fetchFeed();
     this.renderModal();
@@ -426,7 +432,7 @@ export class UpstepWidget {
       <div id="upstep-modal" style="max-width:${this.hasSupport ? "460px" : "440px"}">
         ${this.hasSupport ? `<div class="upstep-mode" style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid ${this.palette.border}"><div id="upstep-tabs" style="margin:0;padding:0;background:transparent;flex:1"><button class="upstep-tab ${this.tab === "support" ? "active" : ""}" data-tab="support">Support</button><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Ideas</button></div><button id="upstep-close" aria-label="Close" style="flex-shrink:0;background:transparent">✕</button></div>` : `<div id="upstep-header"><div><h2>Share your feedback</h2><p>Tell us what to build next, or vote on ideas.</p></div><button id="upstep-close" aria-label="Close">✕</button></div><div id="upstep-tabs"><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Give feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Vote on ideas</button></div>`}
         <div id="upstep-body" style="${this.tab === "support" ? "padding:0;overflow:hidden" : ""}">
-          ${this.tab === "support" ? `<iframe id="upstep-support-frame" title="Customer support" src="${this.client.supportFrameUrl(this.palette.bg === "#000000" ? "dark" : "light", this.accent)}" style="width:100%;height:min(560px,calc(100dvh - 168px));min-height:300px;border:0;display:block"></iframe>` : this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
+          ${this.tab === "support" ? `<iframe id="upstep-support-frame" title="Customer support" src="${escapeHtml(this.supportFrameSrc())}" style="width:100%;height:min(560px,calc(100dvh - 168px));min-height:300px;border:0;display:block"></iframe>` : this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
         </div>
       </div>
     `;
@@ -450,7 +456,7 @@ export class UpstepWidget {
     );
     if (frame) {
       frame.style.color = this.accent;
-      this.frameTheme = this.palette.bg === "#000000" ? "dark" : "light";
+      this.frameTheme = this.palette.dark ? "dark" : "light";
       this.disconnectSupport = this.client.connectSupportFrame(frame, {
         isVisible: () => this.isOpen,
         onUnread: (unread) => this.onSupportUnread(unread),

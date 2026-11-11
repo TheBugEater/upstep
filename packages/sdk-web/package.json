@@ -36,6 +36,11 @@
       "types": "./dist/support.d.ts",
       "import": "./dist/support.js",
       "require": "./dist/support.cjs"
+    },
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "import": "./dist/theme.js",
+      "require": "./dist/theme.cjs"
     }
   },
   "files": [

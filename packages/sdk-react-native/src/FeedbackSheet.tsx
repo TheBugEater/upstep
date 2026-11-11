@@ -23,38 +23,17 @@ import type {
 } from "@upstep/types";
 import { SupportView } from "./SupportView";
 import { useUpstep } from "./FeedbackContext";
+import {
+  RadiusContext,
+  sheetPalette,
+  useScaledStyles,
+  type SheetPalette,
+} from "./theme";
+import { scaleRadius } from "@upstep/js/theme";
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
-interface Palette {
-  bg: string;
-  bgSoft: string;
-  text: string;
-  textSoft: string;
-  textFaint: string;
-  border: string;
-  handle: string;
-}
-
-const LIGHT: Palette = {
-  bg: "#ffffff",
-  bgSoft: "#f5f5f5",
-  text: "#1a1915",
-  textSoft: "#56544d",
-  textFaint: "#9b9890",
-  border: "#e8e6df",
-  handle: "#dad7ce",
-};
-
-const DARK: Palette = {
-  bg: "#000000",
-  bgSoft: "#171717",
-  text: "#f5f4f0",
-  textSoft: "#b4b1a8",
-  textFaint: "#7d7a72",
-  border: "#33312c",
-  handle: "#48453f",
-};
+type Palette = SheetPalette;
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
@@ -67,6 +46,7 @@ type Nav =
 // ─── FeedbackSheet ────────────────────────────────────────────────────────────
 
 export function FeedbackSheet() {
+  const styles = useScaledStyles(baseStyles);
   const {
     client,
     isOpen,
@@ -77,10 +57,17 @@ export function FeedbackSheet() {
     showBranding,
     supportConfig,
     supportRevision,
+    colors,
   } = useUpstep();
+  const radius = React.useContext(RadiusContext);
   const scheme = useColorScheme();
   const isDark = theme === "dark" || (theme === "auto" && scheme === "dark");
-  const p = isDark ? DARK : LIGHT;
+  const p = React.useMemo(
+    () => sheetPalette(isDark, accentColor, colors),
+    // `colors` is usually an inline object literal, so compare it by value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isDark, accentColor, JSON.stringify(colors ?? null)],
+  );
 
   const [nav, setNav] = useState<Nav>({ screen: "list" });
   const insets = useSafeAreaInsets();
@@ -131,7 +118,7 @@ export function FeedbackSheet() {
                       style={{
                         paddingVertical: 10,
                         paddingHorizontal: 14,
-                        borderRadius: 10,
+                        borderRadius: scaleRadius(10, radius),
                         backgroundColor: (
                           screen === "support"
                             ? nav.screen === "support"
@@ -171,7 +158,9 @@ export function FeedbackSheet() {
                   activeOpacity={0.8}
                   style={[styles.newBtn, { backgroundColor: accentColor }]}
                 >
-                  <Text style={styles.newBtnText}>+ New</Text>
+                  <Text style={[styles.newBtnText, { color: p.accentText }]}>
+                    + New
+                  </Text>
                 </TouchableOpacity>
               </>
             ) : nav.screen === "create" ? (
@@ -211,6 +200,7 @@ export function FeedbackSheet() {
                   config={supportConfig}
                   accentColor={accentColor}
                   dark={isDark}
+                  colors={colors}
                 />
               )}
             </View>
@@ -233,7 +223,9 @@ export function FeedbackSheet() {
                     },
                   ]}
                 >
-                  <Text style={styles.newBtnText}>+ New feedback</Text>
+                  <Text style={[styles.newBtnText, { color: p.accentText }]}>
+                    + New feedback
+                  </Text>
                 </TouchableOpacity>
               )}
               {nav.screen === "list" && (
@@ -302,6 +294,7 @@ function FeedListBody({
   accent: string;
   onSelect: (id: string) => void;
 }) {
+  const styles = useScaledStyles(baseStyles);
   const { feedItems, feedLoading, vote } = useUpstep();
 
   const displayItems = feedItems.filter((f) => f.status !== "CLOSED");
@@ -353,6 +346,7 @@ function FeedCard({
   onPress: () => void;
   onVote: () => void;
 }) {
+  const styles = useScaledStyles(baseStyles);
   const voted = item.userVote === "UP";
   const displayTitle = item.title ?? item.content;
 
@@ -374,10 +368,14 @@ function FeedCard({
           },
         ]}
       >
-        <Text style={[styles.voteArrow, { color: voted ? "#fff" : accent }]}>
+        <Text
+          style={[styles.voteArrow, { color: voted ? p.accentText : accent }]}
+        >
           ▲
         </Text>
-        <Text style={[styles.voteCount, { color: voted ? "#fff" : p.text }]}>
+        <Text
+          style={[styles.voteCount, { color: voted ? p.accentText : p.text }]}
+        >
           {item.upvotes}
         </Text>
       </TouchableOpacity>
@@ -424,6 +422,7 @@ function FeedDetailBody({
   accent: string;
   feedbackId: string;
 }) {
+  const styles = useScaledStyles(baseStyles);
   const { vote, getItem } = useUpstep();
   const [item, setItem] = useState<FeedbackWithComments | null>(null);
   const [loading, setLoading] = useState(true);
@@ -542,6 +541,7 @@ function CommentBubble({
   p: Palette;
   accent: string;
 }) {
+  const styles = useScaledStyles(baseStyles);
   return (
     <View
       style={[
@@ -584,6 +584,7 @@ function FeedCreateBody({
   accent: string;
   onDone: () => void;
 }) {
+  const styles = useScaledStyles(baseStyles);
   const { submit } = useUpstep();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -640,7 +641,7 @@ function FeedCreateBody({
               <Text
                 style={[
                   styles.typeBtnText,
-                  { color: active ? "#fff" : p.textSoft },
+                  { color: active ? p.accentText : p.textSoft },
                 ]}
               >
                 {TYPE_LABELS[t]}
@@ -695,9 +696,11 @@ function FeedCreateBody({
         ]}
       >
         {submitting ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={p.accentText} />
         ) : (
-          <Text style={styles.submitBtnText}>Submit feedback</Text>
+          <Text style={[styles.submitBtnText, { color: p.accentText }]}>
+            Submit feedback
+          </Text>
         )}
       </TouchableOpacity>
     </View>
@@ -718,6 +721,7 @@ const TYPE_FG: Record<FeedbackType, string> = {
 };
 
 function PendingBadge() {
+  const styles = useScaledStyles(baseStyles);
   return (
     <View style={styles.pendingBadge}>
       <View style={styles.pendingDot} />
@@ -727,6 +731,7 @@ function PendingBadge() {
 }
 
 function TypeBadge({ type, p }: { type: FeedbackType; p: Palette }) {
+  const styles = useScaledStyles(baseStyles);
   return (
     <View
       style={[styles.badge, { backgroundColor: TYPE_BG[type] || p.bgSoft }]}
@@ -753,6 +758,7 @@ function StatusDot({
   status: string;
   color?: string | undefined;
 }) {
+  const styles = useScaledStyles(baseStyles);
   return (
     <View
       style={[
@@ -772,6 +778,7 @@ function StatusBadge({
   boardStatus: Feedback["boardStatus"];
   p: Palette;
 }) {
+  const styles = useScaledStyles(baseStyles);
   return (
     <View
       style={[
@@ -794,6 +801,7 @@ function LabelBadges({
   labels: Feedback["labels"];
   p: Palette;
 }) {
+  const styles = useScaledStyles(baseStyles);
   if (!labels?.length) return null;
 
   return (
@@ -828,7 +836,7 @@ function fmtDate(iso: string) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   // Modal overlay
   overlay: {
     flex: 1,

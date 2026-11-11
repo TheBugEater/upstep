@@ -1,11 +1,5 @@
 "use client";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BusinessAvatar } from "./BusinessAvatar";
 import { SupportWidgets } from "./SupportWidgets";
 import type { SupportWidget } from "@upstep/types";
@@ -13,6 +7,10 @@ import { SupportIcon } from "./SupportIcons";
 import { useSupportUnread } from "./useSupportUnread";
 import { playChime } from "@/lib/support/chime";
 import { preview } from "@/lib/support/unread";
+import {
+  supportThemeVars,
+  type SupportAppearance,
+} from "@/lib/support/appearance";
 type Message = {
   id: string;
   role: string;
@@ -50,10 +48,24 @@ type Config = {
   online: { name: string }[];
 };
 const noMessages: Message[] = [];
+// Neutrals come from CSS variables set on <main> (see lib/support/appearance), so a host project's colors apply.
 const control =
-  "rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs text-black disabled:opacity-50 dark:border-neutral-800 dark:bg-black dark:text-white";
-export function SupportChat({ apiKey }: { apiKey: string }) {
-  const [accentColor, setAccentColor] = useState("#D97757");
+  "rounded-[var(--sx-r12)] border border-[var(--sx-border)] bg-[var(--sx-bg)] px-3 py-2 text-xs text-[var(--sx-text)] disabled:opacity-50";
+const defaultAppearance: SupportAppearance = {
+  dark: false,
+  colors: {},
+  radius: 12,
+};
+export function SupportChat({
+  apiKey,
+  appearance = defaultAppearance,
+}: {
+  apiKey: string;
+  appearance?: SupportAppearance;
+}) {
+  const [accentColor, setAccentColor] = useState(
+    appearance.accent ?? "#D97757",
+  );
   const [config, setConfig] = useState<Config | null>(null);
   const [chat, setChat] = useState<Chat | null>(null);
   const [history, setHistory] = useState<{ id: string; state: string }[]>([]);
@@ -236,11 +248,8 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
     const accent = new URLSearchParams(location.search).get("accent");
     if (accent && accent.length <= 256 && CSS.supports("color", accent))
       setAccentColor(accent);
-    document.documentElement.classList.toggle(
-      "dark",
-      new URLSearchParams(location.search).get("theme") === "dark",
-    );
-  }, []);
+    document.documentElement.classList.toggle("dark", appearance.dark);
+  }, [appearance.dark]);
   useEffect(() => {
     let active = true;
     void request("")
@@ -456,13 +465,11 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
     setMessage(text);
     input.current?.focus();
   }
-  const ink =
-    "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900";
-  const soft =
-    "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100";
+  const ink = "bg-[var(--sx-ink)] text-[var(--sx-on-ink)]";
+  const soft = "bg-[var(--sx-surface)] text-[var(--sx-soft-text)]";
   // Team replies carry the business accent so they read apart from AI answers.
   const team =
-    "border border-[color:color-mix(in_srgb,var(--support-accent)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--support-accent)_12%,white)] text-neutral-900 dark:bg-[color:color-mix(in_srgb,var(--support-accent)_20%,#111)] dark:text-neutral-100";
+    "border border-[color:color-mix(in_srgb,var(--support-accent)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--support-accent)_12%,var(--sx-bg))] text-[var(--sx-soft-text)] dark:bg-[color:color-mix(in_srgb,var(--support-accent)_20%,var(--sx-bg))]";
   function clock(iso?: string) {
     if (!iso) return "";
     const date = new Date(iso);
@@ -472,10 +479,10 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
   }
   return (
     <main
-      style={{ "--support-accent": accentColor } as CSSProperties}
-      className="mx-auto flex h-[100dvh] w-full max-w-[480px] flex-col overflow-hidden bg-white text-neutral-950 antialiased dark:bg-black dark:text-white"
+      style={supportThemeVars(appearance, accentColor)}
+      className="mx-auto flex h-[100dvh] w-full max-w-[480px] flex-col overflow-hidden bg-[var(--sx-bg)] text-[var(--sx-text)] antialiased"
     >
-      <header className="relative shrink-0 border-b border-neutral-100 px-3 py-2.5 dark:border-neutral-900 sm:px-4 sm:py-3">
+      <header className="relative shrink-0 border-b border-[var(--sx-hairline)] px-3 py-2.5 sm:px-4 sm:py-3">
         <div className="flex items-center gap-2.5">
           <div className="relative h-9 w-9 shrink-0">
             <BusinessAvatar
@@ -484,21 +491,21 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
               size={36}
             />
             <span
-              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-black ${config?.online.length || isHuman ? "bg-emerald-500" : "bg-[var(--support-accent)]"}`}
+              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[var(--sx-bg)] ${config?.online.length || isHuman ? "bg-emerald-500" : "bg-[var(--support-accent)]"}`}
             />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold tracking-tight">
               {business}
             </h1>
-            <p className="flex min-w-0 items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="flex min-w-0 items-center gap-1.5 text-xs text-[var(--sx-muted)]">
               <span className="truncate">{subtitle}</span>
               {chat?.ticketReference && (
                 <button
                   type="button"
                   title="Copy ticket reference"
                   aria-label={`Copy ticket reference ${chat.ticketReference}`}
-                  className="shrink-0 rounded-md border border-neutral-200 bg-neutral-100 px-1.5 font-mono text-[11px] font-semibold text-neutral-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
+                  className="shrink-0 rounded-[var(--sx-r6)] border border-[var(--sx-border)] bg-[var(--sx-surface)] px-1.5 font-mono text-[11px] font-semibold text-[var(--sx-strong)]"
                   onClick={() =>
                     void navigator.clipboard
                       .writeText(chat.ticketReference!)
@@ -517,7 +524,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             aria-label={sound ? "Mute message sound" : "Turn on message sound"}
             title={sound ? "Sound on" : "Sound off"}
             onClick={toggleSound}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white sm:h-8 sm:w-8"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--sx-r8)] text-[var(--sx-faint)] transition hover:bg-[var(--sx-surface)] hover:text-[var(--sx-text)] sm:h-8 sm:w-8"
           >
             <SupportIcon
               name={sound ? "bell" : "mute"}
@@ -526,7 +533,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
           </button>
           <button
             type="button"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white sm:h-8 sm:w-8"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--sx-r8)] text-[var(--sx-faint)] transition hover:bg-[var(--sx-surface)] hover:text-[var(--sx-text)] sm:h-8 sm:w-8"
             aria-label="Conversation options"
             aria-expanded={showHistory}
             onClick={() => setShowHistory(!showHistory)}
@@ -535,7 +542,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
           </button>
         </div>
         {showHistory && (
-          <div className="mt-3 space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-xs dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="mt-3 space-y-3 rounded-[var(--sx-r12)] border border-[var(--sx-border)] bg-[var(--sx-subtle)] p-3 text-xs">
             {history.length > 1 && (
               <select
                 aria-label="Choose conversation"
@@ -558,7 +565,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             )}
             {chat?.supportEmail && (
               <a
-                className="block truncate text-neutral-600 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-300"
+                className="block truncate text-[var(--sx-strong)] underline decoration-[var(--sx-hover-border)] underline-offset-2"
                 href={`mailto:${chat.supportEmail}${chat.ticketReference ? `?subject=${encodeURIComponent(`Support ${chat.ticketReference}`)}` : ""}`}
               >
                 Email {chat.supportEmail}
@@ -567,7 +574,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             {chat?.humanRequested && !chat.customer.verified && (
               <button
                 type="button"
-                className="font-semibold text-neutral-700 underline underline-offset-2 dark:text-neutral-200"
+                className="font-semibold text-[var(--sx-strong)] underline underline-offset-2"
                 onClick={() => {
                   setName(chat.customer.name || "");
                   setEmail(chat.customer.email || "");
@@ -578,7 +585,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 Your contact details
               </button>
             )}
-            <p className="text-neutral-400">
+            <p className="text-[var(--sx-faint)]">
               {config?.showBranding !== false ? (
                 <>
                   Powered by{" "}
@@ -586,7 +593,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                     href="https://upstep.dev"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-neutral-500 dark:text-neutral-400"
+                    className="font-medium text-[var(--sx-muted)]"
                   >
                     UpStep
                   </a>
@@ -612,18 +619,16 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
         >
           {!chat && (
             <div className="mx-auto max-w-sm pt-3">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-neutral-200 px-2.5 py-1 text-xs font-medium text-neutral-500 dark:border-neutral-800">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--sx-border)] px-2.5 py-1 text-xs font-medium text-[var(--sx-muted)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--support-accent)]" />
                 {business} help desk
               </div>
               <h2 className="text-[26px] font-semibold leading-[1.13] tracking-[-0.045em]">
                 Hi there.
                 <br />
-                <span className="text-neutral-400 dark:text-neutral-500">
-                  How can we help?
-                </span>
+                <span className="text-[var(--sx-faint)]">How can we help?</span>
               </h2>
-              <p className="mt-4 text-base leading-6 text-neutral-500 dark:text-neutral-400">
+              <p className="mt-4 text-base leading-6 text-[var(--sx-muted)]">
                 {config?.welcomeMessage ||
                   "Ask a question about the business. We're here to help."}
               </p>
@@ -632,17 +637,17 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                   <button
                     key={text}
                     onClick={() => suggest(text)}
-                    className="group flex min-h-11 w-full items-center gap-3 rounded-xl border border-neutral-200/80 bg-white px-3.5 py-3 text-left text-sm transition hover:border-neutral-400 hover:bg-[#fafafa] dark:border-neutral-800 dark:bg-black dark:hover:border-neutral-600 dark:hover:bg-neutral-950"
+                    className="group flex min-h-11 w-full items-center gap-3 rounded-[var(--sx-r12)] border border-[var(--sx-border)] bg-[var(--sx-bg)] px-3.5 py-3 text-left text-sm transition hover:border-[var(--sx-hover-border)] hover:bg-[var(--sx-subtle)]"
                   >
                     <SupportIcon
                       name={i === 2 ? "person" : "message"}
-                      className="h-3.5 w-3.5 shrink-0 text-neutral-400"
+                      className="h-3.5 w-3.5 shrink-0 text-[var(--sx-faint)]"
                     />
                     <span className="flex-1">{text}</span>
                   </button>
                 ))}
               </div>
-              <p className="mt-5 text-xs text-neutral-400">
+              <p className="mt-5 text-xs text-[var(--sx-faint)]">
                 No account or email needed to start.
               </p>
             </div>
@@ -654,7 +659,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             const divider = m.id === firstUnread && (
               <div
                 role="separator"
-                className="flex items-center gap-3 py-3 text-[11px] font-bold uppercase tracking-[0.05em] text-[color:color-mix(in_srgb,var(--support-accent)_62%,#171717)] dark:text-[color:color-mix(in_srgb,var(--support-accent)_55%,white)]"
+                className="flex items-center gap-3 py-3 text-[11px] font-bold uppercase tracking-[0.05em] text-[color:color-mix(in_srgb,var(--support-accent)_60%,var(--sx-text))]"
               >
                 <span className="h-px flex-1 bg-[color:color-mix(in_srgb,var(--support-accent)_50%,transparent)]" />
                 New
@@ -666,8 +671,8 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 <div key={m.id}>
                   {divider}
                   {m.metadata?.ticketReference ? (
-                    <details className="my-3 rounded-xl border border-neutral-200 bg-[#fafafa] px-3.5 py-3 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400">
-                      <summary className="cursor-pointer font-medium text-neutral-700 dark:text-neutral-300">
+                    <details className="my-3 rounded-[var(--sx-r12)] border border-[var(--sx-border)] bg-[var(--sx-subtle)] px-3.5 py-3 text-sm text-[var(--sx-muted)]">
+                      <summary className="cursor-pointer font-medium text-[var(--sx-strong)]">
                         ✓ Ticket {m.metadata.ticketReference} opened
                       </summary>
                       <p className="mt-2 whitespace-pre-wrap text-sm leading-5">
@@ -675,10 +680,10 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                       </p>
                     </details>
                   ) : (
-                    <div className="my-3 flex items-center justify-center gap-2 text-center text-xs leading-5 text-neutral-400">
-                      <span className="h-px w-5 bg-neutral-200 dark:bg-neutral-800" />
+                    <div className="my-3 flex items-center justify-center gap-2 text-center text-xs leading-5 text-[var(--sx-faint)]">
+                      <span className="h-px w-5 bg-[var(--sx-border)]" />
                       <p>{m.content}</p>
-                      <span className="h-px w-5 bg-neutral-200 dark:bg-neutral-800" />
+                      <span className="h-px w-5 bg-[var(--sx-border)]" />
                     </div>
                   )}
                 </div>
@@ -700,17 +705,17 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                   className={`flex flex-col ${customer ? "items-end" : "items-start"}`}
                 >
                   {firstOfRun && !customer && (
-                    <div className="mb-1 ml-0.5 mt-3 flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                    <div className="mb-1 ml-0.5 mt-3 flex items-center gap-1.5 text-xs font-semibold text-[var(--sx-muted)]">
                       {m.role === "ASSISTANT" ? `${business} AI` : m.authorName}
                       <span
-                        className={`rounded px-1.5 py-px text-[10px] font-bold uppercase tracking-wide ${m.role === "AGENT" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" : "border border-neutral-200 bg-neutral-100 text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400"}`}
+                        className={`rounded px-1.5 py-px text-[10px] font-bold uppercase tracking-wide ${m.role === "AGENT" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" : "border border-[var(--sx-border)] bg-[var(--sx-surface)] text-[var(--sx-muted)]"}`}
                       >
                         {m.role === "ASSISTANT" ? "AI" : "Team"}
                       </span>
                     </div>
                   )}
                   <div
-                    className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-6 ${customer ? `${ink} ${firstOfRun ? "mt-3" : ""} rounded-br-md` : `${m.role === "AGENT" ? team : soft} rounded-tl-md`}`}
+                    className={`max-w-[88%] rounded-[var(--sx-r16)] px-3.5 py-2.5 text-[15px] leading-6 ${customer ? `${ink} ${firstOfRun ? "mt-3" : ""} rounded-br-[var(--sx-r6)]` : `${m.role === "AGENT" ? team : soft} rounded-tl-[var(--sx-r6)]`}`}
                   >
                     <div className="space-y-3">
                       {m.content.split(/\n\s*\n/).map((paragraph, n) => (
@@ -720,14 +725,14 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                       ))}
                     </div>
                     {!!m.metadata?.citations?.length && (
-                      <div className="mt-3 flex flex-wrap gap-1.5 border-t border-neutral-300/60 pt-2.5 dark:border-neutral-700">
+                      <div className="mt-3 flex flex-wrap gap-1.5 border-t border-[var(--sx-border)] pt-2.5">
                         {m.metadata.citations.map((s) => (
                           <a
                             key={s.url}
                             href={s.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex max-w-full items-center gap-1 rounded-md border border-neutral-200 bg-white px-1.5 py-1 text-xs leading-4 text-neutral-500 transition hover:text-neutral-900 dark:border-neutral-800 dark:bg-black dark:text-neutral-400"
+                            className="inline-flex max-w-full items-center gap-1 rounded-[var(--sx-r6)] border border-[var(--sx-border)] bg-[var(--sx-bg)] px-1.5 py-1 text-xs leading-4 text-[var(--sx-muted)] transition hover:text-[var(--sx-text)]"
                           >
                             <SupportIcon
                               name="link"
@@ -742,7 +747,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                     )}
                   </div>
                   {lastOfRun && clock(m.createdAt) && (
-                    <span className="mx-1 mt-1 text-[11px] tabular-nums text-neutral-400">
+                    <span className="mx-1 mt-1 text-[11px] tabular-nums text-[var(--sx-faint)]">
                       {clock(m.createdAt)}
                     </span>
                   )}
@@ -754,12 +759,12 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             <div
               role="status"
               aria-label={`${business} AI is typing`}
-              className="mt-3 inline-flex gap-1 rounded-2xl rounded-tl-md bg-neutral-100 px-3.5 py-3.5 dark:bg-neutral-900"
+              className="mt-3 inline-flex gap-1 rounded-[var(--sx-r16)] rounded-tl-[var(--sx-r6)] bg-[var(--sx-surface)] px-3.5 py-3.5"
             >
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-neutral-400"
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--sx-faint)]"
                   style={{ animationDelay: `${i * 150}ms` }}
                 />
               ))}
@@ -775,13 +780,13 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 behavior: "smooth",
               });
             }}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-neutral-900 px-4 py-2 text-xs font-bold text-white shadow-lg dark:bg-neutral-100 dark:text-neutral-900"
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--sx-ink)] px-4 py-2 text-xs font-bold text-[var(--sx-on-ink)] shadow-lg"
           >
             {count} new ↓
           </button>
         )}
       </div>
-      <footer className="shrink-0 bg-white px-3 pb-3 pt-1.5 dark:bg-black sm:px-4">
+      <footer className="shrink-0 bg-[var(--sx-bg)] px-3 pb-3 pt-1.5 sm:px-4">
         {chat && widgets.length > 0 && (
           <section
             aria-label="Suggested next step"
@@ -806,19 +811,19 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
         {error && (
           <p
             role="alert"
-            className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400"
+            className="mb-2 rounded-[var(--sx-r8)] bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400"
           >
             {error}
           </p>
         )}
         {notice && (
-          <p role="status" className="mb-2 px-1 text-xs text-neutral-500">
+          <p role="status" className="mb-2 px-1 text-xs text-[var(--sx-muted)]">
             {notice}
           </p>
         )}
         {showContact && chat?.humanRequested && !chat.customer.verified && (
           <form
-            className="mb-3 rounded-xl border border-neutral-200 bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-950"
+            className="mb-3 rounded-[var(--sx-r12)] border border-[var(--sx-border)] bg-[var(--sx-subtle)] p-3"
             onSubmit={(e) => {
               e.preventDefault();
               void act("contact", { name, email }).then((ok) => {
@@ -832,7 +837,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold">Stay in the loop</p>
-                <p className="mt-1 text-xs text-neutral-400">
+                <p className="mt-1 text-xs text-[var(--sx-faint)]">
                   Optional details for the support team.
                 </p>
               </div>
@@ -840,7 +845,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 type="button"
                 aria-label="Close contact details"
                 onClick={() => setShowContact(false)}
-                className="p-1 text-neutral-400"
+                className="p-1 text-[var(--sx-faint)]"
               >
                 <SupportIcon name="close" />
               </button>
@@ -866,7 +871,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             </div>
             <button
               disabled={busy}
-              className="mt-2 rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-white dark:bg-white dark:text-black"
+              className="mt-2 rounded-[var(--sx-r8)] bg-[var(--sx-ink)] px-3 py-2 text-xs font-semibold text-[var(--sx-on-ink)]"
             >
               Save details
             </button>
@@ -891,13 +896,13 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                   type="button"
                   disabled={busy}
                   onClick={() => void startFresh()}
-                  className="mb-2 w-full text-center text-xs font-medium text-neutral-500 underline-offset-2 hover:underline dark:text-neutral-400"
+                  className="mb-2 w-full text-center text-xs font-medium text-[var(--sx-muted)] underline-offset-2 hover:underline"
                 >
                   Different question? Start a new conversation with AI
                 </button>
               )}
             <form
-              className="flex items-end gap-2 rounded-3xl border-[1.5px] border-neutral-200 bg-white py-1 pl-4 pr-1 transition focus-within:border-neutral-900 dark:border-neutral-800 dark:bg-black dark:focus-within:border-neutral-300"
+              className="flex items-end gap-2 rounded-[var(--sx-r24)] border-[1.5px] border-[var(--sx-border)] bg-[var(--sx-bg)] py-1 pl-4 pr-1 transition focus-within:border-[var(--sx-focus)]"
               onSubmit={(e) => {
                 e.preventDefault();
                 void send();
@@ -920,12 +925,12 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                 maxLength={4000}
                 rows={1}
                 placeholder={`Message ${business}…`}
-                className="block max-h-28 min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base leading-6 outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                className="block max-h-28 min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base leading-6 outline-none placeholder:text-[var(--sx-faint)]"
               />
               <button
                 aria-label="Send message"
                 disabled={busy || !message.trim() || !config}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--support-accent)] text-white transition hover:brightness-95 disabled:bg-neutral-100 disabled:text-neutral-300 dark:disabled:bg-neutral-900 dark:disabled:text-neutral-700"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--support-accent)] text-[var(--sx-accent-text)] transition hover:brightness-95 disabled:bg-[var(--sx-surface)] disabled:text-[var(--sx-disabled)]"
               >
                 <SupportIcon name="arrow" className="h-4 w-4" />
               </button>

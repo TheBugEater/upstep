@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'api_client.dart';
 import 'config.dart';
+import 'theme.dart';
 import 'models.dart';
 import 'support_client.dart';
 
@@ -35,6 +36,16 @@ class UpstepController extends ChangeNotifier {
   Object? get lastError => _lastError;
   Color get accentColor => _config.accentColor ?? const Color(0xFFD97757);
   UpstepThemeMode get themeMode => _config.themeMode;
+  UpstepColors? get colors => _config.colors;
+  double? get radius => _config.radius;
+
+  /// The resolved look for [brightness]: defaults, then [colors] and [radius].
+  UpstepThemeData themeFor(Brightness brightness) => UpstepThemeData.resolve(
+    brightness: brightness,
+    accent: accentColor,
+    colors: colors,
+    radius: radius,
+  );
   String? get userId => _client.userId;
 
   Future<void> initialize() async {

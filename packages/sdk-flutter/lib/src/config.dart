@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme.dart';
+
 enum UpstepThemeMode { light, dark, auto }
 
 @immutable
@@ -12,6 +14,8 @@ class UpstepConfig {
     this.baseUrl = 'https://upstep.dev',
     this.accentColor,
     this.themeMode = UpstepThemeMode.auto,
+    this.colors,
+    this.radius,
   });
 
   final String apiKey;
@@ -22,6 +26,14 @@ class UpstepConfig {
   final Color? accentColor;
   final UpstepThemeMode themeMode;
 
+  /// Panel color overrides. Null fields keep the default palette.
+  final UpstepColors? colors;
+
+  /// Base corner radius in logical pixels. Defaults to 12; the sheet,
+  /// bubbles and buttons scale with it and 0 gives square corners.
+  /// Clamped to 0–32.
+  final double? radius;
+
   UpstepConfig copyWith({
     String? apiKey,
     String? userId,
@@ -31,6 +43,8 @@ class UpstepConfig {
     String? baseUrl,
     Color? accentColor,
     UpstepThemeMode? themeMode,
+    UpstepColors? colors,
+    double? radius,
   }) {
     return UpstepConfig(
       apiKey: apiKey ?? this.apiKey,
@@ -42,6 +56,8 @@ class UpstepConfig {
       baseUrl: baseUrl ?? this.baseUrl,
       accentColor: accentColor ?? this.accentColor,
       themeMode: themeMode ?? this.themeMode,
+      colors: colors ?? this.colors,
+      radius: radius ?? this.radius,
     );
   }
 }
