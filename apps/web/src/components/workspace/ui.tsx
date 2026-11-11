@@ -84,7 +84,7 @@ export function StatusMenu({
                   onChange(s.id);
                   setOpen(false);
                 }}
-                className={`w-full flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg hover:bg-surface transition text-left ${
+                className={`w-full flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg hover:bg-raised transition text-left ${
                   s.id === value ? "font-semibold text-ink" : "text-ink-soft"
                 }`}
               >
@@ -124,10 +124,10 @@ export function ModalShell({
   wide?: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div
-        className={`relative bg-canvas rounded-2xl border border-line shadow-lift w-full ${
+        className={`relative bg-card rounded-2xl border border-line shadow-lift w-full ${
           wide ? "max-w-lg" : "max-w-sm"
         } p-6 max-h-[90vh] overflow-y-auto animate-card-in`}
       >

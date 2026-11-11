@@ -80,12 +80,12 @@ export function SetupGuideButton({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[80]">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
             onClick={close}
           />
-          <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-canvas shadow-lift flex flex-col animate-fade-up">
+          <div className="absolute right-0 top-0 h-full w-full max-w-xl border-l border-line bg-card shadow-lift flex flex-col animate-fade-up">
             <header className="flex items-center justify-between px-6 h-16 border-b border-line shrink-0">
               <div className="flex items-center gap-3">
                 <span className="w-8 h-8 rounded-lg bg-clay/10 text-clay flex items-center justify-center text-sm">
@@ -328,7 +328,7 @@ function AiPrompt({
       </div>
 
       {show && (
-        <pre className="mt-4 rounded-lg bg-[#1A1915] text-white/90 text-xs font-mono p-4 overflow-x-auto whitespace-pre-wrap">
+        <pre className="mt-4 rounded-lg bg-[#17191D] text-white/90 text-xs font-mono p-4 overflow-x-auto whitespace-pre-wrap">
           {prompt}
         </pre>
       )}
@@ -370,7 +370,7 @@ function CodeBlock({ code }: { code: string }) {
   }
   return (
     <div className="relative group">
-      <pre className="rounded-lg bg-[#1A1915] text-white/90 text-[13px] font-mono p-4 overflow-x-auto">
+      <pre className="rounded-lg bg-[#17191D] text-white/90 text-[13px] font-mono p-4 overflow-x-auto">
         <code>{code}</code>
       </pre>
       <button

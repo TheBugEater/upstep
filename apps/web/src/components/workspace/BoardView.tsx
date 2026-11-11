@@ -43,7 +43,7 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard, teamMem
   }
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1">
+    <div className="flex gap-3.5 overflow-x-auto pb-4 -mx-1 px-1">
       {board.columns.map((col) => {
         const colItems = items.filter((f) => f.statusId === col.statusId);
         const isOver = overColId === col.statusId && dragId !== null;
@@ -71,14 +71,14 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard, teamMem
                 draggingRef.current = false;
               }, 0);
             }}
-            className={`min-w-[280px] flex-1 rounded-xl border self-start transition-all duration-300 ease-fluid ${
+            className={`min-w-[264px] flex-1 rounded-2xl border self-start transition-all duration-300 ease-fluid ${
               isOver
-                ? "border-clay/50 bg-clay-tint/50 shadow-glow scale-[1.01]"
-                : "border-line bg-surface/40"
+                ? "border-clay/50 bg-clay-tint shadow-glow scale-[1.01]"
+                : "border-line bg-surface"
             }`}
           >
             {/* Column header */}
-            <div className="flex items-center gap-2 px-4 h-12 border-b border-line">
+            <div className="flex items-center gap-2 pl-4 pr-2 h-12">
               <span
                 className={`w-2 h-2 rounded-full shrink-0 transition-transform duration-300 ${isOver ? "scale-150" : ""}`}
                 style={{ backgroundColor: col.status.color }}
@@ -91,13 +91,13 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard, teamMem
               )}
               <span
                 key={colItems.length}
-                className="ml-auto text-xs font-medium text-faint bg-card border border-line rounded-full px-2 py-0.5 shrink-0 animate-pop"
+                className="text-xs font-medium text-faint shrink-0 animate-pop"
               >
                 {colItems.length}
               </span>
               <button
                 onClick={() => actions.openQuickAdd(col.statusId)}
-                className="text-muted hover:text-clay hover:scale-125 transition-all duration-200 text-base leading-none shrink-0"
+                className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-card hover:text-clay transition text-base leading-none shrink-0"
                 title={`Add task to ${col.status.name}`}
                 aria-label={`Add task to ${col.status.name}`}
               >
@@ -109,7 +109,7 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard, teamMem
             <ColumnComposer statusId={col.statusId} actions={actions} />
 
             {/* Cards */}
-            <div className="p-2.5 space-y-2.5 min-h-[120px] max-h-[65vh] overflow-y-auto">
+            <div className="px-2 pb-2 pt-1 space-y-2 min-h-[120px] max-h-[65vh] overflow-y-auto">
               {colItems.length === 0 ? (
                 <div
                   className={`text-center text-xs py-8 rounded-xl border border-dashed transition-all duration-300 ${
@@ -197,7 +197,7 @@ function ColumnComposer({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full text-left text-xs text-faint hover:text-muted px-4 py-2 border-b border-line/60 transition"
+        className="mx-2 mb-1 w-[calc(100%-1rem)] rounded-lg border border-dashed border-line-strong text-center text-xs text-faint hover:text-ink hover:border-faint px-3 py-2 transition"
       >
         + Add a card…
       </button>
@@ -258,53 +258,52 @@ function BoardCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className={`group bg-card border border-line rounded-xl p-3 shadow-soft cursor-grab active:cursor-grabbing transition-all duration-200 ease-fluid hover:border-line-strong hover:shadow-lift hover:-translate-y-0.5 ${
+      className={`group bg-card border border-line rounded-xl p-3.5 shadow-soft cursor-grab active:cursor-grabbing transition-all duration-200 ease-fluid hover:border-line-strong hover:shadow-lift hover:-translate-y-0.5 ${
         isDragging ? "opacity-40 rotate-2 scale-[1.03] shadow-lift" : ""
       } ${justDropped ? "animate-drop-settle border-clay/40" : ""}`}
     >
-      <p className="text-sm font-semibold text-ink leading-snug line-clamp-2">
-        {item.title ?? item.content}
-      </p>
-      {item.title && (
-        <p className="text-xs text-muted mt-1 line-clamp-2 leading-snug">{item.content}</p>
-      )}
-
-      {item.labels && item.labels.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {item.labels.map((l) => (
-            <span
-              key={l.id}
-              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold border"
-              style={{ backgroundColor: `${l.color}18`, borderColor: `${l.color}55`, color: l.color }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: l.color }} />{l.name}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-center gap-2 mt-2.5">
-        <span className="inline-flex items-center gap-1 text-clay text-xs font-semibold">
-          <span className="text-[10px]">▲</span>
-          <span key={item.upvotes} className="inline-block animate-pop">{item.upvotes}</span>
-        </span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <TypePill type={item.type} />
+        {item.labels?.slice(0, 2).map((l) => (
+          <span key={l.id} className="inline-flex max-w-[110px] items-center gap-1.5 text-[11px] text-ink-soft">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: l.color }} />
+            <span className="truncate">{l.name}</span>
+          </span>
+        ))}
+        {(item.labels?.length ?? 0) > 2 && <span className="text-[11px] text-faint">+{item.labels!.length - 2}</span>}
         {item.internal && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold border bg-violet-500/10 text-violet-500 border-violet-500/30">
+          <span title="Dev only: hidden from the public widget" className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold border bg-violet-500/10 text-violet-500 border-violet-500/30">
             Dev
           </span>
         )}
         {item.flagged && (
-          <span
-            title="Flagged"
-            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium border bg-clay/10 text-clay border-clay/25"
-          >
-            ⚑
-          </span>
+          <span title="Flagged" className="ml-auto text-[11px] font-semibold text-clay" aria-label="Flagged">⚑</span>
         )}
-        <span className="ml-auto text-[10px] text-faint">{relativeDate(item.createdAt)}</span>
       </div>
-      {assigneeName && <p className="mt-2 text-[11px] text-muted truncate" title={`Assigned to ${assigneeName}`}>Assigned to {assigneeName}</p>}
+
+      <p className="mt-2 text-sm font-semibold text-ink leading-snug line-clamp-3">
+        {item.title ?? item.content}
+      </p>
+
+      <div className="flex items-center gap-3 mt-3">
+        <span className="inline-flex items-center gap-1 text-clay text-xs font-semibold" aria-label={`${item.upvotes} upvotes`}>
+          <span className="text-[10px]" aria-hidden>▲</span>
+          <span key={item.upvotes} className="inline-block animate-pop">{item.upvotes}</span>
+        </span>
+        <span className="text-[11px] text-faint">{relativeDate(item.createdAt)}</span>
+        {assigneeName ? (
+          <span title={`Assigned to ${assigneeName}`} aria-label={`Assigned to ${assigneeName}`} className="ml-auto grid h-6 w-6 shrink-0 place-items-center rounded-full bg-raised text-[10px] font-bold text-ink ring-1 ring-line-strong">
+            {initials(assigneeName)}
+          </span>
+        ) : (
+          <span title="Unassigned" aria-label="Unassigned" className="ml-auto h-6 w-6 shrink-0 rounded-full border border-dashed border-line-strong" />
+        )}
+      </div>
     </article>
   );
+}
+
+function initials(name: string) {
+  const parts = name.replace(/@.*/, "").split(/[\s._-]+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }

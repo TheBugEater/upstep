@@ -87,7 +87,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
                         </ul>
                       )}
                       {section.code && (
-                        <pre className="mt-5 overflow-x-auto rounded-xl border border-line bg-[#181715] p-4 sm:p-5 text-xs leading-6 text-[#e7e2da] shadow-soft">
+                        <pre className="mt-5 overflow-x-auto rounded-xl border border-line bg-[#17191D] p-4 sm:p-5 text-xs leading-6 text-[#e7e2da] shadow-soft">
                           <code>{section.code}</code>
                         </pre>
                       )}

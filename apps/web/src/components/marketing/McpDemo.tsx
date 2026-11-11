@@ -83,7 +83,7 @@ export function McpDemo() {
   }, [lines, typing]);
 
   return (
-    <div className="rounded-2xl border border-line-strong bg-[#1C1B19] shadow-lift overflow-hidden" aria-hidden>
+    <div className="rounded-2xl border border-line-strong bg-[#17191D] shadow-lift overflow-hidden" aria-hidden>
       {/* Title bar */}
       <div className="flex items-center gap-2 px-4 h-11 border-b border-white/10">
         <span className="w-3 h-3 rounded-full bg-[#FF5F57]" />

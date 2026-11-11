@@ -102,7 +102,7 @@ export function WidgetGenerator() {
             Add a valid email above — the copied snippet will send feedback there.
           </p>
         )}
-        <pre className="rounded-xl border border-line-strong bg-[#1C1B19] px-4 py-4 text-[12px] leading-relaxed font-mono text-white/85 overflow-x-auto max-h-72">
+        <pre className="rounded-xl border border-line-strong bg-[#17191D] px-4 py-4 text-[12px] leading-relaxed font-mono text-white/85 overflow-x-auto max-h-72">
           <code>{snippet}</code>
         </pre>
         <p className="text-xs text-faint mt-2">

@@ -73,6 +73,9 @@ interface Props {
   initialLabels: Label[];
 }
 
+const chipSelect = (active: boolean) =>
+  `h-9 rounded-lg border px-2.5 text-xs font-medium transition focus:outline-none focus:ring-4 focus:ring-clay/10 ${active ? "border-clay/40 bg-clay-tint text-ink" : "border-line bg-card text-muted hover:border-line-strong hover:text-ink"}`;
+
 export function ProjectWorkspace({
   projectId,
   projectSlug,
@@ -121,6 +124,7 @@ export function ProjectWorkspace({
   const [showStatuses, setShowStatuses] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
   const [showLabelFilter, setShowLabelFilter] = useState(false);
+  const [showCustomize, setShowCustomize] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
   // Suppress background refresh right after an optimistic mutation so a
@@ -151,7 +155,8 @@ export function ProjectWorkspace({
   function closeSettingsPanel() {
     setShowStatuses(false);
     setShowLabels(false);
-    router.replace(`/dashboard/projects/${projectId}?tab=settings`);
+    // Statuses and labels open from the board's Customize menu or from Settings.
+    router.replace(`/dashboard/projects/${projectId}?tab=${tab}`);
   }
 
   function switchView(v: View) {
@@ -481,9 +486,29 @@ export function ProjectWorkspace({
 
       {tab === "feedback" && (
         <div>
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div><h1 className="text-xl font-semibold tracking-[-0.02em] text-ink">{assigneeFilter === "mine" ? "My tasks" : assigneeFilter === "unassigned" ? "Unassigned tasks" : assigneeFilter === "all" ? "All tasks" : `${teamMembers.find((m) => m.id === assigneeFilter)?.name || "Teammate"}’s tasks`}</h1><p className="mt-0.5 text-xs text-faint">{activeItems.length} active · {completedItems.length} completed</p></div>
-            <button onClick={() => setQuickAdd({ open: true, statusId: null })} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-clay px-3.5 text-xs font-semibold text-white transition hover:bg-clay-hover" title="New task (n)"><span className="text-base leading-none">+</span> New task</button>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1 basis-56">
+              <h1 className="text-[22px] font-bold tracking-[-0.02em] text-ink">{assigneeFilter === "mine" ? "My tasks" : assigneeFilter === "unassigned" ? "Unassigned tasks" : assigneeFilter === "all" ? "All tasks" : `${teamMembers.find((m) => m.id === assigneeFilter)?.name || "Teammate"}’s tasks`}</h1>
+              <p className="mt-0.5 text-xs text-faint">{activeItems.length} active · {completedItems.length} completed</p>
+            </div>
+            <div className="relative w-full sm:w-72">
+              <label className="sr-only" htmlFor="task-search">Search tasks</label>
+              <input
+                id="task-search"
+                ref={searchRef}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search tasks"
+                className="h-10 w-full rounded-xl border border-line bg-card pl-9 pr-9 text-sm text-ink placeholder:text-faint focus:border-clay/50 focus:outline-none focus:ring-4 focus:ring-clay/10"
+              />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"><SearchIcon /></span>
+              {search ? (
+                <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-xs text-faint transition hover:text-ink" aria-label="Clear search">✕</button>
+              ) : (
+                <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-line-strong px-1.5 text-[11px] text-faint">/</kbd>
+              )}
+            </div>
+            <button onClick={() => setQuickAdd({ open: true, statusId: null })} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-clay px-4 text-sm font-semibold text-white transition hover:bg-clay-hover" title="New task (n)"><span className="text-base leading-none">+</span> New task</button>
           </div>
 
           <BoardNavigation
@@ -498,71 +523,42 @@ export function ProjectWorkspace({
             onEdit={() => setBoardModal("edit")}
           />
 
-          <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-line pb-3">
-            <div className="flex gap-0.5 rounded-lg bg-surface p-0.5 shrink-0">
-              <ViewBtn active={view === "board"} onClick={() => switchView("board")} label="Board">
-                <BoardIcon />
-              </ViewBtn>
-              <ViewBtn active={view === "list"} onClick={() => switchView("list")} label="List">
-                <ListIcon />
-              </ViewBtn>
-            </div>
-
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <label className="sr-only" htmlFor="task-assignee-filter">Show tasks</label>
-            <select id="task-assignee-filter" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} className="h-8 rounded-lg border border-line bg-card px-2 text-xs text-ink">
-              <option value="mine">My tasks</option>
-              <option value="all">All tasks</option>
+            <select id="task-assignee-filter" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} className={chipSelect(assigneeFilter !== "all")}>
+              <option value="mine">Assignee: me</option>
+              <option value="all">Assignee: anyone</option>
               <option value="unassigned">Unassigned</option>
-              {teamMembers.filter((m) => m.id !== currentUserId).map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
+              {teamMembers.filter((m) => m.id !== currentUserId).map((m) => <option key={m.id} value={m.id}>Assignee: {m.name || m.email}</option>)}
             </select>
 
-            <div className="relative min-w-[180px] flex-1 max-w-sm">
-              <input
-                ref={searchRef}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search…  ( / )"
-                className="h-8 w-full rounded-lg border border-line bg-card pl-8 pr-7 text-xs text-ink placeholder:text-faint focus:border-clay/50 focus:outline-none"
-              />
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-faint pointer-events-none">
-                <SearchIcon />
-              </span>
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-faint hover:text-ink transition text-xs"
-                  aria-label="Clear search"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+            <label className="sr-only" htmlFor="task-type-filter">Type</label>
+            <select id="task-type-filter" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as FeedbackType | "ALL")} className={chipSelect(typeFilter !== "ALL")}>
+              <option value="ALL">Type: all</option>
+              {TYPES.map((t) => <option key={t} value={t}>Type: {TYPE_LABELS[t]}</option>)}
+            </select>
 
-            <div className="flex gap-0.5 rounded-lg bg-surface p-0.5 shrink-0">
-              <FilterBtn active={typeFilter === "ALL"} onClick={() => setTypeFilter("ALL")}>
-                All
-              </FilterBtn>
-              {TYPES.map((t) => (
-                <FilterBtn
-                  key={t}
-                  active={typeFilter === t}
-                  onClick={() => setTypeFilter(typeFilter === t ? "ALL" : t)}
-                >
-                  {TYPE_LABELS[t]}
-                </FilterBtn>
-              ))}
-            </div>
-
-            {labels.length > 0 && <div className="relative"><button onClick={() => setShowLabelFilter((value) => !value)} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium ${labelFilter ? "border-clay/30 bg-clay/5 text-clay" : "border-line bg-card text-muted hover:text-ink"}`}><span className="text-[11px]">◇</span>{labelFilter ? labels.find((label) => label.id === labelFilter)?.name ?? "Label" : "Labels"}<span className="text-[9px] text-faint">▾</span></button>{showLabelFilter && <><button className="fixed inset-0 z-20 cursor-default" onClick={() => setShowLabelFilter(false)} aria-label="Close label filter" /><div className="absolute right-0 top-9 z-30 w-52 rounded-xl border border-line bg-card p-1.5 shadow-lift"><button onClick={() => { setLabelFilter(null); setShowLabelFilter(false); }} className={`flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs ${!labelFilter ? "bg-surface font-semibold text-ink" : "text-muted hover:bg-surface"}`}>All labels</button>{labels.map((label) => <button key={label.id} onClick={() => { setLabelFilter(label.id); setShowLabelFilter(false); }} className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs ${labelFilter === label.id ? "bg-surface font-semibold text-ink" : "text-muted hover:bg-surface"}`}><span className="h-2 w-2 rounded-full" style={{ backgroundColor: label.color }} />{label.name}</button>)}</div></>}</div>}
+            {labels.length > 0 && <div className="relative"><button onClick={() => setShowLabelFilter((value) => !value)} aria-expanded={showLabelFilter} className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition ${labelFilter ? "border-clay/40 bg-clay-tint text-ink" : "border-line bg-card text-muted hover:border-line-strong hover:text-ink"}`}>{labelFilter ? <><span className="h-2 w-2 rounded-full" style={{ backgroundColor: labels.find((label) => label.id === labelFilter)?.color }} />{labels.find((label) => label.id === labelFilter)?.name ?? "Label"}</> : "Label: any"}<span className="text-[9px] text-faint">▾</span></button>{showLabelFilter && <><button className="fixed inset-0 z-20 cursor-default" onClick={() => setShowLabelFilter(false)} aria-label="Close label filter" /><div className="absolute left-0 top-10 z-30 w-52 rounded-xl border border-line bg-card p-1.5 shadow-lift"><button onClick={() => { setLabelFilter(null); setShowLabelFilter(false); }} className={`flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs ${!labelFilter ? "bg-raised font-semibold text-ink" : "text-muted hover:bg-raised"}`}>Any label</button>{labels.map((label) => <button key={label.id} onClick={() => { setLabelFilter(label.id); setShowLabelFilter(false); }} className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs ${labelFilter === label.id ? "bg-raised font-semibold text-ink" : "text-muted hover:bg-raised"}`}><span className="h-2 w-2 rounded-full" style={{ backgroundColor: label.color }} />{label.name}</button>)}</div></>}</div>}
 
             <button
               onClick={() => setSortBy(sortBy === "votes" ? "newest" : "votes")}
-              className="h-8 shrink-0 rounded-lg border border-line bg-card px-2.5 text-xs text-muted hover:text-ink"
+              className="h-9 shrink-0 rounded-lg border border-line bg-card px-3 text-xs font-medium text-muted transition hover:border-line-strong hover:text-ink"
               title="Toggle sort order"
             >
-              {sortBy === "votes" ? "↑ Top voted" : "↑ Newest"}
+              Sort: {sortBy === "votes" ? "top voted" : "newest"}
             </button>
 
+            <div className="ml-auto flex items-center gap-2">
+              {canManage && <div className="relative"><button onClick={() => setShowCustomize((value) => !value)} aria-expanded={showCustomize} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-card px-3 text-xs font-medium text-muted transition hover:border-line-strong hover:text-ink">Customize<span className="text-[9px] text-faint">▾</span></button>{showCustomize && <><button className="fixed inset-0 z-20 cursor-default" onClick={() => setShowCustomize(false)} aria-label="Close customize menu" /><div className="absolute right-0 top-10 z-30 w-48 rounded-xl border border-line bg-card p-1.5 shadow-lift">{([["statuses", "Statuses"], ["labels", "Labels"]] as const).map(([panel, label]) => <button key={panel} onClick={() => { setShowCustomize(false); router.replace(`/dashboard/projects/${projectId}?tab=feedback&panel=${panel}`); }} className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs text-muted hover:bg-raised hover:text-ink">{label}</button>)}{activeBoard && <button onClick={() => { setShowCustomize(false); setBoardModal("edit"); }} className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs text-muted hover:bg-raised hover:text-ink">Edit this board</button>}</div></>}</div>}
+              <div className="flex shrink-0 gap-0.5 rounded-lg border border-line bg-surface p-0.5">
+                <ViewBtn active={view === "board"} onClick={() => switchView("board")} label="Board">
+                  <BoardIcon />
+                </ViewBtn>
+                <ViewBtn active={view === "list"} onClick={() => switchView("list")} label="List">
+                  <ListIcon />
+                </ViewBtn>
+              </div>
+            </div>
           </div>
 
           {filtered.length === 0 && assigneeFilter !== "all" && <div className="mb-4 rounded-xl border border-line bg-surface p-4 text-sm text-muted">No tasks match this view. <button type="button" onClick={() => setAssigneeFilter("all")} className="text-clay hover:underline">View all tasks</button></div>}
@@ -756,7 +752,7 @@ function BoardNavigation({
   onEdit: () => void;
 }) {
   return (
-    <div className="mb-3 flex min-w-0 items-end border-b border-line" aria-label="Boards">
+    <div className="mb-4 flex min-w-0 items-end border-b border-line" aria-label="Boards">
       <nav className="scrollbar-none flex min-w-0 flex-1 gap-0.5 overflow-x-auto" aria-label="Choose a board">
         {boards.map((board) => {
           const active = board.id === activeBoardId;
@@ -766,15 +762,15 @@ function BoardNavigation({
               type="button"
               onClick={() => onSelect(board.id)}
               aria-current={active ? "page" : undefined}
-              className={`group relative inline-flex h-10 shrink-0 items-center gap-2 px-3 text-xs font-medium transition-colors ${
-                active ? "text-ink" : "text-muted hover:text-ink"
+              className={`group relative inline-flex h-11 shrink-0 items-center gap-2 px-3 text-[13px] transition-colors ${
+                active ? "font-semibold text-ink" : "font-medium text-muted hover:text-ink"
               }`}
             >
               <span className={active ? "text-clay" : "text-faint group-hover:text-muted"}>
                 {board.isDefault ? <BoardIcon /> : <BoardTabIcon />}
               </span>
               <span>{board.name}</span>
-              {board.isPublic && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" title="Public board" />}
+              {board.isPublic && <span className="h-1.5 w-1.5 rounded-full bg-success" title="Public board" />}
               {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-clay" />}
             </button>
           );
@@ -782,11 +778,11 @@ function BoardNavigation({
       </nav>
 
       {isOwner && (
-        <div className="flex h-10 shrink-0 items-center gap-1 border-l border-line bg-canvas pl-2">
+        <div className="flex h-11 shrink-0 items-center gap-1 pl-2">
           <button
             type="button"
             onClick={onCreate}
-            className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted transition hover:bg-surface hover:text-ink"
+            className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted transition hover:bg-raised hover:text-ink"
           >
             <span className="text-base leading-none">+</span>
             <span className="hidden sm:inline">New board</span>
@@ -795,7 +791,7 @@ function BoardNavigation({
             <button
               type="button"
               onClick={onEdit}
-              className="grid h-7 w-7 place-items-center rounded-md text-faint transition hover:bg-surface hover:text-ink"
+              className="grid h-7 w-7 place-items-center rounded-md text-faint transition hover:bg-raised hover:text-ink"
               aria-label="Edit current board"
               title="Edit current board"
             >
@@ -880,33 +876,13 @@ function ViewBtn({
     <button
       onClick={onClick}
       title={`${label} view`}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-medium transition ${
-        active ? "bg-primary text-primary-fg" : "text-muted hover:text-ink"
+      aria-pressed={active}
+      className={`inline-flex h-8 items-center gap-1.5 px-2.5 rounded-md text-xs font-medium transition ${
+        active ? "bg-card text-ink shadow-soft" : "text-muted hover:text-ink"
       }`}
     >
       {children}
       <span className="hidden sm:inline">{label}</span>
-    </button>
-  );
-}
-
-function FilterBtn({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-2.5 py-1.5 rounded-[10px] text-xs font-medium transition ${
-        active ? "bg-primary text-primary-fg" : "text-muted hover:text-ink"
-      }`}
-    >
-      {children}
     </button>
   );
 }

@@ -51,10 +51,10 @@ const stateLabel: Record<string, string> = {
   RESOLVED: "Resolved",
 };
 const stateColor: Record<string, string> = {
-  AI: "bg-indigo-500",
-  WAITING: "bg-amber-500",
-  HUMAN: "bg-emerald-500",
-  RESOLVED: "bg-neutral-400",
+  AI: "bg-info",
+  WAITING: "bg-warning",
+  HUMAN: "bg-success",
+  RESOLVED: "bg-faint",
 };
 export function SupportPanel({
   projectId,
@@ -242,7 +242,7 @@ export function SupportPanel({
           }
         >
           <span
-            className={`mr-2 inline-block h-2 w-2 rounded-full ${available ? "bg-emerald-500" : "bg-neutral-400"}`}
+            className={`mr-2 inline-block h-2 w-2 rounded-full ${available ? "bg-success" : "bg-faint"}`}
           />
           {available ? "You're available" : "You're away"}
         </button>
@@ -418,38 +418,54 @@ export function SupportPanel({
                   )}
                 </div>
               </div>
-              <div className="flex max-h-[460px] min-h-[300px] flex-1 flex-col gap-4 overflow-y-auto p-5">
-                {conversation.messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`${m.role === "CUSTOMER" ? "mr-8" : "ml-8"} rounded-xl p-3 ${m.role === "NOTE" ? "border border-warning/30 bg-warning/10" : m.role === "SYSTEM" ? "bg-transparent" : "bg-surface"}`}
-                  >
-                    <div className="mb-1 flex gap-2 text-[10px] text-muted">
-                      <strong>{m.authorName}</strong>
-                      {m.role === "NOTE" && <span>Private note</span>}
-                      <span className="ml-auto">
-                        {new Date(m.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
+              <div className="flex max-h-[460px] min-h-[300px] flex-1 flex-col gap-4 overflow-y-auto bg-surface p-5">
+                {conversation.messages.map((m) => {
+                  const time = new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                  if (m.role === "SYSTEM")
+                    return (
+                      <div key={m.id} className="flex items-center gap-3 text-[11px] text-faint">
+                        <span className="h-px flex-1 bg-line" />
+                        <span className="max-w-[70%] text-center">{m.content} · {time}</span>
+                        <span className="h-px flex-1 bg-line" />
+                      </div>
+                    );
+                  if (m.role === "NOTE")
+                    return (
+                      <div key={m.id} className="rounded-xl border border-dashed border-warning/40 bg-warning/10 px-4 py-3">
+                        <div className="mb-1 flex gap-2 text-[11px] font-semibold text-warning">
+                          <span>Private note · only your team sees this</span>
+                          <span className="ml-auto font-normal text-faint">{m.authorName} · {time}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-ink">{m.content}</p>
+                      </div>
+                    );
+                  const agent = m.role === "AGENT";
+                  const ai = m.role === "ASSISTANT";
+                  return (
+                    <div key={m.id} className={`flex max-w-[80%] flex-col gap-1 ${agent ? "items-end self-end" : "items-start self-start"}`}>
+                      <div className="flex items-center gap-1.5 px-1 text-[11px] text-faint">
+                        <span className="font-semibold text-muted">{m.authorName}</span>
+                        {ai && <span className="rounded border border-info/30 bg-info/10 px-1 text-[10px] font-bold text-info">AI</span>}
+                        {m.role === "CUSTOMER" && <span>Customer</span>}
+                        <span>· {time}</span>
+                      </div>
+                      <div className={`px-3.5 py-2.5 ${agent ? "rounded-2xl rounded-br-md bg-clay-dark text-white" : ai ? "rounded-2xl rounded-bl-md border border-info/30 bg-info/10 text-ink" : "rounded-2xl rounded-bl-md border border-line bg-card text-ink shadow-soft"}`}>
+                        <p className="whitespace-pre-wrap break-words text-sm leading-6">{m.content}</p>
+                        {m.metadata?.citations?.map((c) => (
+                          <a
+                            key={c.url}
+                            href={c.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`mt-2 block truncate text-xs ${agent ? "text-white/85 underline" : "text-clay"}`}
+                          >
+                            ↗ {c.title}
+                          </a>
+                        ))}
+                      </div>
                     </div>
-                    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-ink">
-                      {m.content}
-                    </p>
-                    {m.metadata?.citations?.map((s) => (
-                      <a
-                        key={s.url}
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 block truncate text-xs text-clay"
-                      >
-                        ↗ {s.title}
-                      </a>
-                    ))}
-                  </div>
-                ))}
+                  );
+                })}
                 {conversation.aiPending && (
                   <p className="text-xs text-muted">AI is composing a reply…</p>
                 )}

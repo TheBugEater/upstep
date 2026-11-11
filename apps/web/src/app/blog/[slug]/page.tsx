@@ -162,7 +162,7 @@ function BlogBlockView({ block }: { block: BlogBlock }) {
       );
     case "code":
       return (
-        <div className="rounded-xl border border-line-strong bg-[#1C1B19] overflow-hidden">
+        <div className="rounded-xl border border-line-strong bg-[#17191D] overflow-hidden">
           <div className="flex items-center gap-2 px-4 h-9 border-b border-white/10">
             <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />

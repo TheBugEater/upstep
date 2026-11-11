@@ -96,7 +96,7 @@ function LoginForm() {
       </div>
 
       {/* Right - brand panel */}
-      <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-[#161513] p-12">
+      <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-[#17191D] p-12">
         <div className="absolute inset-0 bg-grid opacity-[0.07]" />
         <div className="absolute inset-0 bg-glow opacity-60" />
 

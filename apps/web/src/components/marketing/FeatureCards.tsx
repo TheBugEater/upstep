@@ -645,7 +645,7 @@ function McpScene({ active }: { active: boolean }) {
         <span className="text-faint">connected</span>
       </div>
 
-      <div className="mt-3 rounded-xl bg-[#1C1B19] p-3.5 font-mono text-[11px] leading-relaxed" style={{ transform: "translateZ(14px)" }}>
+      <div className="mt-3 rounded-xl bg-[#17191D] p-3.5 font-mono text-[11px] leading-relaxed" style={{ transform: "translateZ(14px)" }}>
         {MCP_LINES.map((line, i) => (
           <p
             key={line}
@@ -697,7 +697,7 @@ function IntegrationScene({ active }: { active: boolean }) {
 
   return (
     <div className="flex h-full flex-col justify-center [transform-style:preserve-3d]" aria-hidden>
-      <div className="rounded-xl border border-line-strong bg-[#1C1B19] overflow-hidden" style={{ transform: "translateZ(16px)" }}>
+      <div className="rounded-xl border border-line-strong bg-[#17191D] overflow-hidden" style={{ transform: "translateZ(16px)" }}>
         <div className="flex items-center gap-2 px-3.5 h-9 border-b border-white/10">
           <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />

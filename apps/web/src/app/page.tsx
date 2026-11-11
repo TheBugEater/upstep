@@ -161,7 +161,7 @@ function Hero() {
 function OpenSource() {
   return (
     <section id="open-source" className="max-w-6xl mx-auto px-6 py-24">
-      <div className="relative overflow-hidden rounded-4xl border border-white/10 bg-[#191816] px-8 py-12 shadow-lift md:px-14 md:py-16">
+      <div className="relative overflow-hidden rounded-4xl border border-white/10 bg-[#17191D] px-8 py-12 shadow-lift md:px-14 md:py-16">
         <div className="absolute inset-0 bg-glow opacity-40" />
         <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-clay/15 blur-3xl" />
 
@@ -439,7 +439,7 @@ function Integrate() {
 function CTA() {
   return (
     <section className="max-w-6xl mx-auto px-6 pb-24">
-      <div className="relative overflow-hidden rounded-4xl bg-[#161513] px-8 py-16 md:px-16 md:py-20 text-center">
+      <div className="relative overflow-hidden rounded-4xl bg-[#17191D] px-8 py-16 md:px-16 md:py-20 text-center">
         <div className="absolute inset-0 bg-glow opacity-50" />
         <div className="relative">
           <h2 className="font-serif text-4xl md:text-5xl text-white tracking-tight leading-tight">

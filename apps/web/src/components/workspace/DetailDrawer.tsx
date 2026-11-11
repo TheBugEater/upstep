@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { Comment, Label } from "@upstep/types";
 import type { ProjectStatus, WorkspaceItem } from "@/types/dashboard";
 import type { WorkspaceActions, TeamMember } from "./ProjectWorkspace";
-import { TYPES, TYPE_COLORS, TYPE_LABELS, LABEL_PALETTE, inputCls } from "./ui";
+import { TYPES, TYPE_LABELS, LABEL_PALETTE, StatusMenu, inputCls } from "./ui";
 
 interface Props {
   item: WorkspaceItem;
@@ -26,7 +26,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
   const [loadingComments, setLoadingComments] = useState(true);
   const [assigning, setAssigning] = useState(false);
   const [assignmentError, setAssignmentError] = useState("");
-  const [chatSpaces, setChatSpaces] = useState<{ id: string; name: string | null; status: string | null; lastError: string | null; availableAt: string | null }[]>([]);
+  const [chatSpaces, setChatSpaces] = useState<{ id: string; name: string | null; status: string | null; lastError: string | null; availableAt: string | null; threadUrl: string | null }[]>([]);
   const [chatSpaceId, setChatSpaceId] = useState("");
   const [sharingChat, setSharingChat] = useState(false);
   const [chatNotice, setChatNotice] = useState("");
@@ -35,6 +35,9 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
   const [showNewLabel, setShowNewLabel] = useState(false);
   const [savingLabel, setSavingLabel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showLabelPicker, setShowLabelPicker] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const itemLabels = item.labels ?? [];
   const selectedChatSpace = chatSpaces.find((s) => s.id === chatSpaceId);
@@ -132,6 +135,14 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
     finally { setAssigning(false); }
   }
 
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/dashboard/projects/${projectId}?tab=feedback&issue=${item.id}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* Clipboard access can be blocked; the URL bar still has the link. */ }
+  }
+
   async function addNewLabel() {
     const name = newLabelName.trim();
     if (!name || savingLabel) return;
@@ -148,286 +159,232 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
     }
   }
 
+  const heading = item.title?.trim() || item.content;
+
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <div className="absolute inset-y-0 right-0 w-full sm:max-w-md bg-canvas border-l border-line shadow-lift flex flex-col overflow-hidden animate-[drawer-in_0.35s_cubic-bezier(0.32,0.72,0,1)_both]">
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto sm:p-6 lg:p-10" role="dialog" aria-modal="true" aria-labelledby="task-detail-title">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+      <div className="relative flex min-h-full w-full max-w-[1040px] flex-col overflow-hidden border-line bg-card shadow-lift animate-card-in sm:min-h-0 sm:rounded-2xl sm:border">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 h-14 border-b border-line shrink-0">
-          <div className="flex gap-1">
-            {TYPES.map((t) => (
-              <button
-                key={t}
-                onClick={() => void actions.updateItem(item.id, { type: t })}
-                className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border transition ${
-                  item.type === t
-                    ? TYPE_COLORS[t]
-                    : "bg-card text-faint border-line hover:border-line-strong hover:text-muted"
-                }`}
-              >
-                {TYPE_LABELS[t]}
-              </button>
-            ))}
+        <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line pl-5 pr-3 sm:pl-6">
+          <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-2 text-xs text-faint">
+            <button type="button" onClick={onClose} className="shrink-0 hover:text-ink">Board</button>
+            <span aria-hidden>/</span>
+            <span className="truncate font-medium text-ink-soft">{heading}</span>
+          </nav>
+          <button type="button" onClick={() => void copyLink()} className="hidden h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-xs font-medium text-muted transition hover:border-line-strong hover:text-ink sm:inline-flex">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
+            {copied ? "Copied" : "Copy link"}
+          </button>
+          <div className="relative">
+            <button type="button" onClick={() => { setShowMenu((v) => !v); setConfirmDelete(false); }} aria-expanded={showMenu} aria-label="More actions" className="grid h-10 w-10 place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-ink">
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>
+            </button>
+            {showMenu && <>
+              <button className="fixed inset-0 z-10 cursor-default" onClick={() => setShowMenu(false)} aria-label="Close menu" />
+              <div className="absolute right-0 top-11 z-20 w-64 rounded-xl border border-line bg-card p-1.5 shadow-lift">
+                <button type="button" onClick={() => void copyLink()} className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs text-muted hover:bg-raised hover:text-ink sm:hidden">{copied ? "Copied" : "Copy link"}</button>
+                <button type="button" onClick={() => void actions.updateItem(item.id, { internal: !item.internal })} aria-pressed={item.internal ?? false} className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-raised">
+                  <span className="min-w-0 flex-1"><span className="block text-xs font-medium text-ink">Dev only</span><span className="block text-[11px] text-faint">Hide from the public widget</span></span>
+                  <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${item.internal ? "bg-violet-600" : "bg-line-strong"}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${item.internal ? "translate-x-[18px]" : "translate-x-0.5"}`} /></span>
+                </button>
+                <div className="my-1 h-px bg-line" />
+                {confirmDelete ? (
+                  <div className="flex items-center gap-2 px-2.5 py-2">
+                    <span className="flex-1 text-xs text-danger">Delete permanently?</span>
+                    <button type="button" onClick={() => void actions.deleteItem(item.id)} className="rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-danger/85">Delete</button>
+                    <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-muted hover:text-ink">Cancel</button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setConfirmDelete(true)} className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs font-medium text-danger hover:bg-danger/10">Delete task…</button>
+                )}
+              </div>
+            </>}
           </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-ink transition text-xl leading-none"
-            aria-label="Close"
-          >
-            ✕
+          <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-ink" aria-label="Close">
+            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          {item.title && (
-            <h2 className="font-serif text-xl text-ink font-semibold leading-snug">{item.title}</h2>
-          )}
-          <p className="text-sm text-ink-soft leading-relaxed whitespace-pre-wrap">{item.content}</p>
-
-          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1.5 text-clay text-sm font-semibold">
-              <span className="text-xs">▲</span>
-              {item.upvotes} {item.upvotes === 1 ? "upvote" : "upvotes"}
-            </span>
-            {(item.downvotes ?? 0) > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-muted text-sm">
-                <span className="text-xs">▼</span>
-                {item.downvotes}
-              </span>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="task-assignee" className="block text-xs font-semibold text-muted uppercase tracking-wide mb-2">Assignee</label>
-            <div className="flex items-center gap-2">
-              <select id="task-assignee" value={item.assigneeId ?? ""} disabled={assigning} onChange={(e) => void assignTask(e.target.value || null)} className={inputCls}>
-                <option value="">Unassigned</option>
-                {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}{m.id === currentUserId ? " (you)" : ""}</option>)}
-              </select>
-              {item.assigneeId !== currentUserId && <button type="button" disabled={assigning} onClick={() => void assignTask(currentUserId)} className="shrink-0 text-xs text-clay hover:underline disabled:opacity-40">Assign to me</button>}
-            </div>
-            {assignmentError && <p role="alert" className="mt-2 text-xs text-danger">{assignmentError}</p>}
-          </div>
-
-          {/* Status */}
-          <div>
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Status</p>
-            <div className="flex flex-wrap gap-2">
-              {statuses.map((s) => {
-                const isActive = item.statusId === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => actions.moveItem(item.id, s.id)}
-                    className={`text-xs px-3 py-1.5 rounded-full font-medium border transition ${
-                      isActive
-                        ? "text-white border-transparent"
-                        : "bg-card border-line text-muted hover:border-line-strong"
-                    }`}
-                    style={isActive ? { backgroundColor: s.color, borderColor: s.color } : {}}
-                  >
-                    {s.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Labels */}
-          <div>
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Labels</p>
-            <div className="flex flex-wrap gap-2">
-              {projectLabels.map((l) => {
-                const has = itemLabels.some((x) => x.id === l.id);
-                return (
-                  <button
-                    key={l.id}
-                    onClick={() => void actions.toggleItemLabel(item.id, l, has)}
-                    className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border transition ${
-                      has
-                        ? "text-white border-transparent"
-                        : "bg-card border-line text-muted hover:border-line-strong"
-                    }`}
-                    style={has ? { backgroundColor: l.color, borderColor: l.color } : {}}
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: has ? "rgba(255,255,255,0.7)" : l.color }}
-                    />
-                    {l.name}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setShowNewLabel((v) => !v)}
-                className="text-xs px-2.5 py-1 rounded-full border border-dashed border-line text-faint hover:text-muted hover:border-line-strong transition"
-              >
-                + New label
-              </button>
+        <div className="flex flex-1 flex-col lg:flex-row">
+          {/* Main column */}
+          <div className="min-w-0 flex-1 space-y-6 p-5 sm:p-7">
+            <div className="space-y-3">
+              <h2 id="task-detail-title" className="text-[22px] font-bold leading-snug tracking-[-0.02em] text-ink">{heading}</h2>
+              {item.title?.trim() && <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">{item.content}</p>}
             </div>
 
-            {showNewLabel && (
-              <div className="mt-3 rounded-xl border border-line bg-card p-3">
-                <input
-                  autoFocus
-                  value={newLabelName}
-                  onChange={(e) => setNewLabelName(e.target.value)}
+            {/* Comments */}
+            <section aria-labelledby="task-comments-heading">
+              <div className="mb-3 flex items-center gap-2 border-b border-line pb-2">
+                <h3 id="task-comments-heading" className="text-[13px] font-semibold text-ink">Comments</h3>
+                <span className="text-xs text-faint">{comments.length}</span>
+              </div>
+              {comments.length === 0 ? (
+                <p className="mb-3 text-xs text-faint">{loadingComments ? "Loading comments…" : "Start a conversation about this task."}</p>
+              ) : (
+                <div className="mb-4 space-y-3">
+                  {comments.map((c) => {
+                    const parent = comments.find((p) => p.id === c.parentId);
+                    const authorName = c.author?.name?.trim() || c.authorName?.trim() || "UpStep Team";
+                    return <div key={c.id} className={`flex gap-2.5 ${c.parentId ? "ml-8" : ""}`}>
+                      <span aria-hidden="true" className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-raised text-[11px] font-semibold text-ink ring-1 ring-line-strong">{authorName[0]?.toUpperCase()}</span>
+                      <div className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2.5">
+                        <div className="mb-1 flex items-baseline gap-2">
+                          <span className="text-xs font-semibold text-ink">{authorName}</span>
+                          <time dateTime={c.createdAt} title={new Date(c.createdAt).toLocaleString()} className="text-[11px] text-faint">{new Date(c.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time>
+                          <button type="button" onClick={() => setReplyTo(c)} className="ml-auto text-[11px] text-muted hover:text-ink" aria-label={`Reply to ${authorName}`}>Reply</button>
+                        </div>
+                        {parent && <p className="mb-2 line-clamp-2 border-l-2 border-line-strong pl-2 text-[11px] text-muted">Reply to {parent.author?.name || parent.authorName || "UpStep Team"}: {parent.content}</p>}
+                        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-ink-soft">{c.content}</p>
+                      </div>
+                    </div>
+                  })}
+                </div>
+              )}
+              {commentError && <p role="alert" className="mb-2 text-xs text-danger">{commentError}</p>}
+              <div className="rounded-xl border border-line-strong bg-surface focus-within:border-clay/50 focus-within:ring-4 focus-within:ring-clay/10">
+                {replyTo && <div className="flex items-center gap-2 border-b border-line px-3 py-1.5 text-xs text-muted"><span className="flex-1 truncate">Replying to {replyTo.author?.name || replyTo.authorName || "UpStep Team"}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Cancel reply">✕</button></div>}
+                <textarea
+                  value={input}
+                  rows={2}
+                  maxLength={2000}
+                  onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
-                      void addNewLabel();
+                      void postComment();
                     }
                   }}
-                  placeholder="Label name"
-                  maxLength={50}
-                  className={`${inputCls} mb-2`}
+                  placeholder="Write a comment…"
+                  aria-label="Comment"
+                  className="block w-full resize-none bg-transparent px-3.5 py-3 text-sm text-ink placeholder:text-faint focus:outline-none"
                 />
-                <div className="flex items-center gap-1.5">
-                  {LABEL_PALETTE.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setNewLabelColor(c)}
-                      className={`w-5 h-5 rounded-full transition ${
-                        newLabelColor === c ? "ring-2 ring-offset-1 ring-ink/30" : ""
-                      }`}
-                      style={{ backgroundColor: c }}
-                      aria-label={`Color ${c}`}
-                    />
-                  ))}
+                <div className="flex items-center gap-2 px-3 pb-2.5">
+                  <span className="hidden text-[11px] text-faint sm:inline">⌘ Enter to post</span>
                   <button
-                    onClick={() => void addNewLabel()}
-                    disabled={!newLabelName.trim() || savingLabel}
-                    className="ml-auto text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-fg font-medium hover:bg-primary/85 disabled:opacity-40 transition"
+                    onClick={() => void postComment()}
+                    disabled={posting || !input.trim()}
+                    className="ml-auto rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-fg transition hover:bg-primary/85 disabled:opacity-40"
                   >
-                    {savingLabel ? "Adding…" : "Create & add"}
+                    {posting ? "Posting…" : "Comment"}
                   </button>
                 </div>
               </div>
-            )}
+            </section>
           </div>
 
-          {/* Visibility */}
-          <div className="flex items-center justify-between rounded-xl border border-line bg-card px-4 py-3">
-            <div>
-              <p className="text-xs font-semibold text-ink">Dev only</p>
-              <p className="text-[11px] text-muted mt-0.5">Hidden from the public widget.</p>
-            </div>
-            <button
-              onClick={() => void actions.updateItem(item.id, { internal: !item.internal })}
-              aria-pressed={item.internal ?? false}
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                item.internal ? "bg-violet-600" : "bg-line-strong"
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                  item.internal ? "translate-x-4" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
+          {/* Properties */}
+          <aside className="shrink-0 space-y-5 border-t border-line bg-surface p-5 lg:w-[320px] lg:border-l lg:border-t-0">
+            <dl className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 text-xs">
+              <dt className="text-faint">Status</dt>
+              <dd><StatusMenu statuses={statuses} value={item.statusId} onChange={(id) => actions.moveItem(item.id, id)} className="[&>div:last-child]:left-0 [&>div:last-child]:right-auto" /></dd>
 
-          {chatSpaces.length > 0 && <div className="rounded-xl border border-line bg-card p-4 space-y-2">
-            <p className="text-xs font-semibold text-ink">Discuss in Google Chat</p>
-            {chatSpaces.length > 1 && <select aria-label="Google Chat space" value={chatSpaceId} onChange={(e) => setChatSpaceId(e.target.value)} className={inputCls}>{chatSpaces.map((s, i) => <option key={s.id} value={s.id}>{s.name || `Google Chat space ${i + 1}`}</option>)}</select>}
-            <p className="text-xs text-muted">Start a thread for this task in {selectedChatSpace?.name || "your connected space"}. Teammates can reply there.</p>
-            <button type="button" disabled={sharingChat || ["PENDING", "PROCESSING", "COMPLETED"].includes(selectedChatSpace?.status ?? "")} onClick={() => void startChatDiscussion()} className="text-xs font-semibold text-clay hover:underline disabled:text-muted disabled:no-underline">
-              {sharingChat ? "Starting…" : selectedChatSpace?.status === "COMPLETED" ? "Discussion started" : selectedChatSpace?.status === "PROCESSING" ? "Sending to Google Chat…" : selectedChatSpace?.status === "PENDING" ? selectedChatSpace.lastError ? "Retry scheduled" : "Discussion queued" : selectedChatSpace?.status === "FAILED" ? "Retry discussion" : "Start Google Chat discussion"}
-            </button>
-            {selectedChatSpace?.status === "COMPLETED" ? <p role="status" className="text-xs text-muted">Discussion created in Google Chat.</p>
-              : selectedChatSpace?.lastError ? <p role="alert" className="text-xs text-danger">{selectedChatSpace.lastError}{selectedChatSpace.status === "PENDING" && selectedChatSpace.availableAt ? ` Next retry: ${new Date(selectedChatSpace.availableAt).toLocaleTimeString()}.` : " Check the Google Chat connection, then retry."}</p>
-              : chatNotice && <p role="status" className="text-xs text-muted">{chatNotice}</p>}
-          </div>}
+              <dt><label htmlFor="task-assignee" className="text-faint">Assignee</label></dt>
+              <dd className="flex min-w-0 items-center gap-2">
+                <select id="task-assignee" value={item.assigneeId ?? ""} disabled={assigning} onChange={(e) => void assignTask(e.target.value || null)} className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-card px-2 text-xs text-ink focus:border-clay/50 focus:outline-none">
+                  <option value="">Unassigned</option>
+                  {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}{m.id === currentUserId ? " (you)" : ""}</option>)}
+                </select>
+                {item.assigneeId !== currentUserId && <button type="button" disabled={assigning} onClick={() => void assignTask(currentUserId)} className="shrink-0 text-[11px] font-medium text-clay hover:underline disabled:opacity-40">Me</button>}
+              </dd>
+              {assignmentError && <dd role="alert" className="col-span-2 text-danger">{assignmentError}</dd>}
 
-          {/* Comments */}
-          <div>
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">
-              Comments · {comments.length}
-            </p>
-            {comments.length === 0 ? (
-              <p className="text-xs text-faint mb-3">{loadingComments ? "Loading comments…" : "Start a conversation about this task."}</p>
-            ) : (
-              <div className="space-y-2 mb-3">
-                {comments.map((c) => {
-                  const parent = comments.find((p) => p.id === c.parentId);
-                  const authorName = c.author?.name?.trim() || c.authorName?.trim() || "UpStep Team";
-                  return <div key={c.id} className={`bg-surface rounded-xl border border-line p-3 ${c.parentId ? "ml-4 border-l-2" : ""}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span aria-hidden="true" className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay/10 text-clay text-[10px] font-semibold">{authorName[0]?.toUpperCase()}</span>
-                      <span className="text-xs font-semibold text-ink">{authorName}</span>
-                      <time dateTime={c.createdAt} title={new Date(c.createdAt).toLocaleString()} className="ml-auto text-[10px] text-faint">{new Date(c.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time>
+              <dt><label htmlFor="task-type" className="text-faint">Type</label></dt>
+              <dd>
+                <select id="task-type" value={item.type} onChange={(e) => void actions.updateItem(item.id, { type: e.target.value as typeof item.type })} className="h-8 rounded-lg border border-line bg-card px-2 text-xs text-ink focus:border-clay/50 focus:outline-none">
+                  {TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
+                </select>
+              </dd>
+
+              <dt className="self-start pt-1.5 text-faint">Labels</dt>
+              <dd className="relative flex flex-wrap items-center gap-1.5">
+                {itemLabels.map((l) => (
+                  <span key={l.id} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card py-0.5 pl-2 pr-1 text-[11px] text-ink-soft">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: l.color }} />{l.name}
+                    <button type="button" onClick={() => void actions.toggleItemLabel(item.id, l, true)} className="grid h-4 w-4 place-items-center rounded-full text-faint hover:text-ink" aria-label={`Remove ${l.name}`}>×</button>
+                  </span>
+                ))}
+                <button type="button" onClick={() => setShowLabelPicker((v) => !v)} aria-expanded={showLabelPicker} className="rounded-full border border-dashed border-line-strong px-2 py-0.5 text-[11px] text-faint transition hover:text-ink">+ Add</button>
+                {showLabelPicker && <>
+                  <button className="fixed inset-0 z-10 cursor-default" onClick={() => { setShowLabelPicker(false); setShowNewLabel(false); }} aria-label="Close labels" />
+                  <div className="absolute left-0 top-full z-20 mt-1 w-60 rounded-xl border border-line bg-card p-1.5 shadow-lift">
+                    <div className="max-h-56 overflow-y-auto">
+                      {projectLabels.map((l) => {
+                        const has = itemLabels.some((x) => x.id === l.id);
+                        return <button key={l.id} type="button" onClick={() => void actions.toggleItemLabel(item.id, l, has)} aria-pressed={has} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs text-ink-soft hover:bg-raised">
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: l.color }} />
+                          <span className="flex-1 truncate">{l.name}</span>
+                          {has && <span className="text-clay" aria-hidden>✓</span>}
+                        </button>;
+                      })}
                     </div>
-                    {parent && <p className="mb-2 border-l-2 border-line-strong pl-2 text-[11px] text-muted line-clamp-2">Reply to {parent.author?.name || parent.authorName || "UpStep Team"}: {parent.content}</p>}
-                    <p className="text-sm text-ink-soft whitespace-pre-wrap break-words">{c.content}</p>
-                    <button type="button" onClick={() => setReplyTo(c)} className="mt-2 text-[11px] text-muted hover:text-ink" aria-label={`Reply to ${authorName}`}>Reply</button>
+                    {showNewLabel ? (
+                      <div className="mt-1 border-t border-line p-1.5 pt-2.5">
+                        <input
+                          autoFocus
+                          value={newLabelName}
+                          onChange={(e) => setNewLabelName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void addNewLabel();
+                            }
+                          }}
+                          placeholder="Label name"
+                          aria-label="New label name"
+                          maxLength={50}
+                          className={`${inputCls} mb-2 !py-1.5 !text-xs`}
+                        />
+                        <div className="flex items-center gap-1">
+                          {LABEL_PALETTE.map((c) => (
+                            <button key={c} type="button" onClick={() => setNewLabelColor(c)} className={`h-5 w-5 rounded-full transition ${newLabelColor === c ? "ring-2 ring-ink/40 ring-offset-1 ring-offset-card" : ""}`} style={{ backgroundColor: c }} aria-label={`Color ${c}`} />
+                          ))}
+                        </div>
+                        <button onClick={() => void addNewLabel()} disabled={!newLabelName.trim() || savingLabel} className="mt-2 w-full rounded-lg bg-primary py-1.5 text-xs font-semibold text-primary-fg transition hover:bg-primary/85 disabled:opacity-40">
+                          {savingLabel ? "Adding…" : "Create & add"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setShowNewLabel(true)} className="mt-1 flex w-full items-center rounded-lg border-t border-line px-2.5 py-2 text-left text-xs text-muted hover:bg-raised hover:text-ink">+ New label</button>
+                    )}
                   </div>
-                })}
-              </div>
-            )}
-            {replyTo && <div className="mb-2 flex items-center gap-2 text-xs text-muted"><span className="flex-1 truncate">Replying to {replyTo.author?.name || replyTo.authorName || "UpStep Team"}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Cancel reply">✕</button></div>}
-            {commentError && <p role="alert" className="mb-2 text-xs text-danger">{commentError}</p>}
-            <div className="flex items-end gap-2">
-              <textarea
-                value={input}
-                rows={3}
-                maxLength={2000}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault();
-                    void postComment();
-                  }
-                }}
-                placeholder="Write a comment…"
-                aria-label="Comment"
-                className={inputCls}
-              />
-              <button
-                onClick={() => void postComment()}
-                disabled={posting || !input.trim()}
-                className="px-4 py-2 rounded-xl bg-primary text-primary-fg text-sm font-medium hover:bg-primary/85 disabled:opacity-40 transition shrink-0"
-              >
-                Post
-              </button>
-            </div>
-          </div>
-        </div>
+                </>}
+              </dd>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-line shrink-0 flex items-center justify-between">
-          <span className="text-xs text-faint">
-            {new Date(item.createdAt).toLocaleDateString(undefined, {
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </span>
-          {confirmDelete ? (
-            <span className="flex items-center gap-2">
-              <span className="text-xs text-danger">Delete permanently?</span>
-              <button
-                onClick={() => void actions.deleteItem(item.id)}
-                className="text-xs px-3 py-1.5 rounded-lg bg-danger text-white font-semibold hover:bg-danger/85 transition"
-              >
-                Delete
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="text-xs text-muted hover:text-ink transition"
-              >
-                Cancel
-              </button>
-            </span>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="text-xs text-danger hover:text-danger transition"
-            >
-              Delete
-            </button>
-          )}
+              <dt className="text-faint">Votes</dt>
+              <dd className="flex items-center gap-3">
+                <span className="font-semibold text-clay">▲ {item.upvotes}</span>
+                {(item.downvotes ?? 0) > 0 && <span className="text-muted">▼ {item.downvotes}</span>}
+              </dd>
+
+              <dt className="text-faint">Visibility</dt>
+              <dd className="text-ink-soft">{item.internal ? "Dev only" : "Public"}</dd>
+
+              <dt className="text-faint">Created</dt>
+              <dd className="text-ink-soft">{new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</dd>
+            </dl>
+
+            {chatSpaces.length > 0 && <section aria-labelledby="gchat-heading" className={`space-y-2.5 rounded-xl border p-4 ${selectedChatSpace?.threadUrl ? "border-success/30 bg-success/10" : "border-line bg-card"}`}>
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 24 24" className={`h-4 w-4 ${selectedChatSpace?.threadUrl ? "text-success" : "text-faint"}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 5h16v11H9l-5 4z" /></svg>
+                <h3 id="gchat-heading" className="text-xs font-semibold text-ink">Google Chat</h3>
+              </div>
+              {chatSpaces.length > 1 && <select aria-label="Google Chat space" value={chatSpaceId} onChange={(e) => setChatSpaceId(e.target.value)} className={`${inputCls} !py-1.5 !text-xs`}>{chatSpaces.map((s, i) => <option key={s.id} value={s.id}>{s.name || `Google Chat space ${i + 1}`}</option>)}</select>}
+              {selectedChatSpace?.threadUrl ? <>
+                <p className="text-xs leading-5 text-muted">This task has a thread in <span className="font-medium text-ink-soft">{selectedChatSpace.name || "your connected space"}</span>. Task updates post there too.</p>
+                <a href={selectedChatSpace.threadUrl} target="_blank" rel="noopener noreferrer" className="flex h-9 items-center justify-center gap-1.5 rounded-lg bg-success/15 text-xs font-semibold text-ink transition hover:bg-success/25">Open in Google Chat <span aria-hidden="true">↗</span></a>
+              </> : <>
+                <p className="text-xs leading-5 text-muted">Start a thread for this task in <span className="font-medium text-ink-soft">{selectedChatSpace?.name || "your connected space"}</span>. Teammates can reply there.</p>
+                <button type="button" disabled={sharingChat || ["PENDING", "PROCESSING", "COMPLETED"].includes(selectedChatSpace?.status ?? "")} onClick={() => void startChatDiscussion()} className="flex h-9 w-full items-center justify-center rounded-lg border border-line-strong text-xs font-semibold text-ink transition hover:bg-raised disabled:border-line disabled:text-muted disabled:hover:bg-transparent">
+                  {sharingChat ? "Starting…" : selectedChatSpace?.status === "COMPLETED" ? "Discussion started" : selectedChatSpace?.status === "PROCESSING" ? "Sending to Google Chat…" : selectedChatSpace?.status === "PENDING" ? selectedChatSpace.lastError ? "Retry scheduled" : "Discussion queued" : selectedChatSpace?.status === "FAILED" ? "Retry discussion" : "Start in Google Chat"}
+                </button>
+                {selectedChatSpace?.status === "COMPLETED" ? <p role="status" className="text-[11px] leading-4 text-muted">Discussion created in Google Chat. Its link appears here the next time UpStep posts to the thread.</p>
+                  : selectedChatSpace?.lastError ? <p role="alert" className="text-[11px] leading-4 text-danger">{selectedChatSpace.lastError}{selectedChatSpace.status === "PENDING" && selectedChatSpace.availableAt ? ` Next retry: ${new Date(selectedChatSpace.availableAt).toLocaleTimeString()}.` : " Check the Google Chat connection, then retry."}</p>
+                  : chatNotice && <p role="status" className="text-[11px] leading-4 text-muted">{chatNotice}</p>}
+              </>}
+            </section>}
+          </aside>
         </div>
       </div>
     </div>

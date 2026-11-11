@@ -95,7 +95,7 @@ export default async function IntegrationPage({
 
         <section className="mb-14">
           <h2 className="font-serif text-2xl text-ink mb-6">Code</h2>
-          <div className="rounded-2xl border border-line-strong bg-[#1A1915] shadow-lift overflow-hidden">
+          <div className="rounded-2xl border border-line-strong bg-[#17191D] shadow-lift overflow-hidden">
             <div className="flex items-center gap-2 px-4 h-11 border-b border-white/10">
               <span className="w-3 h-3 rounded-full bg-[#FF5F57]" />
               <span className="w-3 h-3 rounded-full bg-[#FEBC2E]" />

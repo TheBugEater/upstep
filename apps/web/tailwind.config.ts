@@ -13,6 +13,7 @@ const config: Config = {
         canvas: v("c-canvas"),
         surface: v("c-surface"),
         card: v("c-card"),
+        raised: v("c-raised"),
         line: v("c-line"),
         "line-strong": v("c-line-strong"),
         ink: v("c-ink"),
