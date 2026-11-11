@@ -14,6 +14,7 @@ export default defineConfig({
         index: resolve(__dirname, "src/index.ts"),
         react: resolve(__dirname, "src/react.tsx"),
         support: resolve(__dirname, "src/support.ts"),
+        theme: resolve(__dirname, "src/theme.ts"),
       },
       formats: ["es", "cjs"],
       fileName: (format, name) => `${name}.${format === "es" ? "js" : "cjs"}`,

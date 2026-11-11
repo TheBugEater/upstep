@@ -21,16 +21,17 @@ type Props = {
   onContact: (name: string, email: string) => Promise<boolean>;
 };
 const field =
-  "mt-1 block w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-base text-neutral-800 outline-none focus:border-neutral-400 dark:border-neutral-700 dark:bg-black dark:text-neutral-100";
+  "mt-1 block w-full rounded-[var(--sx-r8,0.5rem)] border border-[var(--sx-border,#e5e5e5)] bg-[var(--sx-bg,#fff)] px-3 py-2 text-base text-[var(--sx-soft-text,#262626)] outline-none focus:border-[var(--sx-hover-border,#a3a3a3)] dark:border-[var(--sx-border,#404040)] dark:bg-[var(--sx-bg,#000)] dark:text-[var(--sx-soft-text,#f5f5f5)]";
 const button =
-  "min-h-10 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[13px] font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:bg-black dark:text-neutral-200";
-const primary = `${button} !border-transparent !bg-[var(--support-accent)] !text-white`;
-const label = "block text-[13px] text-neutral-600 dark:text-neutral-400";
+  "min-h-10 rounded-[var(--sx-r8,0.5rem)] border border-[var(--sx-border,#e5e5e5)] bg-[var(--sx-bg,#fff)] px-3 py-2 text-[13px] font-medium text-[var(--sx-strong,#404040)] transition hover:bg-[var(--sx-subtle,#fafafa)] disabled:opacity-50 dark:border-[var(--sx-border,#404040)] dark:bg-[var(--sx-bg,#000)] dark:text-[var(--sx-strong,#e5e5e5)]";
+const primary = `${button} !border-transparent !bg-[var(--support-accent)] !text-[var(--sx-accent-text,#fff)]`;
+const label =
+  "block text-[13px] text-[var(--sx-muted,#525252)] dark:text-[var(--sx-muted,#a3a3a3)]";
 /** Accent fills are reserved for things the customer can tap. Replies get a tinted pill. */
 const chip =
-  "inline-flex min-h-[42px] shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-[color:color-mix(in_srgb,var(--support-accent)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--support-accent)_12%,transparent)] py-0 pl-3 pr-4 text-sm font-semibold text-[color:color-mix(in_srgb,var(--support-accent)_62%,#171717)] transition hover:border-[var(--support-accent)] hover:bg-[var(--support-accent)] hover:text-white disabled:opacity-50 dark:text-[color:color-mix(in_srgb,var(--support-accent)_55%,white)] sm:min-h-9";
+  "inline-flex min-h-[42px] shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-[color:color-mix(in_srgb,var(--support-accent)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--support-accent)_12%,transparent)] py-0 pl-3 pr-4 text-sm font-semibold text-[color:color-mix(in_srgb,var(--support-accent)_62%,#171717)] transition hover:border-[var(--support-accent)] hover:bg-[var(--support-accent)] hover:text-[var(--sx-accent-text,#fff)] disabled:opacity-50 dark:text-[color:color-mix(in_srgb,var(--support-accent)_55%,white)] sm:min-h-9";
 const textAction =
-  "inline-flex min-h-8 items-center gap-1.5 rounded-md px-1.5 text-xs font-semibold text-neutral-500 transition hover:text-neutral-950 hover:underline disabled:opacity-50 dark:text-neutral-400 dark:hover:text-white";
+  "inline-flex min-h-8 items-center gap-1.5 rounded-[var(--sx-r6,0.375rem)] px-1.5 text-xs font-semibold text-[var(--sx-muted,#737373)] transition hover:text-[var(--sx-text,#0a0a0a)] hover:underline disabled:opacity-50 dark:text-[var(--sx-muted,#a3a3a3)] dark:hover:text-[var(--sx-text,#fff)]";
 const isChoice = (w: SupportWidget) =>
   w.type === "quick_replies" || w.type === "confirmation";
 function actionLabel(widget: SupportWidget) {
@@ -47,9 +48,9 @@ export function SupportWidgets(props: Props) {
   return (
     <div className="space-y-2.5">
       {choice && !answered && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-2.5 dark:border-neutral-800 dark:bg-black sm:p-3">
+        <div className="rounded-[var(--sx-r16,1rem)] border border-[var(--sx-border,#e5e5e5)] bg-[var(--sx-bg,#fff)] p-2.5 dark:border-[var(--sx-border,#262626)] dark:bg-[var(--sx-bg,#000)] sm:p-3">
           <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
-            <p className="truncate text-[11px] font-bold uppercase tracking-[0.06em] text-neutral-500 dark:text-neutral-400">
+            <p className="truncate text-[11px] font-bold uppercase tracking-[0.06em] text-[var(--sx-muted,#737373)] dark:text-[var(--sx-muted,#a3a3a3)]">
               {choice.title || "Quick replies"}
             </p>
             <div className="flex shrink-0 items-center gap-1">
@@ -137,7 +138,7 @@ function SupportWidgetCard({
     return (
       <p
         role="status"
-        className="flex items-center gap-1.5 py-2 text-[13px] text-neutral-500"
+        className="flex items-center gap-1.5 py-2 text-[13px] text-[var(--sx-muted,#737373)]"
       >
         <SupportIcon name="check" className="h-3.5 w-3.5" />
         {widget.type === "contact_form"
@@ -147,7 +148,7 @@ function SupportWidgetCard({
     );
   if (isChoice(widget)) return null;
   const shell =
-    "overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-black";
+    "overflow-hidden rounded-[var(--sx-r16,1rem)] border border-[var(--sx-border,#e5e5e5)] bg-[var(--sx-bg,#fff)] dark:border-[var(--sx-border,#262626)] dark:bg-[var(--sx-bg,#000)]";
   const head = (title: string, aside?: string) => (
     <div className="flex items-center gap-2 border-b border-[color:color-mix(in_srgb,var(--support-accent)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--support-accent)_12%,transparent)] px-3 py-2 text-xs font-bold text-[color:color-mix(in_srgb,var(--support-accent)_62%,#171717)] dark:text-[color:color-mix(in_srgb,var(--support-accent)_55%,white)]">
       <SupportIcon
@@ -168,7 +169,7 @@ function SupportWidgetCard({
         <div className="p-3">
           {step === 0 ? (
             <>
-              <p className="line-clamp-2 text-[13px] leading-5 text-neutral-500 dark:text-neutral-400">
+              <p className="line-clamp-2 text-[13px] leading-5 text-[var(--sx-muted,#737373)] dark:text-[var(--sx-muted,#a3a3a3)]">
                 {widget.summary}
               </p>
               <button
@@ -292,7 +293,7 @@ function SupportWidgetCard({
             </label>
             <button
               type="button"
-              className="text-[13px] text-neutral-500 underline underline-offset-2"
+              className="text-[13px] text-[var(--sx-muted,#737373)] underline underline-offset-2"
               aria-expanded={more}
               onClick={() => setMore(!more)}
             >

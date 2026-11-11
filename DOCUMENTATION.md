@@ -377,7 +377,8 @@ reads `data-*` attributes:
 ```
 
 Supported attributes: `data-api-key`, `data-user-id`, `data-base-url`,
-`data-accent-color`, `data-position`, `data-theme`.
+`data-accent-color`, `data-position`, `data-theme`, `data-colors` (JSON),
+`data-radius`, `data-font-family`. See [Theming](#theming-to-match-your-brand).
 
 ### `@upstep/react-native`
 
@@ -449,19 +450,23 @@ The button uses the provider's `accentColor`.
 [packages/types/src/index.ts](packages/types/src/index.ts) and accepted by
 `Upstep.init`, `<UpstepProvider>`, and `<FeedbackProvider>`.
 
-| Option        | Type                              | Default              | Notes                                                                                                         |
-| ------------- | --------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `apiKey`      | `string`                          | —                    | **Required.** Your project's API key                                                                          |
-| `userId`      | `string`                          | —                    | End-user id from your app; enables per-user vote deduplication and visibility of the user's own pending items |
-| `baseUrl`     | `string`                          | `https://upstep.dev` | Point at your Upstep deployment when self-hosting                                                             |
-| `accentColor` | `string`                          | `#D97757`            | Any CSS hex color for the button, tabs, and highlights                                                        |
-| `theme`       | `"light"` \| `"dark"` \| `"auto"` | `"auto"`             | Panel color theme. `"auto"` follows the OS/browser `prefers-color-scheme`                                     |
-| `position`    | `"left"` \| `"right"`             | `"right"`            | Launcher position (vanilla web widget only)                                                                   |
+| Option        | Type                              | Default              | Notes                                                                                                                                            |
+| ------------- | --------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apiKey`      | `string`                          | —                    | **Required.** Your project's API key                                                                                                             |
+| `userId`      | `string`                          | —                    | End-user id from your app; enables per-user vote deduplication and visibility of the user's own pending items                                    |
+| `baseUrl`     | `string`                          | `https://upstep.dev` | Point at your Upstep deployment when self-hosting                                                                                                |
+| `accentColor` | `string`                          | `#D97757`            | Any CSS hex color for the button, tabs, and highlights                                                                                           |
+| `theme`       | `"light"` \| `"dark"` \| `"auto"` | `"auto"`             | Panel color theme. `"auto"` follows the OS/browser `prefers-color-scheme`                                                                        |
+| `position`    | `"left"` \| `"right"`             | `"right"`            | Launcher position (vanilla web widget only)                                                                                                      |
+| `colors`      | `UpstepColorOverrides`            | —                    | Panel colors: `background`, `surface`, `border`, `text`, `textMuted`, `accentText`, plus `light` / `dark` variants. Unset keys keep the defaults |
+| `radius`      | `number`                          | `12`                 | Base corner radius in px; every corner scales from it, `0` is square. Clamped to 0–32                                                            |
+| `fontFamily`  | `string`                          | system font          | Web only. CSS font-family for the widget                                                                                                         |
 
 Notes on the React components:
 
-- The web `FeedbackWidget` accepts `accentColor` and `theme` as props; if
-  omitted they fall back to the values passed to `<UpstepProvider>`.
+- The web `FeedbackWidget` accepts `accentColor`, `theme`, `colors`, `radius`
+  and `fontFamily` as props; if omitted they fall back to the values passed to
+  `<UpstepProvider>`.
 - The vanilla widget reads `accentColor` / `theme` / `position` from the `init`
   config (or `data-*` attributes for the script tag).
 - **Dark mode** is built in across all three SDKs. With `theme: "auto"` the
@@ -469,6 +474,130 @@ Notes on the React components:
 - **Mobile-responsive launcher** — on viewports narrower than 640 px the web
   launcher (both React and vanilla) collapses to an icon-only pill; the label is
   hidden automatically.
+
+### Theming to match your brand
+
+The widgets are white-label: give them your brand's colors and they follow
+them in the panel, the feedback forms and the support chat. Everything is
+optional and unset keys keep the built-in palette, so existing installs look
+the same.
+
+| Key          | Used for                                                 |
+| ------------ | -------------------------------------------------------- |
+| `background` | Panel background                                         |
+| `surface`    | Inputs, tabs, chat bubbles and other soft fills          |
+| `border`     | Hairlines and input borders                              |
+| `text`       | Primary text                                             |
+| `textMuted`  | Hints, timestamps, placeholders                          |
+| `accentText` | Text and icons on the accent (launcher, primary buttons) |
+
+Top-level keys apply in light and dark mode; `light` / `dark` refine one mode
+and win over the top-level keys. Hover fills and faint text are derived from
+the colors you set.
+
+Use hex (`#0f172a`, `#0f172acc`) or `rgb()` / `rgba()` values. The web widget
+also accepts other CSS colors, but the hosted support chat only takes hex and
+rgb (anything else is dropped there), and shades can only be derived from hex
+or rgb.
+
+**Accent text.** When `accentText` is unset it is chosen for you: white while
+white keeps at least 3:1 contrast on the accent, otherwise near-black. The
+default accent and mid-tone brand colors stay white; light accents such as
+yellow get dark text.
+
+**Vanilla JS**
+
+```js
+Upstep.init({
+  apiKey: "upstep_xxx",
+  accentColor: "#4f46e5",
+  colors: {
+    border: "#e2e8f0",
+    light: { background: "#ffffff", surface: "#f1f5f9", text: "#0f172a" },
+    dark: { background: "#0f172a", surface: "#1e293b", text: "#f8fafc" },
+  },
+  radius: 8,
+  fontFamily: "Inter, system-ui, sans-serif",
+});
+```
+
+**Script tag**
+
+```html
+<script
+  type="module"
+  src="https://unpkg.com/@upstep/js/dist/index.js"
+  data-api-key="upstep_xxx"
+  data-accent-color="#4f46e5"
+  data-colors='{"light":{"background":"#ffffff"},"dark":{"background":"#0f172a"}}'
+  data-radius="8"
+  data-font-family="Inter, system-ui, sans-serif"
+></script>
+```
+
+**React**
+
+```tsx
+<UpstepProvider
+  apiKey="upstep_xxx"
+  accentColor="#4f46e5"
+  colors={{ dark: { background: "#0f172a", surface: "#1e293b" } }}
+  radius={8}
+  fontFamily="Inter, system-ui, sans-serif"
+>
+  {children}
+  <FeedbackWidget />
+</UpstepProvider>
+```
+
+**React Native**
+
+```tsx
+<FeedbackProvider
+  apiKey="upstep_xxx"
+  accentColor="#4f46e5"
+  colors={{
+    light: { background: "#ffffff", surface: "#f1f5f9", text: "#0f172a" },
+    dark: { background: "#0f172a", surface: "#1e293b", text: "#f8fafc" },
+  }}
+  radius={8}
+>
+  {/* your app */}
+  <FeedbackButton />
+  <FeedbackSheet />
+</FeedbackProvider>
+```
+
+A standalone `<SupportView>` takes the same `colors` plus `radius` as props.
+`fontFamily` is web only; on native the app's font is used.
+
+**Flutter**
+
+```dart
+Upstep(
+  apiKey: 'upstep_xxx',
+  accentColor: const Color(0xFF4F46E5),
+  colors: const UpstepColors(
+    border: Color(0xFFE2E8F0),
+    light: UpstepColors(background: Colors.white, surface: Color(0xFFF1F5F9)),
+    dark: UpstepColors(background: Color(0xFF0F172A), surface: Color(0xFF1E293B)),
+  ),
+  radius: 8,
+  child: const MyApp(),
+);
+```
+
+`UpstepConfig` has the same `colors` and `radius` fields (and `copyWith`).
+The resolved look is exposed as the `UpstepThemeData` theme extension, so a
+standalone `SupportChat` can be themed by wrapping it in a `Theme` that
+carries one.
+
+**Hosted support chat.** The web SDKs pass the overrides for the current
+mode to the support iframe as query parameters (`bg`, `surface`, `border`,
+`text`, `muted`, `accentText`, `radius`, `font`). The server validates every
+value: only hex and rgb colors are kept, `radius` is clamped to 0–32 and
+`font` must be a plain font-family list. The iframe can only use fonts
+installed on the visitor's device, not web fonts loaded by your page.
 
 ### Disabling the floating launcher
 

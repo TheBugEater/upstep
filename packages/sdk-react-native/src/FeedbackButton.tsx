@@ -1,6 +1,14 @@
 import React from "react";
-import { TouchableOpacity, Text, View, StyleSheet } from "react-native";
+import {
+  TouchableOpacity,
+  Text,
+  View,
+  StyleSheet,
+  useColorScheme,
+} from "react-native";
+import { resolveColorOverrides } from "@upstep/js/theme";
 import { useUpstep } from "./FeedbackContext";
+import { readableTextOn, useScaledStyles } from "./theme";
 
 interface Props {
   position?: "bottom-right" | "bottom-left";
@@ -9,7 +17,13 @@ interface Props {
 }
 
 export function FeedbackButton({ position = "bottom-right", label = "Feedback", icon }: Props) {
-  const { openSheet, accentColor, supportUnread } = useUpstep();
+  const styles = useScaledStyles(baseStyles);
+  const { openSheet, accentColor, supportUnread, colors, theme } = useUpstep();
+  const scheme = useColorScheme();
+  const mode =
+    theme === "dark" || (theme === "auto" && scheme === "dark") ? "dark" : "light";
+  const onAccent =
+    resolveColorOverrides(colors, mode).accentText ?? readableTextOn(accentColor);
 
   return (
     <TouchableOpacity
@@ -27,8 +41,8 @@ export function FeedbackButton({ position = "bottom-right", label = "Feedback", 
           : label
       }
     >
-      {icon ?? <ChatIcon />}
-      <Text style={styles.label}>{label}</Text>
+      {icon ?? <ChatIcon color={onAccent} />}
+      <Text style={[styles.label, { color: onAccent }]}>{label}</Text>
       {supportUnread > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>
@@ -40,16 +54,18 @@ export function FeedbackButton({ position = "bottom-right", label = "Feedback", 
   );
 }
 
-function ChatIcon() {
+function ChatIcon({ color }: { color: string }) {
+  // A glyph, so its corners stay fixed whatever the widget radius.
+  const styles = baseStyles;
   return (
     <View style={styles.iconWrap}>
-      <View style={styles.iconBubble} />
-      <View style={styles.iconTail} />
+      <View style={[styles.iconBubble, { borderColor: color }]} />
+      <View style={[styles.iconTail, { borderColor: color }]} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   btn: {
     position: "absolute",
     bottom: 24,

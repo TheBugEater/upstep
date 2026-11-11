@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../provider.dart';
+import '../theme.dart';
 
 enum FeedbackButtonPosition { bottomLeft, bottomRight }
 
@@ -35,7 +36,11 @@ class FeedbackButton extends StatelessWidget {
             child: FloatingActionButton.extended(
               heroTag: null,
               backgroundColor: upstep.accentColor,
-              foregroundColor: Colors.white,
+              foregroundColor:
+                  upstep.colors
+                      ?.resolve(Theme.of(context).brightness)
+                      .accentText ??
+                  readableTextOn(upstep.accentColor),
               onPressed: upstep.openSheet,
               icon: icon,
               label: Text(label),

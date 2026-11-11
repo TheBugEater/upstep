@@ -4,8 +4,10 @@ import type {
   FeedbackWithComments,
   SubmitFeedbackPayload,
   VotePayload,
+  UpstepColorOverrides,
   UpstepConfig,
 } from "@upstep/types";
+import { DEFAULT_ACCENT, supportThemeParams } from "./theme";
 
 const ANON_ID_KEY = "upstep-anonymous-id";
 
@@ -82,8 +84,27 @@ export class UpstepApiClient {
     }
   }
 
-  supportFrameUrl(theme: string, accentColor = "#D97757"): string {
-    return `${this.baseUrl}/support/${encodeURIComponent(this.apiKey)}?theme=${encodeURIComponent(theme)}&accent=${encodeURIComponent(accentColor)}`;
+  /**
+   * URL of the hosted support chat. Color, radius and font overrides travel
+   * as query parameters; only hex/rgb colors are sent and the server
+   * validates every value again.
+   */
+  supportFrameUrl(
+    theme: string,
+    accentColor = DEFAULT_ACCENT,
+    appearance: {
+      colors?: UpstepColorOverrides | undefined;
+      radius?: number | undefined;
+      fontFamily?: string | undefined;
+    } = {},
+  ): string {
+    const params = new URLSearchParams({ theme, accent: accentColor });
+    const extra = supportThemeParams({
+      mode: theme === "dark" ? "dark" : "light",
+      ...appearance,
+    });
+    for (const [key, value] of Object.entries(extra)) params.set(key, value);
+    return `${this.baseUrl}/support/${encodeURIComponent(this.apiKey)}?${params}`;
   }
 
   connectSupportFrame(

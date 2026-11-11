@@ -23,6 +23,7 @@ import type {
   SupportConfiguration,
 } from "@upstep/types";
 import { UpstepApiClient } from "./api";
+import { RadiusContext, clampRadius } from "./theme";
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === "android") {
@@ -52,6 +53,10 @@ interface UpstepContextValue {
   identify: (userId: string | undefined) => void;
   accentColor: string;
   theme: "light" | "dark" | "auto";
+  /** Panel color overrides from the provider config. */
+  colors: UpstepConfig["colors"];
+  /** Base corner radius in px, clamped to 0–32. */
+  radius: number;
   showBranding: boolean;
   supportConfig: SupportConfiguration | null;
   supportRevision: number;
@@ -238,13 +243,17 @@ export function FeedbackProvider({
         identify,
         accentColor: config.accentColor ?? DEFAULT_ACCENT,
         theme: config.theme ?? "auto",
+        colors: config.colors,
+        radius: clampRadius(config.radius),
         showBranding,
         supportConfig,
         supportRevision,
         supportUnread,
       }}
     >
-      {children}
+      <RadiusContext.Provider value={clampRadius(config.radius)}>
+        {children}
+      </RadiusContext.Provider>
     </UpstepContext.Provider>
   );
 }

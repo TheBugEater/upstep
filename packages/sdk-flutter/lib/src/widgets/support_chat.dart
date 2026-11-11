@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../support_client.dart';
+import '../theme.dart';
 
 /// Support inside the existing feedback sheet, rendered with native Flutter UI.
 class SupportChat extends StatefulWidget {
@@ -130,10 +131,10 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dark = theme.brightness == Brightness.dark;
-    final canvas = dark ? Colors.black : Colors.white;
-    final soft = dark ? const Color(0xFF171717) : const Color(0xFFF5F5F5);
-    final foreground = dark ? const Color(0xFFE5E5E5) : const Color(0xFF404040);
+    final look = UpstepThemeData.of(context);
+    final canvas = look.background;
+    final soft = look.surface;
+    final foreground = look.text;
     final customer =
         (_chat?['customer'] as Map?)?.cast<String, dynamic>() ??
         <String, dynamic>{};
@@ -310,12 +311,8 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: mine ? soft : canvas,
-                                  border: Border.all(
-                                    color: dark
-                                        ? const Color(0xFF404040)
-                                        : const Color(0xFFE5E5E5),
-                                  ),
-                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: look.border),
+                                  borderRadius: look.corners(18),
                                 ),
                                 child: SelectableText(
                                   message['content'] as String? ?? '',
@@ -415,7 +412,7 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                           filled: true,
                           fillColor: soft,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: look.corners(18),
                             borderSide: BorderSide.none,
                           ),
                         ),
@@ -427,7 +424,7 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                       tooltip: 'Send message',
                       style: IconButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: look.accentText,
                         minimumSize: const Size(48, 48),
                       ),
                       onPressed: _busy ? null : () => _send(),
@@ -543,7 +540,9 @@ class _SupportCardState extends State<_SupportCard> {
           vertical: 12,
         ),
         counterText: '',
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(
+          borderRadius: UpstepThemeData.of(context).corners(12),
+        ),
       ),
       validator: (value) {
         if (required && (value == null || value.trim().isEmpty)) {
@@ -602,7 +601,7 @@ class _SupportCardState extends State<_SupportCard> {
     Widget primary(String title, VoidCallback onPressed) => FilledButton(
       style: FilledButton.styleFrom(
         backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: UpstepThemeData.of(context).accentText,
         minimumSize: const Size(44, 40),
       ),
       onPressed: widget.busy ? null : onPressed,
@@ -611,10 +610,8 @@ class _SupportCardState extends State<_SupportCard> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF171717)
-            : const Color(0xFFFAFAFA),
-        borderRadius: BorderRadius.circular(12),
+        color: UpstepThemeData.of(context).cardFill,
+        borderRadius: UpstepThemeData.of(context).corners(12),
       ),
       child: Form(
         key: _form,

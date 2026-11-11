@@ -23,6 +23,14 @@ import type {
   SupportWidget,
 } from "@upstep/types";
 import { useSupportUnread } from "./useSupportUnread";
+import type { UpstepColorOverrides } from "@upstep/types";
+import { mixColors, withAlpha } from "@upstep/js/theme";
+import {
+  RadiusContext,
+  clampRadius,
+  supportBaseColors,
+  useScaledStyles,
+} from "./theme";
 
 type Colors = {
   bg: string;
@@ -36,37 +44,13 @@ type Colors = {
   tint: string;
   tintLine: string;
   accentInk: string;
+  /** Text on accent fills. */
+  accentText: string;
 };
 
-function hex(color: string) {
-  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(color);
-  const value = short
-    ? `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`
-    : color;
-  return /^#[0-9a-f]{6}$/i.test(value) ? value : null;
-}
-function alpha(color: string, amount: number) {
-  const value = hex(color);
-  if (!value) return null;
-  return (
-    value +
-    Math.round(amount * 255)
-      .toString(16)
-      .padStart(2, "0")
-  );
-}
+const alpha = withAlpha;
 function mix(color: string, toward: string, amount: number) {
-  const a = hex(color);
-  const b = hex(toward);
-  if (!a || !b) return color;
-  const part = (i: number) =>
-    Math.round(
-      parseInt(a.slice(i, i + 2), 16) * (1 - amount) +
-        parseInt(b.slice(i, i + 2), 16) * amount,
-    )
-      .toString(16)
-      .padStart(2, "0");
-  return `#${part(1)}${part(3)}${part(5)}`;
+  return mixColors(color, toward, amount) ?? color;
 }
 function clock(iso?: string) {
   if (!iso) return "";
@@ -79,16 +63,38 @@ const isChoice = (w: SupportWidget) =>
   w.type === "quick_replies" || w.type === "confirmation";
 
 export function SupportView({
-  client,
-  config,
-  dark = false,
-  accentColor = "#D97757",
-}: {
+  radius,
+  ...props
+}: SupportViewProps & {
+  /** Base corner radius in px. Defaults to the provider's, or 12 outside one. */
+  radius?: number;
+}) {
+  // Used on its own, the chat can still take a radius; inside the provider it inherits one.
+  if (radius === undefined) return <SupportViewBody {...props} />;
+  return (
+    <RadiusContext.Provider value={clampRadius(radius)}>
+      <SupportViewBody {...props} />
+    </RadiusContext.Provider>
+  );
+}
+
+interface SupportViewProps {
   client: SupportClient;
   config: SupportConfiguration;
   dark?: boolean;
   accentColor?: string;
-}) {
+  /** Panel color overrides, same shape as `UpstepConfig.colors`. */
+  colors?: UpstepColorOverrides | undefined;
+}
+
+function SupportViewBody({
+  client,
+  config,
+  dark = false,
+  accentColor = "#D97757",
+  colors: overrides,
+}: SupportViewProps) {
+  const styles = useScaledStyles(baseStyles);
   const { height } = useWindowDimensions();
   const [logoFailed, setLogoFailed] = useState(false);
   useEffect(() => setLogoFailed(false), [config.logoUrl]);
@@ -106,22 +112,16 @@ export function SupportView({
   const active = useRef(true);
   const soundOn = useRef(true);
   const pending = useRef<{ text: string; id: string } | null>(null);
+  const { inkTarget, ...base } = supportBaseColors(
+    dark,
+    accentColor,
+    overrides,
+  );
   const colors: Colors = {
-    bg: dark ? "#000000" : "#ffffff",
-    soft: dark ? "#1b1b1b" : "#f2f2f2",
-    text: dark ? "#ececec" : "#262626",
-    muted: dark ? "#a3a3a3" : "#6b6b6b",
-    line: dark ? "#333333" : "#e5e5e5",
-    ink: dark ? "#f2f2f2" : "#171717",
-    onInk: dark ? "#111111" : "#ffffff",
-    tint:
-      alpha(accentColor, dark ? 0.18 : 0.12) ?? (dark ? "#1b1b1b" : "#f2f2f2"),
+    ...base,
+    tint: alpha(accentColor, dark ? 0.18 : 0.12) ?? base.soft,
     tintLine: alpha(accentColor, 0.55) ?? accentColor,
-    accentInk: mix(
-      accentColor,
-      dark ? "#ffffff" : "#171717",
-      dark ? 0.45 : 0.4,
-    ),
+    accentInk: mix(accentColor, inkTarget, dark ? 0.45 : 0.4),
   };
   useEffect(() => {
     void client.soundEnabled().then((value) => {
@@ -609,7 +609,9 @@ export function SupportView({
           style={[styles.resolved, { backgroundColor: accentColor }]}
           onPress={() => setChat(null)}
         >
-          <Text style={styles.sendText}>Start a new conversation</Text>
+          <Text style={[styles.sendText, { color: colors.accentText }]}>
+            Start a new conversation
+          </Text>
         </TouchableOpacity>
       ) : (
         <View style={[styles.composer, { borderColor: colors.line }]}>
@@ -638,7 +640,7 @@ export function SupportView({
             <Text
               style={[
                 styles.sendText,
-                { color: text.trim() ? "#ffffff" : colors.muted },
+                { color: text.trim() ? colors.accentText : colors.muted },
               ]}
             >
               ↑
@@ -672,6 +674,7 @@ function NativeSupportActions({
   widgets,
   ...props
 }: ActionProps & { widgets: SupportWidget[] }) {
+  const styles = useScaledStyles(baseStyles);
   const choice = widgets.find(isChoice);
   const others = widgets.filter((w) => !isChoice(w));
   const [opened, setOpened] = useState<string | null>(null);
@@ -775,6 +778,7 @@ function NativeSupportWidget({
   onContact,
   onDetails,
 }: ActionProps & { widget: SupportWidget; startOpen?: boolean }) {
+  const styles = useScaledStyles(baseStyles);
   const [step, setStep] = useState(startOpen ? 1 : 0),
     [issueOpen, setIssueOpen] = useState(startOpen),
     [more, setMore] = useState(false),
@@ -809,7 +813,9 @@ function NativeSupportWidget({
       ]}
       onPress={press}
     >
-      <Text style={[styles.sendText, { color: "#ffffff" }]}>{title}</Text>
+      <Text style={[styles.sendText, { color: color.accentText }]}>
+        {title}
+      </Text>
     </TouchableOpacity>
   );
   const field = (
@@ -980,7 +986,7 @@ function NativeSupportWidget({
     </View>
   );
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   root: { flex: 1 },
   heading: {
     paddingHorizontal: 12,

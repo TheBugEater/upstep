@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'config.dart';
 import 'controller.dart';
+import 'theme.dart';
 
 class Upstep extends StatefulWidget {
   const Upstep({
@@ -14,6 +15,8 @@ class Upstep extends StatefulWidget {
     this.baseUrl = 'https://upstep.dev',
     this.accentColor,
     this.themeMode = UpstepThemeMode.auto,
+    this.colors,
+    this.radius,
   });
 
   final String apiKey;
@@ -23,6 +26,12 @@ class Upstep extends StatefulWidget {
   final String baseUrl;
   final Color? accentColor;
   final UpstepThemeMode themeMode;
+
+  /// Panel color overrides. See [UpstepColors].
+  final UpstepColors? colors;
+
+  /// Base corner radius in logical pixels. Defaults to 12.
+  final double? radius;
   final Widget child;
 
   static UpstepController of(BuildContext context, {bool listen = true}) {
@@ -63,6 +72,8 @@ class _UpstepState extends State<Upstep> {
     if (oldWidget.userId != widget.userId ||
         oldWidget.accentColor != widget.accentColor ||
         oldWidget.themeMode != widget.themeMode ||
+        oldWidget.colors != widget.colors ||
+        oldWidget.radius != widget.radius ||
         oldWidget.chat != widget.chat ||
         oldWidget.supportIdentityToken != widget.supportIdentityToken) {
       _controller.updateConfig(_configFromWidget());
@@ -78,6 +89,8 @@ class _UpstepState extends State<Upstep> {
       baseUrl: widget.baseUrl,
       accentColor: widget.accentColor,
       themeMode: widget.themeMode,
+      colors: widget.colors,
+      radius: widget.radius,
     );
   }
 
