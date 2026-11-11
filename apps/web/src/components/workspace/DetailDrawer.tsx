@@ -6,6 +6,7 @@ import type { Comment, Label } from "@upstep/types";
 import type { ProjectStatus, WorkspaceItem } from "@/types/dashboard";
 import type { WorkspaceActions, TeamMember } from "./ProjectWorkspace";
 import { TYPES, TYPE_LABELS, LABEL_PALETTE, StatusMenu, inputCls } from "./ui";
+import { Avatar } from "@/components/Avatar";
 
 interface Props {
   item: WorkspaceItem;
@@ -178,6 +179,13 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
   const heading = item.title?.trim() || item.content;
   const pad = isPage ? "" : "px-5 sm:px-7";
 
+  const assignee = teamMembers.find((m) => m.id === item.assigneeId);
+  // Prefer the live teammate picture; fall back to the one loaded with the comment.
+  const avatarFor = (c: Comment) => {
+    const member = teamMembers.find((m) => m.id === (c.author?.id ?? c.authorId));
+    return member ? member.image : c.author?.image ?? null;
+  };
+
   const panel = (
       <div className={isPage ? "mx-auto flex w-full max-w-[1160px] flex-col" : "relative flex h-full w-full max-w-[1040px] flex-col overflow-hidden border-line bg-card shadow-lift animate-card-in sm:h-[min(860px,calc(100dvh-48px))] sm:rounded-2xl sm:border"}>
         {/* Header */}
@@ -255,7 +263,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
                     const parent = comments.find((p) => p.id === c.parentId);
                     const authorName = c.author?.name?.trim() || c.authorName?.trim() || "UpStep Team";
                     return <div key={c.id} className={`-mx-2.5 flex gap-3 rounded-xl px-2.5 py-2.5 transition hover:bg-raised/60 ${c.parentId ? "ml-6" : ""}`}>
-                      <span aria-hidden="true" className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-raised text-[11px] font-semibold text-ink ring-1 ring-line-strong">{authorName[0]?.toUpperCase()}</span>
+                      <Avatar name={authorName} src={avatarFor(c)} size={28} decorative className="mt-0.5" />
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 flex items-baseline gap-2">
                           <span className="text-xs font-semibold text-ink">{authorName}</span>
@@ -313,6 +321,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
 
               <dt><label htmlFor="task-assignee" className="text-faint">Assignee</label></dt>
               <dd className="flex min-w-0 items-center gap-2">
+                {assignee ? <Avatar name={assignee.name} email={assignee.email} src={assignee.image} size={24} decorative /> : <span aria-hidden="true" className="h-6 w-6 shrink-0 rounded-full border border-dashed border-line-strong" />}
                 <select id="task-assignee" value={item.assigneeId ?? ""} disabled={assigning} onChange={(e) => void assignTask(e.target.value || null)} className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-card px-2 text-xs text-ink focus:border-clay/50 focus:outline-none">
                   <option value="">Unassigned</option>
                   {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}{m.id === currentUserId ? " (you)" : ""}</option>)}

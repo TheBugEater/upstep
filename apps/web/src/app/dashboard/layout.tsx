@@ -3,13 +3,14 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { UpstepWidget } from "@/components/UpstepWidget";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { avatarOptions, effectiveAvatarSource } from "@/lib/avatar";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user?.id || !session.user.email) redirect("/login");
 
   const [user, projects] = await Promise.all([
-    db.user.findUnique({ where: { id: session.user.id }, select: { name: true, plan: true } }),
+    db.user.findUnique({ where: { id: session.user.id }, select: { name: true, plan: true, image: true, avatarSource: true, accounts: { select: { provider: true, image: true, createdAt: true } } } }),
     db.project.findMany({
       where: { OR: [{ ownerId: session.user.id }, { members: { some: { userId: session.user.id } } }] },
       orderBy: { updatedAt: "desc" },
@@ -41,6 +42,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       email={session.user.email}
       name={user?.name}
       plan={user?.plan ?? "FREE"}
+      avatar={{
+        image: user?.image ?? null,
+        source: effectiveAvatarSource({ source: user?.avatarSource, accounts: user?.accounts ?? [] }),
+        options: avatarOptions(user?.accounts ?? []),
+      }}
       projects={projects.map((project) => {
         const projectCounts = counts.get(project.id) ?? {};
         return {

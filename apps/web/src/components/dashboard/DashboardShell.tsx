@@ -6,6 +6,8 @@ import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Avatar } from "@/components/Avatar";
+import { AvatarPicker, type ShellAvatar } from "@/components/dashboard/AvatarPicker";
 
 export interface ShellProject {
   id: string;
@@ -21,6 +23,7 @@ interface Props {
   email: string;
   name: string | null | undefined;
   plan: string;
+  avatar: ShellAvatar;
   projects: ShellProject[];
 }
 
@@ -53,7 +56,7 @@ function Icon({ name, className = "" }: { name: IconName; className?: string }) 
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={`h-[18px] w-[18px] ${className}`} aria-hidden>{paths[name]}</svg>;
 }
 
-export function DashboardShell({ children, email, name, plan, projects }: Props) {
+export function DashboardShell({ children, email, name, plan, avatar, projects }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [expanded, setExpanded] = useState(true);
@@ -61,6 +64,7 @@ export function DashboardShell({ children, email, name, plan, projects }: Props)
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [liveProjects, setLiveProjects] = useState(projects);
+  const [avatarImage, setAvatarImage] = useState(avatar.image);
   const projectMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,6 +72,7 @@ export function DashboardShell({ children, email, name, plan, projects }: Props)
   }, []);
 
   useEffect(() => setLiveProjects(projects), [projects]);
+  useEffect(() => setAvatarImage(avatar.image), [avatar.image]);
 
   useEffect(() => {
     function updateCounts(event: Event) {
@@ -180,7 +185,8 @@ export function DashboardShell({ children, email, name, plan, projects }: Props)
         <div className="relative border-t border-line p-2">
           {profileOpen && (
             <div className={`absolute bottom-14 z-50 rounded-xl border border-line bg-card p-1.5 shadow-lift ${panelExpanded ? "inset-x-2" : "left-2 w-60"}`}>
-              <div className="border-b border-line px-2.5 py-2"><p className="truncate text-xs font-semibold text-ink">{name || email}</p><p className="truncate text-[11px] text-faint">{email}</p></div>
+              <div className="flex items-center gap-2.5 border-b border-line px-2.5 py-2"><Avatar name={name} email={email} src={avatarImage} size={32} tone="primary" decorative /><div className="min-w-0"><p className="truncate text-xs font-semibold text-ink">{name || email}</p><p className="truncate text-[11px] text-faint">{email}</p></div></div>
+              <AvatarPicker name={name} email={email} avatar={avatar} onChange={setAvatarImage} />
               <div className="py-1">
                 <MenuLink href="/dashboard/billing" icon="card" label="Billing & plan" />
                 <MenuLink href="/guides" icon="help" label="Help & guides" />
@@ -190,7 +196,7 @@ export function DashboardShell({ children, email, name, plan, projects }: Props)
               <button onClick={() => signOut({ callbackUrl: "/" })} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-muted hover:bg-raised hover:text-danger"><Icon name="logout" className="h-4 w-4" />Sign out</button>
             </div>
           )}
-          <button onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} className={`flex h-11 w-full items-center rounded-lg hover:bg-card ${panelExpanded ? "gap-2.5 px-1.5" : "justify-center"}`}><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-fg">{(name?.[0] || email[0] || "U").toUpperCase()}</span>{panelExpanded && <><span className="min-w-0 flex-1 text-left"><span className="block truncate text-xs font-medium text-ink">{name || email.split("@")[0]}</span><span className="block text-[11px] text-faint">{plan.charAt(0) + plan.slice(1).toLowerCase()} plan</span></span><span className="text-xs text-faint" aria-hidden>•••</span></>}</button>
+          <button onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} className={`flex h-11 w-full items-center rounded-lg hover:bg-card ${panelExpanded ? "gap-2.5 px-1.5" : "justify-center"}`}><Avatar name={name} email={email} src={avatarImage} size={28} tone="primary" decorative={panelExpanded} />{panelExpanded && <><span className="min-w-0 flex-1 text-left"><span className="block truncate text-xs font-medium text-ink">{name || email.split("@")[0]}</span><span className="block text-[11px] text-faint">{plan.charAt(0) + plan.slice(1).toLowerCase()} plan</span></span><span className="text-xs text-faint" aria-hidden>•••</span></>}</button>
         </div>
 
         <button onClick={toggleExpanded} className="absolute -right-3 top-[72px] hidden h-6 w-6 place-items-center rounded-full border border-line bg-card text-faint shadow-soft hover:text-ink lg:grid" aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}><Icon name={expanded ? "collapse" : "expand"} className="h-3 w-3" /></button>

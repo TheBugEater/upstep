@@ -5,6 +5,7 @@ import { SupportSetup, type SupportSetupConfig } from "./SupportSetup";
 import { SupportIcon } from "./SupportIcons";
 import { useSearchParams } from "next/navigation";
 import type { TeamMember } from "../workspace/ProjectWorkspace";
+import { Avatar } from "@/components/Avatar";
 
 type Message = {
   id: string;
@@ -188,6 +189,9 @@ export function SupportPanel({
       }),
     );
   }
+  // Support messages store only the agent's display name, so match it to a teammate.
+  const teammateFor = (authorName: string) =>
+    teamMembers.find((m) => (m.name?.trim() || m.email) === authorName.trim());
   const visible = (data?.conversations || []).filter((c) =>
     filter === "ALL" || filter === "MINE"
       ? filter === "ALL" || c.assignedToId === currentUserId
@@ -332,8 +336,17 @@ export function SupportPanel({
                   <p className="mt-2 truncate text-xs text-muted">
                     {c.messages[0]?.content || "New conversation"}
                   </p>
-                  <p className="mt-2 text-[10px] text-faint">
+                  <p className="mt-2 flex items-center gap-1.5 text-[10px] text-faint">
                     {stateLabel[c.state]}
+                    {(() => {
+                      const assignee = teamMembers.find((m) => m.id === c.assignedToId);
+                      return assignee ? (
+                        <span className="ml-auto inline-flex min-w-0 items-center gap-1" title={`Assigned to ${assignee.name || assignee.email}`}>
+                          <Avatar name={assignee.name} email={assignee.email} src={assignee.image} size={16} decorative />
+                          <span className="truncate">{assignee.name || assignee.email}</span>
+                        </span>
+                      ) : null;
+                    })()}
                   </p>
                 </button>
               ))}
@@ -382,6 +395,10 @@ export function SupportPanel({
                   </button>
                 </div>
                 <div className="flex w-full flex-wrap items-center gap-3">
+                  {(() => {
+                    const assignee = teamMembers.find((m) => m.id === conversation.assignedToId);
+                    return assignee ? <Avatar name={assignee.name} email={assignee.email} src={assignee.image} size={24} decorative /> : null;
+                  })()}
                   <select
                     aria-label="Assign conversation"
                     className="rounded-lg border border-line bg-card p-1.5 text-xs text-ink"
@@ -432,9 +449,9 @@ export function SupportPanel({
                   if (m.role === "NOTE")
                     return (
                       <div key={m.id} className="rounded-xl border border-dashed border-warning/40 bg-warning/10 px-4 py-3">
-                        <div className="mb-1 flex gap-2 text-[11px] font-semibold text-warning">
+                        <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-warning">
                           <span>Private note · only your team sees this</span>
-                          <span className="ml-auto font-normal text-faint">{m.authorName} · {time}</span>
+                          <span className="ml-auto inline-flex items-center gap-1.5 font-normal text-faint">{teammateFor(m.authorName) && <Avatar name={m.authorName} src={teammateFor(m.authorName)?.image} size={16} decorative />}{m.authorName} · {time}</span>
                         </div>
                         <p className="whitespace-pre-wrap break-words text-sm leading-6 text-ink">{m.content}</p>
                       </div>
@@ -444,6 +461,7 @@ export function SupportPanel({
                   return (
                     <div key={m.id} className={`flex max-w-[80%] flex-col gap-1 ${agent ? "items-end self-end" : "items-start self-start"}`}>
                       <div className="flex items-center gap-1.5 px-1 text-[11px] text-faint">
+                        {agent && <Avatar name={m.authorName} src={teammateFor(m.authorName)?.image} size={18} decorative />}
                         <span className="font-semibold text-muted">{m.authorName}</span>
                         {ai && <span className="rounded border border-info/30 bg-info/10 px-1 text-[10px] font-bold text-info">AI</span>}
                         {m.role === "CUSTOMER" && <span>Customer</span>}

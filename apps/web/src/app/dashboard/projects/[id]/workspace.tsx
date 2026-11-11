@@ -14,9 +14,9 @@ export async function renderProjectWorkspace({ id, issue, taskPageId }: { id: st
   const project = await db.project.findUnique({
     where: { id },
     include: {
-      owner: { select: { id: true, name: true, email: true, plan: true } },
+      owner: { select: { id: true, name: true, email: true, image: true, plan: true } },
       members: {
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: { user: { select: { id: true, name: true, email: true, image: true } } },
         orderBy: { createdAt: "asc" },
       },
     },

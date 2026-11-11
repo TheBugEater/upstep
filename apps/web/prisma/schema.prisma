@@ -30,6 +30,9 @@ model Account {
   scope             String?
   id_token          String? @db.Text
   session_state     String?
+  // Profile picture from this provider, refreshed on every sign-in.
+  image             String?
+  createdAt         DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -54,12 +57,22 @@ model VerificationToken {
 
 // ─── Core models ─────────────────────────────────────────────────────────────
 
+enum AvatarSource {
+  GITHUB
+  GOOGLE
+  INITIALS
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String    @unique
   emailVerified DateTime?
+  // Effective avatar URL, resolved from avatarSource and the linked accounts'
+  // pictures (see lib/avatar.ts). Null means show initials.
   image         String?
+  // Which picture to show. Null means the provider the user signed up with.
+  avatarSource  AvatarSource?
   createdAt     DateTime  @default(now())
 
   // Billing

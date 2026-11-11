@@ -3,6 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { db } from "./db";
+import { recordSignInAvatar } from "./avatar-sync";
 
 const providers = [
   ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
@@ -20,6 +21,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   providers,
+  events: {
+    async signIn({ user, account, profile, isNewUser }) {
+      if (!user.id || !account || (account.type !== "oauth" && account.type !== "oidc")) return;
+      try {
+        await recordSignInAvatar({
+          userId: user.id,
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+          profile,
+          isNewUser: !!isNewUser,
+        });
+      } catch (error) {
+        // A missing picture must never block sign-in.
+        console.error("Failed to refresh profile picture", error);
+      }
+    },
+  },
   callbacks: {
     jwt({ token, user }) {
       if (user) token.id = user.id;

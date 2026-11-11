@@ -30,6 +30,8 @@ export interface TeamMember {
   id: string;
   name: string | null;
   email: string;
+  /** Resolved profile picture, or null for initials. */
+  image: string | null;
   role: "OWNER" | "ADMIN" | "MEMBER";
 }
 
@@ -107,6 +109,11 @@ export function ProjectWorkspace({
   const [statuses, setStatuses] = useState<ProjectStatus[]>(initialStatuses);
   const [labels, setLabels] = useState<Label[]>(initialLabels);
   const [teamMembers, setTeamMembers] = useState(initialTeamMembers);
+  // Keep profile pictures current after a server refresh (e.g. a teammate's avatar change).
+  useEffect(() => {
+    const images = new Map(initialTeamMembers.map((m) => [m.id, m.image]));
+    setTeamMembers((current) => current.map((m) => (images.has(m.id) ? { ...m, image: images.get(m.id) ?? null } : m)));
+  }, [initialTeamMembers]);
   const [assigneeFilter, setAssigneeFilter] = useState(isOwner ? "all" : "mine");
 
   // ── UI state ───────────────────────────────────────────────────────────────

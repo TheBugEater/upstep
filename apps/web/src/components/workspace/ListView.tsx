@@ -2,6 +2,7 @@
 
 import type { ProjectStatus, WorkspaceItem } from "@/types/dashboard";
 import type { WorkspaceActions, TeamMember } from "./ProjectWorkspace";
+import { Avatar } from "@/components/Avatar";
 import { TypePill, StatusMenu, relativeDate } from "./ui";
 
 interface Props {
@@ -43,7 +44,7 @@ export function ListView({ items, statuses, actions, teamMembers }: Props) {
               <p className="text-sm text-ink font-medium truncate">{f.title ?? f.content}</p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <span className="text-[11px] text-faint">{relativeDate(f.createdAt)}</span>
-                {f.assigneeId && <span className="text-[11px] text-muted">Assigned to {teamMembers.find((m) => m.id === f.assigneeId)?.name || teamMembers.find((m) => m.id === f.assigneeId)?.email || "Teammate"}</span>}
+                {f.assigneeId && (() => { const assignee = teamMembers.find((m) => m.id === f.assigneeId); return <span className="inline-flex items-center gap-1 text-[11px] text-muted">{assignee && <Avatar name={assignee.name} email={assignee.email} src={assignee.image} size={16} decorative />}Assigned to {assignee?.name || assignee?.email || "Teammate"}</span>; })()}
                 {f.labels?.map((l) => (
                   <span
                     key={l.id}

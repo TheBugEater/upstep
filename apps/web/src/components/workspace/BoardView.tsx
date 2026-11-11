@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ProjectBoard, ProjectStatus, WorkspaceItem } from "@/types/dashboard";
 import type { WorkspaceActions, TeamMember } from "./ProjectWorkspace";
 import { TypePill, relativeDate } from "./ui";
+import { Avatar } from "@/components/Avatar";
 
 interface Props {
   board: ProjectBoard | null;
@@ -125,7 +126,7 @@ export function BoardView({ board, items, isOwner, actions, onEditBoard, teamMem
                   <BoardCard
                     key={f.id}
                     item={f}
-                    assigneeName={teamMembers.find((m) => m.id === f.assigneeId)?.name || teamMembers.find((m) => m.id === f.assigneeId)?.email || null}
+                    assignee={teamMembers.find((m) => m.id === f.assigneeId) ?? null}
                     isDragging={dragId === f.id}
                     justDropped={justDroppedId === f.id}
                     onPointerDown={() => {
@@ -234,7 +235,7 @@ function ColumnComposer({
 
 function BoardCard({
   item,
-  assigneeName,
+  assignee,
   isDragging,
   justDropped,
   onPointerDown,
@@ -243,7 +244,7 @@ function BoardCard({
   onClick,
 }: {
   item: WorkspaceItem;
-  assigneeName: string | null;
+  assignee: TeamMember | null;
   isDragging: boolean;
   justDropped: boolean;
   onPointerDown: () => void;
@@ -291,9 +292,9 @@ function BoardCard({
           <span key={item.upvotes} className="inline-block animate-pop">{item.upvotes}</span>
         </span>
         <span className="text-[11px] text-faint">{relativeDate(item.createdAt)}</span>
-        {assigneeName ? (
-          <span title={`Assigned to ${assigneeName}`} aria-label={`Assigned to ${assigneeName}`} className="ml-auto grid h-6 w-6 shrink-0 place-items-center rounded-full bg-raised text-[10px] font-bold text-ink ring-1 ring-line-strong">
-            {initials(assigneeName)}
+        {assignee ? (
+          <span title={`Assigned to ${assignee.name || assignee.email}`} aria-label={`Assigned to ${assignee.name || assignee.email}`} role="img" className="ml-auto flex shrink-0">
+            <Avatar name={assignee.name} email={assignee.email} src={assignee.image} size={24} decorative />
           </span>
         ) : (
           <span title="Unassigned" aria-label="Unassigned" className="ml-auto h-6 w-6 shrink-0 rounded-full border border-dashed border-line-strong" />
@@ -301,9 +302,4 @@ function BoardCard({
       </div>
     </article>
   );
-}
-
-function initials(name: string) {
-  const parts = name.replace(/@.*/, "").split(/[\s._-]+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }

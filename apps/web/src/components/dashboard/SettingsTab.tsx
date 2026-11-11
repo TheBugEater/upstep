@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import type { TeamMember } from "@/components/workspace/ProjectWorkspace";
+import { Avatar } from "@/components/Avatar";
 
 interface Props {
   projectId: string;
@@ -203,9 +204,7 @@ export function SettingsTab({
         <div className="space-y-2 mb-5">
           {members.map((m) => (
             <div key={m.id} className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-clay/10 text-clay flex items-center justify-center text-xs font-semibold shrink-0">
-                {(m.name ?? m.email)[0]?.toUpperCase()}
-              </div>
+              <Avatar name={m.name} email={m.email} src={m.image} size={32} tone="accent" decorative />
               <div className="flex-1 min-w-0">
                 {m.name && <p className="text-sm font-medium text-ink truncate">{m.name}</p>}
                 <p className={`text-xs truncate ${m.name ? "text-muted" : "text-ink font-medium"}`}>{m.email}</p>
