@@ -23,7 +23,9 @@ export type IntegrationPayload =
 
 // ─── Entry point ───────────────────────────────────────────────────────────────
 
-export async function triggerIntegrations(payload: IntegrationPayload, client: Pick<Prisma.TransactionClient, "project"> = db): Promise<void> {
+type IntegrationClient = Pick<Prisma.TransactionClient, "project" | "googleChatThread">;
+
+export async function triggerIntegrations(payload: IntegrationPayload, client: IntegrationClient = db): Promise<void> {
   const project = await client.project.findUnique({
     where: { id: payload.project.id },
     select: {
@@ -44,7 +46,7 @@ export async function triggerIntegrations(payload: IntegrationPayload, client: P
   const issueUrl = `${baseUrl}/api/projects/${encodeURIComponent(payload.project.id)}/feedback/${encodeURIComponent(payload.feedback.id)}/open`;
 
   if (payload.event === "ISSUE_SHARED") {
-    await Promise.all(project.integrations.map((integration) => sendGoogleChat(integration.webhookUrl, payload, issueUrl)));
+    await Promise.all(project.integrations.map((integration) => sendGoogleChatAndRecordThread(client, integration, payload, issueUrl)));
     return;
   }
 
@@ -56,15 +58,27 @@ export async function triggerIntegrations(payload: IntegrationPayload, client: P
         case "DISCORD":
           return sendDiscord(integration.webhookUrl, payload, dashboardUrl);
         case "GOOGLE_CHAT":
-          return sendGoogleChat(
-            integration.webhookUrl, payload,
-            issueUrl,
-          );
+          return sendGoogleChatAndRecordThread(client, integration, payload, issueUrl);
         case "WEBHOOK":
           return sendWebhook(integration.webhookUrl, payload, dashboardUrl);
       }
     })
   );
+}
+
+async function sendGoogleChatAndRecordThread(client: IntegrationClient, integration: { id: string; webhookUrl: string }, payload: IntegrationPayload, issueUrl: string) {
+  const { threadName } = await sendGoogleChat(integration.webhookUrl, payload, issueUrl);
+  if (!threadName) return;
+  try {
+    await client.googleChatThread.upsert({
+      where: { integrationId_feedbackId: { integrationId: integration.id, feedbackId: payload.feedback.id } },
+      create: { integrationId: integration.id, feedbackId: payload.feedback.id, threadName },
+      update: { threadName },
+    });
+  } catch (error) {
+    // The message is already in Chat; failing the job would retry and post it twice.
+    console.error("Couldn't record the Google Chat thread", error);
+  }
 }
 
 // ─── Slack ─────────────────────────────────────────────────────────────────────

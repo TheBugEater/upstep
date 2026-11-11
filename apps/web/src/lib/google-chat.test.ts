@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, mock, test } from "node:test";
-import { googleChatMessage, googleChatWebhookUrl, GoogleChatDeliveryError, sendGoogleChat } from "./google-chat";
+import { googleChatMessage, googleChatThreadUrl, googleChatWebhookUrl, GoogleChatDeliveryError, sendGoogleChat } from "./google-chat";
 import { triggerIntegrations, type IntegrationPayload } from "./integrations";
 import type { Prisma } from "@prisma/client";
 
@@ -217,7 +217,8 @@ test("integration dispatch only uses supported webhook parameters and respects t
       { id: "chat-one", type: "GOOGLE_CHAT", webhookUrl: webhook },
       { id: "chat-two", type: "GOOGLE_CHAT", webhookUrl: webhook },
     ] } as never;
-  } } } as unknown as Pick<Prisma.TransactionClient, "project">;
+  } }, googleChatThread: { upsert: async (input: never) => { threads.push(input); return input; } } } as unknown as Pick<Prisma.TransactionClient, "project" | "googleChatThread">;
+  const threads: unknown[] = [];
   const requests: URL[] = [];
   mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -232,4 +233,36 @@ test("integration dispatch only uses supported webhook parameters and respects t
   plan = "FREE";
   await triggerIntegrations(events[0]!, client);
   assert.equal(requests.length, 4);
+});
+
+test("successful posts record the thread Google reports so the dashboard can link to it", async () => {
+  const threads: { where: unknown; create: { threadName: string } }[] = [];
+  const client = {
+    project: { findUnique: async () => ({ owner: { plan: "PRO" }, integrations: [{ id: "chat-one", type: "GOOGLE_CHAT", webhookUrl: webhook }] }) },
+    googleChatThread: { upsert: async (input: never) => { threads.push(input); return input; } },
+  } as unknown as Pick<Prisma.TransactionClient, "project" | "googleChatThread">;
+  mock.method(globalThis, "fetch", async () => Response.json({ name: "spaces/TEST/messages/m1", thread: { name: "spaces/TEST/threads/t1" } }));
+  await triggerIntegrations(events[0]!, client);
+  assert.equal(threads.length, 1);
+  assert.deepEqual(threads[0]!.where, { integrationId_feedbackId: { integrationId: "chat-one", feedbackId: base.feedback.id } });
+  assert.equal(threads[0]!.create.threadName, "spaces/TEST/threads/t1");
+
+  // A malformed or missing thread is ignored rather than stored.
+  mock.method(globalThis, "fetch", async () => Response.json({ thread: { name: "https://evil.example/x" } }));
+  await triggerIntegrations(events[0]!, client);
+  assert.equal(threads.length, 1);
+
+  // Recording failures never fail delivery, which would post the message again.
+  client.googleChatThread.upsert = (async () => { throw new Error("db down"); }) as never;
+  mock.method(console, "error", () => {});
+  mock.method(globalThis, "fetch", async () => Response.json({ thread: { name: "spaces/TEST/threads/t1" } }));
+  await triggerIntegrations(events[0]!, client);
+});
+
+test("thread links only resolve for the webhook's current space", () => {
+  const url = "https://chat.googleapis.com/v1/spaces/TEST/messages?key=k&token=t";
+  assert.equal(googleChatThreadUrl(url, "spaces/TEST/threads/abc_1"), "https://chat.google.com/room/TEST/abc_1");
+  assert.equal(googleChatThreadUrl(url, "spaces/OTHER/threads/abc"), null);
+  assert.equal(googleChatThreadUrl(url, "spaces/TEST/threads/a/b"), null);
+  assert.equal(googleChatThreadUrl("not a url", "spaces/TEST/threads/abc"), null);
 });

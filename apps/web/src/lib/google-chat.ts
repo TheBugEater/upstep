@@ -199,4 +199,21 @@ export async function sendGoogleChat(webhookUrl: string, payload: IntegrationPay
     detail = detail.replace(/https?:\/\/\S+/g, "[URL redacted]").slice(0, 500);
     throw new GoogleChatDeliveryError(response.status, detail);
   }
+  // Google answers with the created message, including the thread it joined.
+  const body = await response.json().catch(() => null) as { thread?: { name?: unknown } } | null;
+  const threadName = typeof body?.thread?.name === "string" && THREAD_NAME.test(body.thread.name) ? body.thread.name : null;
+  return { threadName };
+}
+
+const THREAD_NAME = /^spaces\/([A-Za-z0-9_-]+)\/threads\/([A-Za-z0-9_-]+)$/;
+
+/** Browser link to a stored thread, or null when it no longer belongs to the webhook's space. */
+export function googleChatThreadUrl(webhookUrl: string, threadName: string): string | null {
+  const match = THREAD_NAME.exec(threadName);
+  if (!match) return null;
+  let space: string | undefined;
+  try { space = /^\/v1\/spaces\/([A-Za-z0-9_-]+)\/messages$/.exec(new URL(webhookUrl).pathname)?.[1]; } catch { return null; }
+  // A webhook re-pointed at another space makes the old thread irrelevant to it.
+  if (space !== match[1]) return null;
+  return `https://chat.google.com/room/${match[1]}/${match[2]}`;
 }

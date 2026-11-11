@@ -20,15 +20,17 @@ for (const [httpStatus, expectedStatus] of [[400, "FAILED"], [429, "PENDING"], [
       },
       project: { findUnique: async () => ({ owner: { plan: "PRO" }, integrations: [{ id: "chat-test", type: "GOOGLE_CHAT", webhookUrl: "https://chat.googleapis.com/v1/spaces/TEST/messages?key=test-key&token=test-token" }] }) },
       rateLimitBucket: { deleteMany: async () => ({ count: 0 }) },
-    } as unknown as Pick<Prisma.TransactionClient, "notificationJob" | "project" | "rateLimitBucket" | "projectInvitation">;
+      googleChatThread: { upsert: async (input: { create: { threadName: string } }) => { threads.push(input.create.threadName); return input; } },
+    } as unknown as Pick<Prisma.TransactionClient, "notificationJob" | "project" | "rateLimitBucket" | "projectInvitation" | "googleChatThread">;
+    const threads: string[] = [];
     mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
       assert.equal(new URL(String(input)).searchParams.has("requestId"), false);
-      return Response.json(httpStatus === 200 ? { name: "spaces/TEST/messages/test" } : { error: { message: "Provider rejection details" } }, { status: httpStatus });
+      return Response.json(httpStatus === 200 ? { name: "spaces/TEST/messages/test", thread: { name: "spaces/TEST/threads/test" } } : { error: { message: "Provider rejection details" } }, { status: httpStatus });
     });
     const result = await processNotificationJobs(1, client);
     assert.equal(updates.at(-1)?.status, expectedStatus);
     assert.equal(result.completed, httpStatus === 200 ? 1 : 0);
     if (httpStatus !== 200) assert.match(String(updates.at(-1)?.lastError), /Provider rejection details/);
-    else assert.equal(updates.at(-1)?.lastError, null);
+    else { assert.equal(updates.at(-1)?.lastError, null); assert.deepEqual(threads, ["spaces/TEST/threads/test"]); }
   });
 }

@@ -12,7 +12,7 @@ import { GoogleChatDeliveryError } from "./google-chat";
 import { withIntegrationContext } from "./integration-context";
 
 type QueueClient = Pick<Prisma.TransactionClient, "notificationJob">;
-type NotificationClient = Pick<Prisma.TransactionClient, "notificationJob" | "rateLimitBucket" | "projectInvitation" | "project">;
+type NotificationClient = Pick<Prisma.TransactionClient, "notificationJob" | "rateLimitBucket" | "projectInvitation" | "project" | "googleChatThread">;
 let retryTimer: NodeJS.Timeout | null = null;
 
 export async function queueIntegration(payload: IntegrationPayload, client: QueueClient & Pick<Prisma.TransactionClient, "feedback"> = db) {
