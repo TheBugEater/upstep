@@ -137,6 +137,7 @@ export async function startConversation(
   projectId: string,
   customerId: string,
   client: PrismaClient = db,
+  options: { fresh?: boolean } = {},
 ) {
   return collaborationTransaction(async (tx) => {
     const project = await supportProject(projectId, tx);
@@ -153,7 +154,16 @@ export async function startConversation(
       where: { projectId, customerId, state: { not: "RESOLVED" } },
       orderBy: { updatedAt: "desc" },
     });
-    if (existing) return existing;
+    // While a teammate has the conversation the AI stays silent, so a customer
+    // with a different question can open a separate AI conversation. Only
+    // allowed from a team-handled thread so it cannot be used to spam new ones.
+    const handledByTeam =
+      existing?.state === "HUMAN" || existing?.state === "WAITING";
+    if (
+      existing &&
+      !(options.fresh && handledByTeam && config.mode !== "HUMAN_ONLY")
+    )
+      return existing;
     return tx.supportConversation.create({
       data: {
         projectId,

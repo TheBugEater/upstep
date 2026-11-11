@@ -366,6 +366,22 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
       setBusy(false);
     }
   }
+  async function startFresh() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await ensureSession();
+      const c = await request("/conversations", "POST", { fresh: true });
+      await refresh(c.id);
+      const items = await request("/conversations");
+      setHistory(items.conversations);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function send(quickText?: string) {
     const outgoing = quickText ?? message;
     if (!outgoing.trim() || busy) return false;
@@ -444,6 +460,9 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
     "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900";
   const soft =
     "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100";
+  // Team replies carry the business accent so they read apart from AI answers.
+  const team =
+    "border border-[color:color-mix(in_srgb,var(--support-accent)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--support-accent)_12%,white)] text-neutral-900 dark:bg-[color:color-mix(in_srgb,var(--support-accent)_20%,#111)] dark:text-neutral-100";
   function clock(iso?: string) {
     if (!iso) return "";
     const date = new Date(iso);
@@ -691,7 +710,7 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
                     </div>
                   )}
                   <div
-                    className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-6 ${customer ? `${ink} ${firstOfRun ? "mt-3" : ""} rounded-br-md` : `${soft} rounded-tl-md`}`}
+                    className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-6 ${customer ? `${ink} ${firstOfRun ? "mt-3" : ""} rounded-br-md` : `${m.role === "AGENT" ? team : soft} rounded-tl-md`}`}
                   >
                     <div className="space-y-3">
                       {m.content.split(/\n\s*\n/).map((paragraph, n) => (
@@ -865,40 +884,53 @@ export function SupportChat({ apiKey }: { apiKey: string }) {
             Start a new conversation →
           </button>
         ) : (
-          <form
-            className="flex items-end gap-2 rounded-3xl border-[1.5px] border-neutral-200 bg-white py-1 pl-4 pr-1 transition focus-within:border-neutral-900 dark:border-neutral-800 dark:bg-black dark:focus-within:border-neutral-300"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void send();
-            }}
-          >
-            <label htmlFor="support-message" className="sr-only">
-              Your message
-            </label>
-            <textarea
-              ref={input}
-              id="support-message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void send();
-                }
+          <>
+            {(chat?.state === "HUMAN" || chat?.state === "WAITING") &&
+              config?.mode !== "HUMAN_ONLY" && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void startFresh()}
+                  className="mb-2 w-full text-center text-xs font-medium text-neutral-500 underline-offset-2 hover:underline dark:text-neutral-400"
+                >
+                  Different question? Start a new conversation with AI
+                </button>
+              )}
+            <form
+              className="flex items-end gap-2 rounded-3xl border-[1.5px] border-neutral-200 bg-white py-1 pl-4 pr-1 transition focus-within:border-neutral-900 dark:border-neutral-800 dark:bg-black dark:focus-within:border-neutral-300"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send();
               }}
-              maxLength={4000}
-              rows={1}
-              placeholder={`Message ${business}…`}
-              className="block max-h-28 min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base leading-6 outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
-            />
-            <button
-              aria-label="Send message"
-              disabled={busy || !message.trim() || !config}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--support-accent)] text-white transition hover:brightness-95 disabled:bg-neutral-100 disabled:text-neutral-300 dark:disabled:bg-neutral-900 dark:disabled:text-neutral-700"
             >
-              <SupportIcon name="arrow" className="h-4 w-4" />
-            </button>
-          </form>
+              <label htmlFor="support-message" className="sr-only">
+                Your message
+              </label>
+              <textarea
+                ref={input}
+                id="support-message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void send();
+                  }
+                }}
+                maxLength={4000}
+                rows={1}
+                placeholder={`Message ${business}…`}
+                className="block max-h-28 min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base leading-6 outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+              />
+              <button
+                aria-label="Send message"
+                disabled={busy || !message.trim() || !config}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--support-accent)] text-white transition hover:brightness-95 disabled:bg-neutral-100 disabled:text-neutral-300 dark:disabled:bg-neutral-900 dark:disabled:text-neutral-700"
+              >
+                <SupportIcon name="arrow" className="h-4 w-4" />
+              </button>
+            </form>
+          </>
         )}
       </footer>
     </main>

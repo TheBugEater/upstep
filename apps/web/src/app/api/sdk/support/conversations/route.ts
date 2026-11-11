@@ -23,7 +23,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { project, session } = await sdkRequest(req, true, true);
-    const c = await startConversation(project.id, session!.customerId);
+    const body = await req.json().catch(() => null);
+    const c = await startConversation(project.id, session!.customerId, db, {
+      fresh: body?.fresh === true,
+    });
     return NextResponse.json(
       { id: c.id, state: c.state },
       { headers: supportCors },
