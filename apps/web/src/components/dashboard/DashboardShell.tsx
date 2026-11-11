@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { feedbackWidgetEnabled, openFeedbackWidget } from "@/components/UpstepWidget";
 import { Avatar } from "@/components/Avatar";
 import { AvatarPicker, type ShellAvatar } from "@/components/dashboard/AvatarPicker";
 
@@ -180,6 +181,12 @@ export function DashboardShell({ children, email, name, plan, avatar, projects }
             </Link>
           )}
           {currentProject && !panelExpanded && <NavItem href={`${projectHref("settings")}&setup=1`} label="Setup guide" icon="help" active={setupGuideOpen} expanded={false} />}
+          {feedbackWidgetEnabled && (
+            <button type="button" onClick={() => { setMobileOpen(false); openFeedbackWidget(); }} title="Send feedback about Upstep" className={`flex h-10 w-full items-center rounded-lg text-[13px] font-medium text-muted transition hover:bg-card/60 hover:text-ink ${panelExpanded ? "gap-2.5 px-2.5" : "justify-center"}`}>
+              <Icon name="chat" className="text-faint" />
+              {panelExpanded ? <span className="min-w-0 flex-1 truncate text-left">Send feedback</span> : <span className="sr-only">Send feedback</span>}
+            </button>
+          )}
         </div>
 
         <div className="relative border-t border-line p-2">

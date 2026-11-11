@@ -90,6 +90,14 @@ export function SupportPanel({
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const [conversation, setConversation] = useState<Conversation | null>(null);
+  // Keep the newest message in view: the thread scrolls on its own, so open
+  // it at the bottom and follow new messages.
+  const threadRef = useRef<HTMLDivElement>(null);
+  const messageCount = conversation?.messages.length ?? 0;
+  useEffect(() => {
+    const el = threadRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [conversation?.id, messageCount]);
   const [filter, setFilter] = useState("OPEN");
   const [message, setMessage] = useState("");
   const [note, setNote] = useState(false);
@@ -225,7 +233,9 @@ export function SupportPanel({
       </div>
     );
   return (
-    <div className="mx-auto max-w-7xl">
+    // The inbox works like an app view on desktop: the page stays put and the
+    // conversation list and thread scroll on their own.
+    <div className={`mx-auto max-w-7xl ${view === "inbox" ? "lg:flex lg:h-[calc(100dvh-48px)] lg:flex-col" : ""}`}>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-ink">Customer support</h1>
@@ -290,8 +300,8 @@ export function SupportPanel({
         </p>
       )}
       {view === "inbox" && (
-        <div className="grid min-h-[580px] overflow-hidden rounded-2xl border border-line bg-card md:grid-cols-[310px_1fr]">
-          <aside className="border-b border-line md:border-b-0 md:border-r">
+        <div className="grid min-h-[580px] overflow-hidden rounded-2xl border border-line bg-card md:grid-cols-[310px_1fr] lg:min-h-[480px] lg:flex-1 lg:grid-rows-[minmax(0,1fr)]">
+          <aside className="flex flex-col border-b border-line md:border-b-0 md:border-r lg:min-h-0">
             <div className="p-3">
               <select
                 aria-label="Filter conversations"
@@ -312,7 +322,7 @@ export function SupportPanel({
                 ))}
               </select>
             </div>
-            <div className="max-h-[600px] overflow-y-auto">
+            <div className="max-h-[600px] overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1">
               {visible.map((c) => (
                 <button
                   key={c.id}
@@ -358,7 +368,7 @@ export function SupportPanel({
             </div>
           </aside>
           {conversation ? (
-            <section className="flex min-w-0 flex-col">
+            <section className="flex min-w-0 flex-col lg:min-h-0">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line p-4">
                 <div>
                   <h2 className="text-sm font-semibold text-ink">
@@ -435,7 +445,7 @@ export function SupportPanel({
                   )}
                 </div>
               </div>
-              <div className="flex max-h-[460px] min-h-[300px] flex-1 flex-col gap-4 overflow-y-auto bg-surface p-5">
+              <div ref={threadRef} className="flex max-h-[460px] min-h-[300px] flex-1 flex-col gap-4 overflow-y-auto bg-surface p-5 lg:max-h-none lg:min-h-0">
                 {conversation.messages.map((m) => {
                   const time = new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                   if (m.role === "SYSTEM")
@@ -489,7 +499,7 @@ export function SupportPanel({
                 )}
               </div>
               <form
-                className="mt-auto border-t border-line p-4"
+                className="mt-auto shrink-0 border-t border-line p-4"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!message.trim()) return;
