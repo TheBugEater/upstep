@@ -112,6 +112,8 @@ test("overrides flow into the variables and derived shades follow them", () => {
 
 test("accent text stays white on mid-tone brand colors and flips on light ones", () => {
   assert.equal(readableTextOn("#D97757"), "#ffffff");
+  assert.equal(readableTextOn("#C9481F"), "#ffffff");
+  assert.equal(readableTextOn("#FF7A50"), "#1a1915");
   assert.equal(readableTextOn("#E05A33"), "#ffffff");
   assert.equal(readableTextOn("rgb(29, 78, 216)"), "#ffffff");
   assert.equal(readableTextOn("#facc15"), "#1a1915");

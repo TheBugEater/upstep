@@ -8,6 +8,10 @@ continuously from `main`.
 
 ### Added
 
+- SDK 0.9.0 (`@upstep/js`, `@upstep/react-native`, `@upstep/types`) and
+  `upstep_flutter` 0.3.0: theme the widgets and hosted support chat with
+  `colors`, `radius` and (web) `fontFamily`; the default accent follows the
+  brand orange per mode.
 - AGPL-licensed self-hostable server distribution and Docker Compose setup.
 - Community health files, CI, dependency review, CodeQL and secret scanning.
 - Private, hashed MCP credentials with generate, rotate and revoke controls.

@@ -7,7 +7,7 @@ import type {
   UpstepColorOverrides,
   UpstepConfig,
 } from "@upstep/types";
-import { DEFAULT_ACCENT, supportThemeParams } from "./theme";
+import { defaultAccent, supportThemeParams } from "./theme";
 
 const ANON_ID_KEY = "upstep-anonymous-id";
 
@@ -91,14 +91,17 @@ export class UpstepApiClient {
    */
   supportFrameUrl(
     theme: string,
-    accentColor = DEFAULT_ACCENT,
+    accentColor?: string,
     appearance: {
       colors?: UpstepColorOverrides | undefined;
       radius?: number | undefined;
       fontFamily?: string | undefined;
     } = {},
   ): string {
-    const params = new URLSearchParams({ theme, accent: accentColor });
+    const params = new URLSearchParams({
+      theme,
+      accent: accentColor || defaultAccent(theme === "dark" ? "dark" : "light"),
+    });
     const extra = supportThemeParams({
       mode: theme === "dark" ? "dark" : "light",
       ...appearance,

@@ -151,7 +151,8 @@ export interface UpstepConfig {
   baseUrl?: string;
   /**
    * Accent color for the widget button, tabs, and highlights.
-   * Any CSS color string. Defaults to "#D97757".
+   * Any CSS color string. Defaults to the Upstep brand orange: "#C9481F" on
+   * light panels and "#FF7A50" on dark ones.
    */
   accentColor?: string;
   /**

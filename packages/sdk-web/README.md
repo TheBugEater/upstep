@@ -70,10 +70,28 @@ Every entry point (`Upstep.init`, `<UpstepProvider>`, and the script tag's `data
 | `apiKey` | `string` | — | **Required.** Your project's API key. |
 | `userId` | `string` | — | End-user id from your app, used to deduplicate votes per user. Call `identify(userId)` if it's only known after login. |
 | `baseUrl` | `string` | `https://upstep.dev` | Only needed for self-hosted or staging setups. |
-| `accentColor` | `string` | `#D97757` | Any CSS color, used for the launcher button and highlights. |
+| `accentColor` | `string` | `#C9481F` light / `#FF7A50` dark | Any CSS color, used for the launcher button and highlights. |
 | `theme` | `"light" \| "dark" \| "auto"` | `"auto"` | `"auto"` follows the host page's `prefers-color-scheme`. |
 | `position` | `"left" \| "right"` | `"right"` | Deprecated. Website launchers and panels stay bottom-right. |
 | `launcher` | `boolean` | `true` | Set `false` to hide the floating button and trigger the widget yourself via `Upstep.open()`. |
+| `colors` | `object` | — | Brand colors for the panel and support chat: `background`, `surface`, `border`, `text`, `textMuted`, `accentText`, plus `light` / `dark` variants. Unset keys keep the defaults. |
+| `radius` | `number` | `12` | Base corner radius in px. Every corner scales with it; `0` is square. Clamped to 0–32. |
+| `fontFamily` | `string` | system font | CSS font-family for the widget. |
+
+```js
+Upstep.init({
+  apiKey: "upstep_xxx",
+  accentColor: "#4f46e5",
+  colors: {
+    border: "#e2e8f0",
+    dark: { background: "#0f172a", surface: "#1e293b", text: "#f8fafc" },
+  },
+  radius: 8,
+  fontFamily: "Inter, system-ui, sans-serif",
+});
+```
+
+When `accentText` isn't set, text on the accent is white unless that's hard to read, then near-black. Script tags take `data-colors` (JSON), `data-radius` and `data-font-family`.
 
 ## API
 
@@ -87,7 +105,7 @@ Every entry point (`Upstep.init`, `<UpstepProvider>`, and the script tag's `data
 ### React (`@upstep/js/react`)
 
 - `<UpstepProvider apiKey="..." />` — wraps your app, all `UpstepConfig` options are valid props.
-- `<FeedbackWidget position? accentColor? theme? hideLauncher? />` — the launcher button and panel. Renders nothing until it's shown; safe to mount once near the root.
+- `<FeedbackWidget position? accentColor? theme? colors? radius? fontFamily? hideLauncher? />` — the launcher button and panel. Renders nothing until it's shown; safe to mount once near the root.
 - `useUpstep()` — the same state and actions the widget uses (`feedItems`, `submit`, `vote`, `open`, `close`, `identify`, ...), if you want to build your own UI on top instead of the default widget.
 
 ## Links

@@ -24,7 +24,7 @@ import type {
 } from "@upstep/types";
 import { useSupportUnread } from "./useSupportUnread";
 import type { UpstepColorOverrides } from "@upstep/types";
-import { mixColors, withAlpha } from "@upstep/js/theme";
+import { defaultAccent, mixColors, withAlpha } from "@upstep/js/theme";
 import {
   RadiusContext,
   clampRadius,
@@ -91,10 +91,11 @@ function SupportViewBody({
   client,
   config,
   dark = false,
-  accentColor = "#D97757",
+  accentColor: accentProp,
   colors: overrides,
 }: SupportViewProps) {
   const styles = useScaledStyles(baseStyles);
+  const accentColor = accentProp || defaultAccent(dark ? "dark" : "light");
   const { height } = useWindowDimensions();
   const [logoFailed, setLogoFailed] = useState(false);
   useEffect(() => setLogoFailed(false), [config.logoUrl]);

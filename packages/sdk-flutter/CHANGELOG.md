@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- Theme the sheet and support chat to your brand with `colors: UpstepColors(...)` (with `light` / `dark` variants) and `radius`, on `Upstep` and `UpstepConfig`.
+- Text on the accent is picked for contrast when `accentText` isn't set.
+- The default accent now matches the Upstep brand per mode: `#C9481F` on light, `#FF7A50` with dark text on dark. Set `accentColor` to keep a single color.
+- New `UpstepThemeData` theme extension, so a standalone `SupportChat` can be themed.
+
 ## 0.2.1
 
 - Restore the original accent and apply the configured theme color to support actions.

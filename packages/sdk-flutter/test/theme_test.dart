@@ -64,6 +64,19 @@ void main() {
     expect(custom.accentText, const Color(0xFF000000));
   });
 
+  test('the default accent follows the mode', () {
+    const config = UpstepConfig(apiKey: 'k');
+    final controller = UpstepController(config: config);
+    expect(controller.accentFor(Brightness.light), upstepAccentLight);
+    expect(controller.accentFor(Brightness.dark), upstepAccentDark);
+    expect(readableTextOn(upstepAccentLight), const Color(0xFFFFFFFF));
+    expect(readableTextOn(upstepAccentDark), const Color(0xFF1A1915));
+    final custom = UpstepController(
+      config: config.copyWith(accentColor: const Color(0xFF4F46E5)),
+    );
+    expect(custom.accentFor(Brightness.dark), const Color(0xFF4F46E5));
+  });
+
   test('radius is clamped', () {
     expect(clampUpstepRadius(null), 12);
     expect(clampUpstepRadius(-5), 0);

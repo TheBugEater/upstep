@@ -64,7 +64,8 @@ export function SupportChat({
   appearance?: SupportAppearance;
 }) {
   const [accentColor, setAccentColor] = useState(
-    appearance.accent ?? "#D97757",
+    // Brand default per mode; dark panels get the brighter orange.
+    appearance.accent ?? (appearance.dark ? "#FF7A50" : "#C9481F"),
   );
   const [config, setConfig] = useState<Config | null>(null);
   const [chat, setChat] = useState<Chat | null>(null);

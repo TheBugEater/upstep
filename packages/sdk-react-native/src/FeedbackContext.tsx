@@ -13,6 +13,7 @@ import {
   Platform,
   UIManager,
   Vibration,
+  useColorScheme,
 } from "react-native";
 import type {
   Feedback,
@@ -24,6 +25,7 @@ import type {
 } from "@upstep/types";
 import { UpstepApiClient } from "./api";
 import { RadiusContext, clampRadius } from "./theme";
+import { defaultAccent } from "@upstep/js/theme";
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === "android") {
@@ -33,7 +35,6 @@ if (Platform.OS === "android") {
   um.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-const DEFAULT_ACCENT = "#D97757";
 
 interface UpstepContextValue {
   client: UpstepApiClient;
@@ -227,6 +228,13 @@ export function FeedbackProvider({
     [client],
   );
 
+  // With no accent configured, follow the brand default for the current mode.
+  const scheme = useColorScheme();
+  const theme = config.theme ?? "auto";
+  const mode =
+    theme === "dark" || (theme === "auto" && scheme === "dark")
+      ? "dark"
+      : "light";
   return (
     <UpstepContext.Provider
       value={{
@@ -241,7 +249,7 @@ export function FeedbackProvider({
         openSheet,
         closeSheet,
         identify,
-        accentColor: config.accentColor ?? DEFAULT_ACCENT,
+        accentColor: config.accentColor ?? defaultAccent(mode),
         theme: config.theme ?? "auto",
         colors: config.colors,
         radius: clampRadius(config.radius),

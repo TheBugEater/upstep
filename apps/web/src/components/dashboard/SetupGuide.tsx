@@ -418,7 +418,7 @@ export function UpstepWidget() {
       apiKey="${apiKey}"
       baseUrl="${baseUrl}"
       // theme="auto"      // "light" | "dark" | "auto" (default)
-      // accentColor="#D97757"
+      // accentColor="#C9481F"
     >
       <FeedbackWidget />
     </UpstepProvider>
@@ -446,7 +446,7 @@ export default function App({ children }) {
       apiKey="${apiKey}"
       baseUrl="${baseUrl}"
       // theme="auto"      // "light" | "dark" | "auto" (default)
-      // accentColor="#D97757"
+      // accentColor="#C9481F"
     >
       {children}
       <FeedbackWidget />
@@ -514,7 +514,7 @@ export default function App() {
       apiKey="${apiKey}"
       baseUrl="${baseUrl}"
       // userId="user-123"    // tie votes to the logged-in user
-      // accentColor="#D97757"
+      // accentColor="#C9481F"
       // theme="auto"         // "light" | "dark" | "auto" (default)
     >
       {/* your app */}

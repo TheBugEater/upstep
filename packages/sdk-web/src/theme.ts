@@ -4,7 +4,17 @@
  */
 import type { UpstepColorOverrides, UpstepThemeColors } from "@upstep/types";
 
-export const DEFAULT_ACCENT = "#D97757";
+/** Brand orange for light panels; white text reads on it. */
+export const DEFAULT_ACCENT_LIGHT = "#C9481F";
+/** Brighter brand orange for dark panels; dark text reads on it. */
+export const DEFAULT_ACCENT_DARK = "#FF7A50";
+/** The light-mode default, kept for callers that need a single color. */
+export const DEFAULT_ACCENT = DEFAULT_ACCENT_LIGHT;
+
+/** The accent to use: the host's own, or the brand default for the mode. */
+export function defaultAccent(mode: "light" | "dark"): string {
+  return mode === "dark" ? DEFAULT_ACCENT_DARK : DEFAULT_ACCENT_LIGHT;
+}
 /** Base corner radius in px. Every other corner in the widgets scales from it. */
 export const DEFAULT_RADIUS = 12;
 export const MAX_RADIUS = 32;
@@ -235,7 +245,7 @@ export function buildWidgetPalette(options: {
 }): WidgetPalette {
   const base = options.mode === "dark" ? DARK : LIGHT;
   const o = resolveColorOverrides(options.colors, options.mode);
-  const accent = options.accentColor?.trim() || DEFAULT_ACCENT;
+  const accent = options.accentColor?.trim() || defaultAccent(options.mode);
   const bg = o.background ?? base.bg;
   const text = o.text ?? base.text;
   const bgSoft = o.surface ?? base.bgSoft;
