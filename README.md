@@ -8,16 +8,18 @@
 
 <p align="center">
   <strong>Feedback that ships itself.</strong><br />
-  Collect feedback inside your product, let users vote, triage on a fluid board,<br />
+  Collect feedback and support conversations inside your product, triage them on one board,<br />
   and give your coding agent a direct line to what users want.
 </p>
 
 <p align="center">
-  <a href="https://upstep.dev"><strong>Live product</strong></a>
+  <a href="https://upstep.dev"><strong>Try Upstep</strong></a>
   &nbsp;·&nbsp;
-  <a href="DOCUMENTATION.md"><strong>Documentation</strong></a>
+  <a href="DOCUMENTATION.md"><strong>Docs</strong></a>
   &nbsp;·&nbsp;
-  <a href="#quick-start"><strong>Self-host</strong></a>
+  <a href="#self-host-in-two-minutes"><strong>Self-host</strong></a>
+  &nbsp;·&nbsp;
+  <a href="ROADMAP.md"><strong>Roadmap</strong></a>
   &nbsp;·&nbsp;
   <a href="CONTRIBUTING.md"><strong>Contribute</strong></a>
 </p>
@@ -28,33 +30,36 @@
   <img alt="Next.js 15" src="https://img.shields.io/badge/Next.js-15-2F302E?style=flat-square&logo=nextdotjs&logoColor=white" />
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white" />
   <img alt="Model Context Protocol" src="https://img.shields.io/badge/MCP-ready-E05A33?style=flat-square" />
-  <img alt="Docker ready" src="https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white" />
+  <a href="https://sendpanda.email"><img alt="Email by SendPanda" src="https://img.shields.io/badge/email-SendPanda-C6F04B?style=flat-square" /></a>
 </p>
 
 <p align="center">
   <img src="docs/images/upstep-hero.png" alt="Upstep feedback board and embedded feedback widget" width="100%" />
 </p>
 
-## One feedback loop, end to end
+## Why Upstep
 
-Most feedback tools stop at collecting ideas. Upstep connects the whole loop:
-the widget your users see, the board your team works from, the public roadmap
-you share, and the MCP tools your agent can act through.
+Most feedback tools stop at a list of ideas. Upstep closes the loop: the widget
+your users see, the support inbox your team answers from, the board you triage
+on, the roadmap you publish, and the MCP tools your agent works through, all in
+one app you can run yourself.
 
 | | |
 | --- | --- |
-| **Embedded feedback** | Drop a native widget into web, React, React Native, or Flutter without sending users to another portal. |
-| **Voting that prioritizes itself** | Identified and anonymous voting with deduplication turns requests into a ranked backlog. |
-| **Fluid triage boards** | Use custom boards, statuses, labels, moderation, internal tasks, and completed-item views without drowning in filters. |
-| **An agent that can act** | Claude Code, Codex, Cursor, Windsurf, Copilot, or any MCP client can read, create, update, and comment on project-scoped work. |
-| **A roadmap users can trust** | Publish the work that matters while keeping developer and agent tasks private. |
-| **Self-hosted by default** | Run the same Next.js and PostgreSQL stack yourself. Redis is not required. |
+| 💬 **In-product feedback** | A native widget for web, React, React Native and Flutter. Users never leave your app. |
+| ▲ **Voting that ranks the backlog** | Identified and anonymous votes, deduplicated, so the most-wanted work rises to the top. |
+| 🗂 **One board for triage** | Custom boards, statuses, labels, assignees, moderation, and private dev-only tasks. |
+| 🎧 **Support that becomes work** | AI answers from your docs, a shared team inbox, live handoff, and conversations that turn into tasks. |
+| 🤖 **Agents that can act** | Claude Code, Codex, Cursor, Windsurf, Copilot or any MCP client can read, create, update and comment on tasks. |
+| 🗺 **A public roadmap** | Share what's planned and shipped while internal tasks stay private. |
+| 🔔 **Your team's tools** | Slack, Discord, Google Chat threads per task, webhooks, and email via [SendPanda](https://sendpanda.email). |
+| 🏠 **Self-hosted by default** | One Next.js app and PostgreSQL. No Redis, no extra workers to babysit. |
 
 ## Built for humans and agents
 
-Upstep's MCP server is part of the application—not a separate sidecar. A
-private, project-scoped key lets an agent triage feedback from the editor while
-publishable SDK keys remain safe to embed in client applications.
+The MCP server is part of the app, not a sidecar. A private, project-scoped key
+lets an agent triage feedback from your editor, while publishable SDK keys stay
+safe to embed in client apps.
 
 <p align="center">
   <img src="docs/images/upstep-mcp.png" alt="Upstep MCP workflow with coding agents" width="100%" />
@@ -71,7 +76,7 @@ codex mcp add upstep --url https://upstep.dev/api/mcp \
   --bearer-token-env-var UPSTEP_MCP_KEY
 ```
 
-## Two lines from feedback
+## Add the widget
 
 ```bash
 npm install @upstep/js
@@ -90,30 +95,31 @@ export function App() {
 }
 ```
 
-The same feedback loop is available for vanilla JavaScript, script tags,
-React Native, and Flutter. See the [complete SDK guide](DOCUMENTATION.md#sdks).
+Also available for vanilla JavaScript, a script tag, React Native and Flutter.
+See the [SDK guide](DOCUMENTATION.md#sdks).
 
 ## How it fits together
 
 ```mermaid
 flowchart LR
     U[Your users] --> SDK[Web & mobile SDKs]
-    SDK --> API[Public feedback API]
-    T[Your team] --> DASH[Dashboard & boards]
+    SDK --> API[Public feedback & support API]
+    T[Your team] --> DASH[Dashboard, boards & inbox]
     A[Coding agents] --> MCP[Project-scoped MCP]
     API --> CORE[Upstep application]
     DASH --> CORE
     MCP --> CORE
     CORE --> DB[(PostgreSQL)]
-    CORE --> OUT[Email · Slack · Discord · Webhooks]
+    CORE --> OUT[Slack · Discord · Google Chat · Webhooks]
+    CORE --> MAIL[Email via SendPanda]
 ```
 
-Everything runs in one deployable application with durable PostgreSQL-backed
-rate limiting and notification retries.
+Rate limits and notification retries are durable and backed by PostgreSQL, so
+one deployable app is the whole system.
 
-## Quick start
+## Self-host in two minutes
 
-You need Docker with Compose and either a GitHub or Google OAuth application.
+You need Docker with Compose and a GitHub or Google OAuth app.
 
 ```bash
 git clone https://github.com/TheBugEater/upstep.git
@@ -122,17 +128,31 @@ cp apps/web/.env.example apps/web/.env
 docker compose up --build
 ```
 
-Add your database, auth secret, and OAuth credentials to
-`apps/web/.env`, then open [http://localhost:3000](http://localhost:3000).
-For GitHub OAuth, use this local callback URL:
+Add your database URL, auth secret and OAuth credentials to `apps/web/.env`,
+then open [http://localhost:3000](http://localhost:3000). For GitHub OAuth, use
+this callback URL:
 
 ```text
 http://localhost:3000/api/auth/callback/github
 ```
 
-The Compose stack starts PostgreSQL, applies committed Prisma migrations,
-starts Upstep, and processes durable notification retries. Production
-containers expose `GET /api/health` and respect the platform's `PORT`.
+Compose starts PostgreSQL, applies the committed Prisma migrations, starts
+Upstep and processes notification retries. Containers expose `GET /api/health`
+and respect the platform's `PORT`.
+
+### Email (optional)
+
+Feedback notifications and team invitations are sent through
+[SendPanda](https://sendpanda.email), a developer-first email API. Create a
+send-only key, verify your sending domain, and set:
+
+```bash
+SENDPANDA_API_KEY=your-send-only-key
+SENDPANDA_FROM_EMAIL="Upstep <hello@your-domain.com>"
+```
+
+Without a key, Upstep runs normally and skips email. Template IDs and the full
+setup are in the [email documentation](DOCUMENTATION.md).
 
 ### Local development
 
@@ -151,18 +171,17 @@ pnpm type-check
 pnpm build
 ```
 
-## Credentials are intentionally separate
+## Keys are intentionally separate
 
 | Credential | Where it belongs | Access |
 | --- | --- | --- |
 | `upstep_pk_…` | Browser and mobile SDKs | Publishable; limited to the public feedback API |
-| `upstep_mcp_…` | Secret stores and MCP clients | Private; user-and-project-scoped access following current membership and role |
+| `upstep_mcp_…` | Secret stores and MCP clients | Private; scoped to one user and project, following current membership and role |
 
-Personal MCP keys are returned once and stored only as SHA-256 digests. Each
-teammate manages their own key; see [personal MCP access](docs/mcp-personal-access.md)
-for identity, assignment defaults, revocation, and migration of legacy shared keys. Never
-use a publishable SDK key as an authorization boundary for private data. Read
-the full [security policy](SECURITY.md) before exposing a production instance.
+Personal MCP keys are shown once and stored only as SHA-256 digests. Each
+teammate manages their own key; see [personal MCP access](docs/mcp-personal-access.md).
+Never treat a publishable SDK key as protection for private data, and read the
+[security policy](SECURITY.md) before exposing a production instance.
 
 ## Repository map
 
@@ -176,31 +195,45 @@ packages/types/              @upstep/types
 
 | Resource | What you will find |
 | --- | --- |
-| [Documentation](DOCUMENTATION.md) | Setup, environment variables, SDKs, REST API, data model, billing, and dashboard behavior |
-| [Contributing](CONTRIBUTING.md) | Development workflow, migrations, tests, and pull requests |
+| [Documentation](DOCUMENTATION.md) | Setup, environment variables, SDKs, REST API, data model, billing, dashboard behavior |
+| [Roadmap](ROADMAP.md) | What's planned next |
+| [Changelog](CHANGELOG.md) | What shipped |
+| [Contributing](CONTRIBUTING.md) | Development workflow, migrations, tests, pull requests |
 | [Security](SECURITY.md) | Vulnerability reporting and credential model |
 | [Code of Conduct](CODE_OF_CONDUCT.md) | Community expectations |
 | [Licensing](LICENSING.md) | AGPL server and MIT SDK boundaries |
 | [Trademark policy](TRADEMARKS.md) | Rules for the Upstep name and logo |
 
-## Deployment and operations
+## Deployment
 
-`railway.toml` configures the hosted deployment, but any platform that can run
-a Node.js container and PostgreSQL can host Upstep. Apply
-`prisma migrate deploy` before each release, call
-`POST /api/internal/notifications` every minute with
+`railway.toml` configures the hosted deployment, but any platform that runs a
+Node.js container and PostgreSQL works. Run `prisma migrate deploy` before each
+release, call `POST /api/internal/notifications` every minute with
 `Authorization: Bearer $CRON_SECRET`, and test database restores regularly.
 
-Self-hosted instances send no Upstep product analytics when
+Self-hosted instances send no Upstep product analytics while
 `NEXT_PUBLIC_ONRAMP_API_KEY` is blank, which is the default.
+
+## Email by SendPanda
+
+<p align="center">
+  <a href="https://sendpanda.email">
+    <img src="docs/images/sendpanda-banner.png" alt="SendPanda: Email API for developers" width="100%" />
+  </a>
+</p>
+
+<p align="center">
+  Upstep sends its email with <strong><a href="https://sendpanda.email">SendPanda</a></strong>,
+  an email API for developers with templates, verified domains and a REST API.<br />
+  <a href="https://sendpanda.email"><strong>sendpanda.email →</strong></a>
+</p>
 
 ## License
 
-The server application is licensed under
-[AGPL-3.0-only](LICENSE). Independently distributed SDK and shared-type
-packages are licensed under MIT. The Upstep name and logos are governed by the
-[trademark policy](TRADEMARKS.md).
+The server is licensed under [AGPL-3.0-only](LICENSE). Independently
+distributed SDK and shared-type packages are MIT. The Upstep name and logos
+are covered by the [trademark policy](TRADEMARKS.md).
 
 <p align="center">
-  Built for builders who would rather ship than manage another feedback tool.
+  Built in public for builders who would rather ship than manage another feedback tool.
 </p>
