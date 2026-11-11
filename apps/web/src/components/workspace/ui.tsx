@@ -52,11 +52,14 @@ export function StatusMenu({
   value,
   onChange,
   className = "",
+  block = false,
 }: {
   statuses: ProjectStatus[];
   value: string | null | undefined;
   onChange: (id: string) => void;
   className?: string;
+  /** Full-width trigger that lines up with the other field controls. */
+  block?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const current = statuses.find((s) => s.id === value);
@@ -66,16 +69,19 @@ export function StatusMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-line bg-card hover:border-line-strong transition font-medium text-ink-soft"
+        aria-expanded={open}
+        className={block
+          ? "flex h-9 w-full items-center gap-2 rounded-lg border border-line bg-card px-2.5 text-left text-xs font-medium text-ink transition hover:border-line-strong"
+          : "inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-line bg-card hover:border-line-strong transition font-medium text-ink-soft"}
       >
         <StatusDot color={current?.color ?? "#94a3b8"} />
-        <span className="max-w-[110px] truncate">{current?.name ?? "No status"}</span>
+        <span className={block ? "min-w-0 flex-1 truncate" : "max-w-[110px] truncate"}>{current?.name ?? "No status"}</span>
         <span className="text-faint">▾</span>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-30 min-w-[150px] rounded-xl border border-line bg-card shadow-lift p-1.5">
+          <div className={`absolute top-full mt-1 z-30 min-w-[150px] rounded-xl border border-line bg-card shadow-lift p-1.5 ${block ? "inset-x-0" : "right-0"}`}>
             {statuses.map((s) => (
               <button
                 key={s.id}

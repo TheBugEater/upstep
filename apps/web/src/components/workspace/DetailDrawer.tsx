@@ -186,65 +186,84 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
     return member ? member.image : c.author?.image ?? null;
   };
 
-  const panel = (
-      <div className={isPage ? "mx-auto flex w-full max-w-[1160px] flex-col" : "relative flex h-full w-full max-w-[1040px] flex-col overflow-hidden border-line bg-card shadow-lift animate-card-in sm:h-[min(860px,calc(100dvh-48px))] sm:rounded-2xl sm:border"}>
-        {/* Header */}
-        <div className={isPage ? "flex min-h-14 flex-wrap items-center gap-2 border-b border-line pb-3" : "flex h-14 shrink-0 items-center gap-2 border-b border-line pl-5 pr-3 sm:pl-6"}>
-          <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-2 text-xs text-faint">
-            {isPage
-              ? <Link href={`/dashboard/projects/${projectId}?tab=feedback`} className="inline-flex shrink-0 items-center gap-1 font-medium text-muted hover:text-ink"><span aria-hidden>←</span> Board</Link>
-              : <button type="button" onClick={onClose} className="shrink-0 hover:text-ink">Board</button>}
-            <span aria-hidden>/</span>
-            <span className="truncate font-medium text-ink-soft">{heading}</span>
-          </nav>
-          <button type="button" onClick={() => void copyLink()} className="hidden h-9 items-center gap-1.5 rounded-lg border border-line px-3 text-xs font-medium text-muted transition hover:border-line-strong hover:text-ink sm:inline-flex">
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
-            {copied ? "Copied" : "Copy link"}
-          </button>
-          {!isPage && (
-            <Link href={pageHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-raised px-3 text-xs font-semibold text-ink transition hover:border-line-strong" title="Open this task on its own page">
-              <span className="hidden sm:inline">Open full page</span>
-              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14 4h6v6M20 4l-8 8M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5" /></svg>
-              <span className="sr-only sm:hidden">Open full page</span>
-            </Link>
-          )}
-          <div className="relative">
-            <button type="button" onClick={() => { setShowMenu((v) => !v); setConfirmDelete(false); }} aria-expanded={showMenu} aria-label="More actions" className="grid h-10 w-10 place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-ink">
-              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>
-            </button>
-            {showMenu && <>
-              <button className="fixed inset-0 z-10 cursor-default" onClick={() => setShowMenu(false)} aria-label="Close menu" />
-              <div className="absolute right-0 top-11 z-20 w-64 rounded-xl border border-line bg-card p-1.5 shadow-lift">
-                <button type="button" onClick={() => void copyLink()} className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs text-muted hover:bg-raised hover:text-ink sm:hidden">{copied ? "Copied" : "Copy link"}</button>
-                <button type="button" onClick={() => void actions.updateItem(item.id, { internal: !item.internal })} aria-pressed={item.internal ?? false} className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-raised">
-                  <span className="min-w-0 flex-1"><span className="block text-xs font-medium text-ink">Dev only</span><span className="block text-[11px] text-faint">Hide from the public widget</span></span>
-                  <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${item.internal ? "bg-violet-600" : "bg-line-strong"}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${item.internal ? "translate-x-[18px]" : "translate-x-0.5"}`} /></span>
-                </button>
-                <div className="my-1 h-px bg-line" />
-                {confirmDelete ? (
-                  <div className="flex items-center gap-2 px-2.5 py-2">
-                    <span className="flex-1 text-xs text-danger">Delete permanently?</span>
-                    <button type="button" onClick={() => void actions.deleteItem(item.id).then(() => { if (isPage) onClose(); })} className="rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-danger/85">Delete</button>
-                    <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-muted hover:text-ink">Cancel</button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => setConfirmDelete(true)} className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs font-medium text-danger hover:bg-danger/10">Delete task…</button>
-                )}
-              </div>
-            </>}
-          </div>
-          {!isPage && <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-ink" aria-label="Close">
-            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
-          </button>}
-        </div>
+  const currentStatus = statuses.find((s) => s.id === item.statusId);
+  const fieldLabel = "mb-1.5 block text-[11px] font-semibold text-faint";
+  const fieldCtl = "h-9 w-full min-w-0 rounded-lg border border-line bg-card px-2.5 text-xs font-medium text-ink transition hover:border-line-strong focus:border-ink/40 focus:outline-none disabled:opacity-50";
+  const iconBtn = "grid h-9 w-9 place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-ink";
 
-        <div className={isPage ? "flex flex-col gap-8 pt-8 lg:flex-row lg:items-start" : "flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden"}>
-          {/* Main column */}
+  const toolbar = (
+    <div className="flex items-center gap-0.5">
+      <button type="button" onClick={() => void copyLink()} className={iconBtn} aria-label={copied ? "Link copied" : "Copy link"} title={copied ? "Copied" : "Copy link"}>
+        {copied
+          ? <svg viewBox="0 0 24 24" className="h-4 w-4 text-success" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m5 12 5 5L20 7" /></svg>
+          : <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>}
+      </button>
+      <div className="relative">
+        <button type="button" onClick={() => { setShowMenu((v) => !v); setConfirmDelete(false); }} aria-expanded={showMenu} aria-label="More actions" className={iconBtn}>
+          <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>
+        </button>
+        {showMenu && <>
+          <button className="fixed inset-0 z-10 cursor-default" onClick={() => setShowMenu(false)} aria-label="Close menu" />
+          <div className="absolute right-0 top-11 z-20 w-64 rounded-xl border border-line bg-card p-1.5 shadow-lift">
+            <button type="button" onClick={() => void actions.updateItem(item.id, { internal: !item.internal })} aria-pressed={item.internal ?? false} className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-raised">
+              <span className="min-w-0 flex-1"><span className="block text-xs font-medium text-ink">Dev only</span><span className="block text-[11px] text-faint">Hide from the public widget</span></span>
+              <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${item.internal ? "bg-violet-600" : "bg-line-strong"}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${item.internal ? "translate-x-[18px]" : "translate-x-0.5"}`} /></span>
+            </button>
+            <div className="my-1 h-px bg-line" />
+            {confirmDelete ? (
+              <div className="flex items-center gap-2 px-2.5 py-2">
+                <span className="flex-1 text-xs text-danger">Delete permanently?</span>
+                <button type="button" onClick={() => void actions.deleteItem(item.id).then(() => { if (isPage) onClose(); })} className="rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-danger/85">Delete</button>
+                <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-muted hover:text-ink">Cancel</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setConfirmDelete(true)} className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-xs font-medium text-danger hover:bg-danger/10">Delete task…</button>
+            )}
+          </div>
+        </>}
+      </div>
+      {!isPage && <button type="button" onClick={onClose} className={iconBtn} aria-label="Close">
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>}
+    </div>
+  );
+
+  const panel = (
+      <div className={isPage ? "mx-auto flex w-full max-w-[1160px] flex-col" : "relative flex h-full w-full max-w-[1080px] flex-col overflow-y-auto border-line bg-card shadow-lift animate-card-in sm:h-[min(860px,calc(100dvh-48px))] sm:rounded-2xl sm:border lg:flex-row lg:overflow-hidden"}>
+        {isPage && (
+          <div className="flex min-h-14 flex-wrap items-center gap-2 border-b border-line pb-3">
+            <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-2 text-xs text-faint">
+              <Link href={`/dashboard/projects/${projectId}?tab=feedback`} className="inline-flex shrink-0 items-center gap-1 font-medium text-muted hover:text-ink"><span aria-hidden>←</span> Board</Link>
+              <span aria-hidden>/</span>
+              <span className="truncate font-medium text-ink-soft">{heading}</span>
+            </nav>
+            {toolbar}
+          </div>
+        )}
+
+        <div className={isPage ? "flex flex-col gap-8 pt-8 lg:flex-row lg:items-start" : "contents"}>
+          {/* Content column: title, comments, composer */}
           <div className={isPage ? "min-w-0 flex-1 space-y-8" : "flex min-w-0 flex-1 flex-col lg:min-h-0"}>
+            {!isPage && (
+              <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line pl-5 pr-2.5 sm:pl-7">
+                <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-2 text-xs text-faint">
+                  <button type="button" onClick={onClose} className="shrink-0 hover:text-ink">Board</button>
+                  <span aria-hidden>/</span>
+                  <span className="inline-flex min-w-0 items-center gap-1.5 font-medium text-ink-soft">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: currentStatus?.color ?? "#94a3b8" }} />
+                    <span className="truncate">{currentStatus?.name ?? "No status"}</span>
+                  </span>
+                </nav>
+                <Link href={pageHref} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-line px-2.5 text-xs font-semibold text-ink transition hover:border-line-strong" title="Open this task on its own page">
+                  Open page <span aria-hidden>↗</span>
+                </Link>
+                <div className="lg:hidden">{toolbar}</div>
+              </div>
+            )}
             <div className={isPage ? "space-y-4" : `shrink-0 space-y-3 pb-5 pt-5 sm:pt-6 lg:max-h-[40%] lg:overflow-y-auto ${pad}`}>
               {isPage
                 ? <h1 id="task-detail-title" className="text-[30px] font-bold leading-tight tracking-[-0.025em] text-ink">{heading}</h1>
-                : <h2 id="task-detail-title" className="text-[22px] font-bold leading-snug tracking-[-0.02em] text-ink">{heading}</h2>}
+                : <h2 id="task-detail-title" className="text-2xl font-bold leading-snug tracking-[-0.02em] text-ink">{heading}</h2>}
               {item.title?.trim() && <p className={`whitespace-pre-wrap leading-relaxed text-ink-soft ${isPage ? "text-[15px]" : "text-sm"}`}>{item.content}</p>}
             </div>
 
@@ -313,32 +332,38 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
             </section>
           </div>
 
-          {/* Properties */}
-          <aside className={isPage ? "w-full shrink-0 space-y-5 rounded-2xl border border-line bg-surface p-5 lg:w-[320px]" : "shrink-0 space-y-5 border-t border-line bg-surface p-5 lg:w-[320px] lg:overflow-y-auto lg:border-l lg:border-t-0"}>
-            <dl className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 text-xs">
-              <dt className="text-faint">Status</dt>
-              <dd><StatusMenu statuses={statuses} value={item.statusId} onChange={(id) => actions.moveItem(item.id, id)} className="[&>div:last-child]:left-0 [&>div:last-child]:right-auto" /></dd>
+          {/* Details column */}
+          <aside aria-label="Task details" className={isPage ? "w-full shrink-0 rounded-2xl border border-line bg-surface lg:w-[320px]" : "flex shrink-0 flex-col border-t border-line bg-surface lg:w-[300px] lg:border-l lg:border-t-0"}>
+            {!isPage && <div className="hidden h-14 shrink-0 items-center justify-end border-b border-line px-2.5 lg:flex">{toolbar}</div>}
+            <div className={isPage ? "space-y-5 p-5" : "flex flex-col gap-5 p-5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto"}>
+              <div>
+                <span className={fieldLabel}>Status</span>
+                <StatusMenu block statuses={statuses} value={item.statusId} onChange={(id) => actions.moveItem(item.id, id)} />
+              </div>
 
-              <dt><label htmlFor="task-assignee" className="text-faint">Assignee</label></dt>
-              <dd className="flex min-w-0 items-center gap-2">
-                {assignee ? <Avatar name={assignee.name} email={assignee.email} src={assignee.image} size={24} decorative /> : <span aria-hidden="true" className="h-6 w-6 shrink-0 rounded-full border border-dashed border-line-strong" />}
-                <select id="task-assignee" value={item.assigneeId ?? ""} disabled={assigning} onChange={(e) => void assignTask(e.target.value || null)} className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-card px-2 text-xs text-ink focus:border-clay/50 focus:outline-none">
-                  <option value="">Unassigned</option>
-                  {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}{m.id === currentUserId ? " (you)" : ""}</option>)}
-                </select>
-                {item.assigneeId !== currentUserId && <button type="button" disabled={assigning} onClick={() => void assignTask(currentUserId)} className="shrink-0 text-[11px] font-medium text-clay hover:underline disabled:opacity-40">Me</button>}
-              </dd>
-              {assignmentError && <dd role="alert" className="col-span-2 text-danger">{assignmentError}</dd>}
+              <div>
+                <label htmlFor="task-assignee" className={fieldLabel}>Assignee</label>
+                <div className="flex items-center gap-2">
+                  {assignee ? <Avatar name={assignee.name} email={assignee.email} src={assignee.image} size={24} decorative /> : <span aria-hidden="true" className="h-6 w-6 shrink-0 rounded-full border border-dashed border-line-strong" />}
+                  <select id="task-assignee" value={item.assigneeId ?? ""} disabled={assigning} onChange={(e) => void assignTask(e.target.value || null)} className={fieldCtl}>
+                    <option value="">Unassigned</option>
+                    {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}{m.id === currentUserId ? " (you)" : ""}</option>)}
+                  </select>
+                </div>
+                {item.assigneeId !== currentUserId && <button type="button" disabled={assigning} onClick={() => void assignTask(currentUserId)} className="mt-1.5 text-xs font-medium text-ink underline decoration-line-strong underline-offset-[3px] transition hover:decoration-ink disabled:opacity-40">Assign to me</button>}
+                {assignmentError && <p role="alert" className="mt-1.5 text-xs text-danger">{assignmentError}</p>}
+              </div>
 
-              <dt><label htmlFor="task-type" className="text-faint">Type</label></dt>
-              <dd>
-                <select id="task-type" value={item.type} onChange={(e) => void actions.updateItem(item.id, { type: e.target.value as typeof item.type })} className="h-8 rounded-lg border border-line bg-card px-2 text-xs text-ink focus:border-clay/50 focus:outline-none">
+              <div>
+                <label htmlFor="task-type" className={fieldLabel}>Type</label>
+                <select id="task-type" value={item.type} onChange={(e) => void actions.updateItem(item.id, { type: e.target.value as typeof item.type })} className={fieldCtl}>
                   {TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
                 </select>
-              </dd>
+              </div>
 
-              <dt className="self-start pt-1.5 text-faint">Labels</dt>
-              <dd className="relative flex flex-wrap items-center gap-1.5">
+              <div>
+                <span className={fieldLabel}>Labels</span>
+              <div className="relative flex flex-wrap items-center gap-1.5">
                 {itemLabels.map((l) => (
                   <span key={l.id} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card py-0.5 pl-2 pr-1 text-[11px] text-ink-soft">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: l.color }} />{l.name}
@@ -390,40 +415,38 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
                     )}
                   </div>
                 </>}
-              </dd>
-
-              <dt className="text-faint">Votes</dt>
-              <dd className="flex items-center gap-3">
-                <span className="font-semibold text-clay">▲ {item.upvotes}</span>
-                {(item.downvotes ?? 0) > 0 && <span className="text-muted">▼ {item.downvotes}</span>}
-              </dd>
-
-              <dt className="text-faint">Visibility</dt>
-              <dd className="text-ink-soft">{item.internal ? "Dev only" : "Public"}</dd>
-
-              <dt className="text-faint">Created</dt>
-              <dd className="text-ink-soft" suppressHydrationWarning>{new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</dd>
-            </dl>
-
-            {chatSpaces.length > 0 && <section aria-labelledby="gchat-heading" className={`space-y-2.5 rounded-xl border p-4 ${selectedChatSpace?.threadUrl ? "border-success/30 bg-success/10" : "border-line bg-card"}`}>
-              <div className="flex items-center gap-2">
-                <svg viewBox="0 0 24 24" className={`h-4 w-4 ${selectedChatSpace?.threadUrl ? "text-success" : "text-faint"}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 5h16v11H9l-5 4z" /></svg>
-                <h3 id="gchat-heading" className="text-xs font-semibold text-ink">Google Chat</h3>
               </div>
-              {chatSpaces.length > 1 && <select aria-label="Google Chat space" value={chatSpaceId} onChange={(e) => setChatSpaceId(e.target.value)} className={`${inputCls} !py-1.5 !text-xs`}>{chatSpaces.map((s, i) => <option key={s.id} value={s.id}>{s.name || `Google Chat space ${i + 1}`}</option>)}</select>}
-              {selectedChatSpace?.threadUrl ? <>
-                <p className="text-xs leading-5 text-muted">This task has a thread in <span className="font-medium text-ink-soft">{selectedChatSpace.name || "your connected space"}</span>. Task updates post there too.</p>
-                <a href={selectedChatSpace.threadUrl} target="_blank" rel="noopener noreferrer" className="flex h-9 items-center justify-center gap-1.5 rounded-lg bg-success/15 text-xs font-semibold text-ink transition hover:bg-success/25">Open in Google Chat <span aria-hidden="true">↗</span></a>
-              </> : <>
-                <p className="text-xs leading-5 text-muted">Start a thread for this task in <span className="font-medium text-ink-soft">{selectedChatSpace?.name || "your connected space"}</span>. Teammates can reply there.</p>
-                <button type="button" disabled={sharingChat || ["PENDING", "PROCESSING", "COMPLETED"].includes(selectedChatSpace?.status ?? "")} onClick={() => void startChatDiscussion()} className="flex h-9 w-full items-center justify-center rounded-lg border border-line-strong text-xs font-semibold text-ink transition hover:bg-raised disabled:border-line disabled:text-muted disabled:hover:bg-transparent">
-                  {sharingChat ? "Starting…" : selectedChatSpace?.status === "COMPLETED" ? "Discussion started" : selectedChatSpace?.status === "PROCESSING" ? "Sending to Google Chat…" : selectedChatSpace?.status === "PENDING" ? selectedChatSpace.lastError ? "Retry scheduled" : "Discussion queued" : selectedChatSpace?.status === "FAILED" ? "Retry discussion" : "Start in Google Chat"}
-                </button>
-                {selectedChatSpace?.status === "COMPLETED" ? <p role="status" className="text-[11px] leading-4 text-muted">Discussion created in Google Chat. Its link appears here the next time UpStep posts to the thread.</p>
-                  : selectedChatSpace?.lastError ? <p role="alert" className="text-[11px] leading-4 text-danger">{selectedChatSpace.lastError}{selectedChatSpace.status === "PENDING" && selectedChatSpace.availableAt ? ` Next retry: ${new Date(selectedChatSpace.availableAt).toLocaleTimeString()}.` : " Check the Google Chat connection, then retry."}</p>
-                  : chatNotice && <p role="status" className="text-[11px] leading-4 text-muted">{chatNotice}</p>}
-              </>}
-            </section>}
+              </div>
+
+              <div className="flex gap-8">
+                <div><span className={fieldLabel}>Votes</span><span className="text-sm font-bold text-clay">▲ {item.upvotes}</span>{(item.downvotes ?? 0) > 0 && <span className="ml-2 text-xs text-muted">▼ {item.downvotes}</span>}</div>
+                <div><span className={fieldLabel}>Visibility</span><span className="text-xs font-medium text-ink-soft">{item.internal ? "Dev only" : "Public"}</span></div>
+              </div>
+
+              {chatSpaces.length > 0 && <section aria-labelledby="gchat-heading" className="space-y-2.5 border-t border-line pt-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-line bg-card">
+                    <svg viewBox="0 0 24 24" className={`h-4 w-4 ${selectedChatSpace?.threadUrl ? "text-success" : "text-faint"}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 5h16v11H9l-5 4z" /></svg>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 id="gchat-heading" className="text-xs font-semibold text-ink">Google Chat</h3>
+                    <p className="truncate text-[11px] text-muted">{selectedChatSpace?.name || "Connected space"}</p>
+                  </div>
+                  {selectedChatSpace?.threadUrl && <a href={selectedChatSpace.threadUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-xs font-semibold text-ink underline decoration-line-strong underline-offset-[3px] hover:decoration-ink">Open <span aria-hidden>↗</span></a>}
+                </div>
+                {chatSpaces.length > 1 && <select aria-label="Google Chat space" value={chatSpaceId} onChange={(e) => setChatSpaceId(e.target.value)} className={fieldCtl}>{chatSpaces.map((s, i) => <option key={s.id} value={s.id}>{s.name || `Google Chat space ${i + 1}`}</option>)}</select>}
+                {!selectedChatSpace?.threadUrl && <>
+                  <button type="button" disabled={sharingChat || ["PENDING", "PROCESSING", "COMPLETED"].includes(selectedChatSpace?.status ?? "")} onClick={() => void startChatDiscussion()} className="flex h-9 w-full items-center justify-center rounded-lg border border-line-strong bg-card text-xs font-semibold text-ink transition hover:bg-raised disabled:border-line disabled:text-muted disabled:hover:bg-card">
+                    {sharingChat ? "Starting…" : selectedChatSpace?.status === "COMPLETED" ? "Discussion started" : selectedChatSpace?.status === "PROCESSING" ? "Sending to Google Chat…" : selectedChatSpace?.status === "PENDING" ? selectedChatSpace.lastError ? "Retry scheduled" : "Discussion queued" : selectedChatSpace?.status === "FAILED" ? "Retry discussion" : "Start in Google Chat"}
+                  </button>
+                  {selectedChatSpace?.status === "COMPLETED" ? <p role="status" className="text-[11px] leading-4 text-muted">Discussion created in Google Chat. Its link appears here the next time UpStep posts to the thread.</p>
+                    : selectedChatSpace?.lastError ? <p role="alert" className="text-[11px] leading-4 text-danger">{selectedChatSpace.lastError}{selectedChatSpace.status === "PENDING" && selectedChatSpace.availableAt ? ` Next retry: ${new Date(selectedChatSpace.availableAt).toLocaleTimeString()}.` : " Check the Google Chat connection, then retry."}</p>
+                    : chatNotice && <p role="status" className="text-[11px] leading-4 text-muted">{chatNotice}</p>}
+                </>}
+              </section>}
+
+              <p className="mt-auto text-[11px] text-faint" suppressHydrationWarning>Created {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</p>
+            </div>
           </aside>
         </div>
       </div>
