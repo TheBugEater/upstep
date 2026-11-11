@@ -24,6 +24,7 @@ const config: Config = {
           DEFAULT: v("c-clay"),
           hover: v("c-clay-hover"),
           dark: v("c-clay-dark"),
+          fg: v("c-clay-fg"),
           tint: v("c-clay-tint"),
           tint2: v("c-clay-tint2"),
         },

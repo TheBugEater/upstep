@@ -72,7 +72,7 @@ export default async function IntegrationPage({
           <p className="text-lg text-muted leading-relaxed mb-8">{i.intro}</p>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft"
+            className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft"
           >
             Get your API key free
             <span aria-hidden>→</span>
@@ -147,7 +147,7 @@ export default async function IntegrationPage({
           </p>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft"
+            className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft"
           >
             Get started free
             <span aria-hidden>→</span>

@@ -141,7 +141,7 @@ export default async function BillingPage({
                       planId={plan.id as "PRO" | "BUSINESS"}
                       currency={currency}
                       label={isUpgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`}
-                      className="block text-center w-full py-3 rounded-xl text-sm font-medium bg-clay text-white hover:bg-clay-hover transition shadow-soft"
+                      className="block text-center w-full py-3 rounded-xl text-sm font-medium bg-primary text-primary-fg hover:bg-primary/85 transition shadow-soft"
                     />
                   )}
                 </div>

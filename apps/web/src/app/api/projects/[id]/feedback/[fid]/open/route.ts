@@ -8,7 +8,7 @@ import { getSiteUrl } from "@/lib/site-url";
 // pages, this endpoint doesn't inherit a layout that redirects to generic login.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string; fid: string }> }) {
   const { id, fid } = await params;
-  const target = `/dashboard/projects/${encodeURIComponent(id)}?issue=${encodeURIComponent(fid)}`;
+  const target = `/dashboard/projects/${encodeURIComponent(id)}/tasks/${encodeURIComponent(fid)}`;
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.redirect(new URL(`/login?returnTo=${encodeURIComponent(target)}`, getSiteUrl()));

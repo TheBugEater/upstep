@@ -318,7 +318,7 @@ function AiPrompt({
       <div className="flex items-center gap-2 mt-4">
         <button
           onClick={copy}
-          className="inline-flex items-center gap-2 bg-clay text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-clay-hover transition"
+          className="inline-flex items-center gap-2 bg-primary text-primary-fg rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/85 transition"
         >
           {copied ? "✓ Copied prompt" : "Copy AI prompt"}
         </button>

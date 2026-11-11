@@ -81,7 +81,7 @@ export default async function DashboardPage({
         {atProjectLimit ? (
           <Link href="/dashboard/billing" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-fg shadow-soft transition hover:opacity-90">Upgrade to add a project <span aria-hidden>→</span></Link>
         ) : (
-          <Link href="/dashboard/projects/new" className="inline-flex h-11 items-center gap-2 rounded-xl bg-clay px-4 text-sm font-semibold text-white shadow-soft transition hover:bg-clay-hover"><span className="text-lg leading-none">+</span> New project</Link>
+          <Link href="/dashboard/projects/new" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-fg shadow-soft transition hover:bg-primary/85"><span className="text-lg leading-none">+</span> New project</Link>
         )}
       </div>
 
@@ -121,7 +121,7 @@ export default async function DashboardPage({
                   <Link href={`/dashboard/projects/${p.id}`} className="absolute inset-0" aria-label={`Open ${p.name}`} />
                   <div className="relative pointer-events-none flex min-w-0 items-center gap-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-clay/15 bg-clay/10 font-serif text-lg text-clay">{p.name[0]?.toUpperCase() ?? "P"}</span>
-                    <span className="min-w-0"><span className="flex items-center gap-2"><span className="truncate text-sm font-bold text-ink">{p.name}</span>{pendingCount > 0 && <span className="rounded-full bg-clay px-1.5 py-0.5 text-[9px] font-bold text-white">{pendingCount} new</span>}</span><span className="mt-0.5 block text-[11px] text-faint">{total} feedback · Updated {new Date(p.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span></span>
+                    <span className="min-w-0"><span className="flex items-center gap-2"><span className="truncate text-sm font-bold text-ink">{p.name}</span>{pendingCount > 0 && <span className="rounded-full bg-clay px-1.5 py-0.5 text-[9px] font-bold text-clay-fg">{pendingCount} new</span>}</span><span className="mt-0.5 block text-[11px] text-faint">{total} feedback · Updated {new Date(p.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span></span>
                   </div>
                   <div className="pointer-events-none relative">
                     <div className="mb-2 flex h-1.5 overflow-hidden rounded-full bg-surface"><span className="bg-warning" style={{ width: `${(openCount / barTotal) * 100}%` }} /><span className="bg-info" style={{ width: `${(inProgressCount / barTotal) * 100}%` }} /><span className="bg-success" style={{ width: `${(doneCount / barTotal) * 100}%` }} /></div>
@@ -175,7 +175,7 @@ function EmptyState() {
       <p className="text-sm text-muted mt-1 mb-6">You’ll get an API key and a ready-to-use feedback board.</p>
       <Link
         href="/dashboard/projects/new"
-        className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay-hover transition"
+        className="inline-flex items-center gap-2 bg-primary text-primary-fg rounded-full px-5 py-2.5 text-sm font-medium hover:bg-primary/85 transition"
       >
         Create an app →
       </Link>

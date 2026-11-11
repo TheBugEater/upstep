@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FeedbackType, Label } from "@upstep/types";
 import type { BoardFilters, ProjectBoard, ProjectStatus, WorkspaceItem } from "@/types/dashboard";
@@ -71,6 +72,8 @@ interface Props {
   initialBoards: ProjectBoard[];
   initialStatuses: ProjectStatus[];
   initialLabels: Label[];
+  /** Render this task on its own page instead of the workspace tabs. */
+  taskPageId?: string | undefined;
 }
 
 const chipSelect = (active: boolean) =>
@@ -93,6 +96,7 @@ export function ProjectWorkspace({
   initialBoards,
   initialStatuses,
   initialLabels,
+  taskPageId,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -481,6 +485,34 @@ export function ProjectWorkspace({
   );
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  if (taskPageId) {
+    const pageItem = items.find((f) => f.id === taskPageId) ?? pending.find((f) => f.id === taskPageId) ?? null;
+    return (
+      <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+        {pageItem ? (
+          <DetailDrawer
+            key={pageItem.id}
+            variant="page"
+            item={pageItem}
+            projectId={projectId}
+            statuses={statuses}
+            projectLabels={labels}
+            actions={actions}
+            teamMembers={teamMembers}
+            currentUserId={currentUserId}
+            onClose={() => router.push(`/dashboard/projects/${projectId}?tab=feedback`)}
+          />
+        ) : (
+          <div className="mx-auto max-w-md rounded-2xl border border-line bg-card p-8 text-center">
+            <p className="text-sm font-semibold text-ink">This task no longer exists</p>
+            <p className="mt-1 text-xs text-muted">It may have been deleted or moved to another project.</p>
+            <Link href={`/dashboard/projects/${projectId}?tab=feedback`} className="mt-4 inline-flex h-9 items-center rounded-lg bg-primary px-4 text-xs font-semibold text-primary-fg hover:bg-primary/85">Back to board</Link>
+          </div>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-7 lg:py-6 2xl:px-9">
 
@@ -508,7 +540,7 @@ export function ProjectWorkspace({
                 <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-line-strong px-1.5 text-[11px] text-faint">/</kbd>
               )}
             </div>
-            <button onClick={() => setQuickAdd({ open: true, statusId: null })} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-clay px-4 text-sm font-semibold text-white transition hover:bg-clay-hover" title="New task (n)"><span className="text-base leading-none">+</span> New task</button>
+            <button onClick={() => setQuickAdd({ open: true, statusId: null })} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-fg transition hover:bg-primary/85" title="New task (n)"><span className="text-base leading-none">+</span> New task</button>
           </div>
 
           <BoardNavigation

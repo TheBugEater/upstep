@@ -108,7 +108,7 @@ export default async function BlogPostPage({
             href={slug === "upstep-is-open-source" ? "https://github.com/TheBugEater/upstep" : "/login"}
             target={slug === "upstep-is-open-source" ? "_blank" : undefined}
             rel={slug === "upstep-is-open-source" ? "noreferrer" : undefined}
-            className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft"
+            className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft"
           >
             {slug === "upstep-is-open-source" ? "View the repository" : "Get started free"}
             <span aria-hidden>{slug === "upstep-is-open-source" ? "↗" : "→"}</span>
@@ -184,7 +184,7 @@ function BlogBlockView({ block }: { block: BlogBlock }) {
               target={link.href.startsWith("http") ? "_blank" : undefined}
               rel={link.href.startsWith("http") ? "noreferrer" : undefined}
               className={index === 0
-                ? "inline-flex items-center gap-2 rounded-full bg-clay px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-clay-hover"
+                ? "inline-flex items-center gap-2 rounded-full bg-clay px-5 py-2.5 text-sm font-semibold text-clay-fg shadow-soft transition hover:bg-clay-hover"
                 : "inline-flex items-center gap-2 rounded-full border border-line bg-card px-5 py-2.5 text-sm font-semibold text-ink transition hover:border-clay/30 hover:text-clay"
               }
             >

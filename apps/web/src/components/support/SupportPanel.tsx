@@ -449,7 +449,7 @@ export function SupportPanel({
                         {m.role === "CUSTOMER" && <span>Customer</span>}
                         <span>· {time}</span>
                       </div>
-                      <div className={`px-3.5 py-2.5 ${agent ? "rounded-2xl rounded-br-md bg-clay-dark text-white" : ai ? "rounded-2xl rounded-bl-md border border-info/30 bg-info/10 text-ink" : "rounded-2xl rounded-bl-md border border-line bg-card text-ink shadow-soft"}`}>
+                      <div className={`px-3.5 py-2.5 ${agent ? "rounded-2xl rounded-br-md bg-primary text-primary-fg" : ai ? "rounded-2xl rounded-bl-md border border-info/30 bg-info/10 text-ink" : "rounded-2xl rounded-bl-md border border-line bg-card text-ink shadow-soft"}`}>
                         <p className="whitespace-pre-wrap break-words text-sm leading-6">{m.content}</p>
                         {m.metadata?.citations?.map((c) => (
                           <a

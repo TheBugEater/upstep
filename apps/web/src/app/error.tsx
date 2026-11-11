@@ -27,7 +27,7 @@ export default function GlobalError({
           <div className="flex items-center justify-center gap-3">
             <button
               onClick={reset}
-              className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay-hover transition"
+              className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-5 py-2.5 text-sm font-medium hover:bg-clay-hover transition"
             >
               Try again
             </button>

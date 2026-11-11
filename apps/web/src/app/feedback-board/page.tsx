@@ -85,7 +85,7 @@ export default function FeedbackBoardPage() {
               and give your team one clear signal for what to build next. No detour to a separate portal.
             </p>
             <div className="flex flex-wrap gap-3 mt-9">
-              <Link href="/login" className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-6 py-3 text-sm font-semibold hover:bg-clay-hover transition shadow-soft">
+              <Link href="/login" className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-6 py-3 text-sm font-semibold hover:bg-clay-hover transition shadow-soft">
                 Create a free feedback board <span aria-hidden>→</span>
               </Link>
               <Link href="/guides/feedback-widget-nextjs" className="inline-flex items-center gap-2 border border-line bg-card text-ink rounded-full px-6 py-3 text-sm font-semibold hover:bg-surface transition">
@@ -196,7 +196,7 @@ export default function FeedbackBoardPage() {
         <section className="max-w-4xl mx-auto px-6 py-20 sm:py-28 text-center">
           <h2 className="font-serif text-4xl sm:text-5xl text-ink">Give product feedback a home.</h2>
           <p className="max-w-xl mx-auto mt-5 text-lg text-muted leading-relaxed">Start with a free project, put the board in front of real users, and make the next product decision with better evidence.</p>
-          <Link href="/login" className="inline-flex items-center gap-2 mt-9 bg-clay text-white rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft">Create your feedback board <span aria-hidden>→</span></Link>
+          <Link href="/login" className="inline-flex items-center gap-2 mt-9 bg-clay text-clay-fg rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft">Create your feedback board <span aria-hidden>→</span></Link>
         </section>
       </main>
       <Footer />

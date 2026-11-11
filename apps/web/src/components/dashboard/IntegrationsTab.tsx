@@ -211,7 +211,7 @@ export function IntegrationsTab({ projectId, isOwner, isPro, onOpenMcpTab }: Pro
           </p>
           <Link
             href="/dashboard/billing"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-clay text-white text-sm font-medium hover:bg-clay/80 transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-clay text-clay-fg text-sm font-medium hover:bg-clay/80 transition"
           >
             Upgrade to Pro →
           </Link>

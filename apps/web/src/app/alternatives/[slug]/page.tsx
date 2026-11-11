@@ -75,7 +75,7 @@ export default async function AlternativePage({
           <p className="text-lg text-muted leading-relaxed mb-8">{c.intro}</p>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft"
+            className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft"
           >
             Try Upstep free, no credit card
             <span aria-hidden>→</span>
@@ -168,7 +168,7 @@ export default async function AlternativePage({
           <p className="mb-6 text-sm text-muted">See how an <Link href="/feedback-board" className="font-medium text-clay hover:text-clay-hover">in-app feedback board</Link> works before you compare plans.</p>
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft"
+            className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft"
           >
             Get started free
             <span aria-hidden>→</span>

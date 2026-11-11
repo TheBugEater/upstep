@@ -117,7 +117,7 @@ export default function NewProjectPage() {
               router.push(`/dashboard/projects/${created.id}`);
               router.refresh();
             }}
-            className="mt-6 w-full py-3 bg-clay text-white rounded-xl font-medium text-sm hover:bg-clay-hover transition shadow-soft"
+            className="mt-6 w-full py-3 bg-primary text-primary-fg rounded-xl font-medium text-sm hover:bg-primary/85 transition shadow-soft"
           >
             Go to project →
           </button>
@@ -199,7 +199,7 @@ export default function NewProjectPage() {
               <p className="text-sm text-ink-soft">{error}</p>
               <Link
                 href="/dashboard/billing"
-                className="mt-3 inline-flex items-center gap-2 bg-clay text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-clay-hover transition"
+                className="mt-3 inline-flex items-center gap-2 bg-primary text-primary-fg rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/85 transition"
               >
                 View plans →
               </Link>
@@ -208,7 +208,7 @@ export default function NewProjectPage() {
             <button
               type="submit"
               disabled={loading || (!name.trim() && !website.trim())}
-              className="w-full py-3 bg-clay text-white rounded-xl font-medium text-sm hover:bg-clay-hover transition disabled:opacity-40 disabled:cursor-not-allowed shadow-soft"
+              className="w-full py-3 bg-primary text-primary-fg rounded-xl font-medium text-sm hover:bg-primary/85 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-soft"
             >
               {loading
                 ? "Setting up…"

@@ -122,7 +122,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
             <aside className="mt-16 rounded-2xl border border-clay/20 bg-clay/5 p-8">
               <h2 className="font-serif text-2xl text-ink">Put the guide into practice</h2>
               <p className="text-sm text-muted mt-2 mb-5">Create an Upstep project, copy its key, and test the integration on the free plan.</p>
-              <Link href="/login" className="inline-flex rounded-full bg-clay px-6 py-3 text-sm font-semibold text-white hover:bg-clay-hover transition">Get started free →</Link>
+              <Link href="/login" className="inline-flex rounded-full bg-clay px-6 py-3 text-sm font-semibold text-clay-fg hover:bg-clay-hover transition">Get started free →</Link>
             </aside>
           </article>
 

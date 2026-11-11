@@ -318,7 +318,7 @@ export function HeroDemo() {
         <button
           ref={widgetBtnRef}
           tabIndex={-1}
-          className={`w-12 h-12 rounded-full bg-clay text-white shadow-lift flex items-center justify-center text-lg transition-transform duration-300 ease-spring ${
+          className={`w-12 h-12 rounded-full bg-clay text-clay-fg shadow-lift flex items-center justify-center text-lg transition-transform duration-300 ease-spring ${
             widgetOpen ? "rotate-45 scale-95" : ""
           }`}
         >

@@ -2,73 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design tokens ──────────────────────────────────────────────────────────
-   Layers keep one order in both themes: surface (recessed: columns, panels,
-   sidebar) sits below card (raised: cards, inputs, menus), and raised is the
-   hover/active step above card. Light recesses darker; dark lifts lighter.
+/* ─── Design tokens: "Mono" ─────────────────────────────────────────────────
+   Pure black and white with no tint. Layers stay in one order in both themes
+   (surface under card, raised as the hover step) but are told apart mostly by
+   borders, so lines are deliberately visible. Primary actions are black on
+   white (white on black in dark). Orange (clay) is for small highlights and
+   brand moments; clay-fg is the text that stays readable on a clay fill.
    RGB triplets so Tailwind opacity modifiers (e.g. bg-clay/10) keep working. */
 :root {
   --c-canvas: 255 255 255;        /* #FFFFFF */
-  --c-surface: 246 246 247;       /* #F6F6F7 */
+  --c-surface: 250 250 250;       /* #FAFAFA */
   --c-card: 255 255 255;          /* #FFFFFF */
-  --c-raised: 240 240 242;        /* #F0F0F2 */
-  --c-line: 228 228 231;          /* #E4E4E7 */
-  --c-line-strong: 209 210 214;   /* #D1D2D6 */
-  --c-ink: 0 0 0;                /* #000000 */
-  --c-ink-soft: 64 64 64;         /* #404040 */
+  --c-raised: 242 242 242;        /* #F2F2F2 */
+  --c-line: 229 229 229;          /* #E5E5E5 */
+  --c-line-strong: 208 208 208;   /* #D0D0D0 */
+  --c-ink: 0 0 0;                 /* #000000 */
+  --c-ink-soft: 51 51 51;         /* #333333 */
   --c-muted: 82 82 82;            /* #525252 */
-  --c-faint: 115 115 115;         /* #737373 */
-  --c-clay: 224 90 51;            /* #E05A33 */
-  --c-clay-hover: 201 78 43;      /* #C94E2B */
-  --c-clay-dark: 182 69 38;       /* #B64526 */
-  --c-clay-tint: 253 241 236;     /* #FDF1EC */
-  --c-clay-tint2: 250 224 213;    /* #FAE0D5 */
+  --c-faint: 107 107 107;         /* #6B6B6B — 5.3:1 on white */
+  --c-clay: 201 72 31;            /* #C9481F — passes as text and under white text */
+  --c-clay-hover: 176 61 25;      /* #B03D19 */
+  --c-clay-dark: 150 52 21;       /* #963415 */
+  --c-clay-fg: 255 255 255;
+  --c-clay-tint: 253 240 234;     /* #FDF0EA */
+  --c-clay-tint2: 250 222 210;    /* #FADED2 */
   --c-primary: 0 0 0;             /* black action */
-  --c-primary-fg: 255 255 255;    /* white text on primary */
+  --c-primary-fg: 255 255 255;
   --c-success: 26 127 55;         /* #1A7F37 */
-  --c-warning: 217 119 8;         /* #D97708 */
-  --c-danger: 220 53 69;          /* #DC3545 */
-  --c-info: 58 143 200;           /* #3A8FC8 */
+  --c-warning: 176 98 6;          /* #B06206 */
+  --c-danger: 204 38 56;          /* #CC2638 */
+  --c-info: 31 95 168;            /* #1F5FA8 */
 
-  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.05);
-  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.05), 0 16px 40px rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.06), 0 16px 40px rgba(0, 0, 0, 0.12);
   --grid-dot: #e5e5e5;
   --scrollbar-track: #fafafa;
-  --scrollbar-thumb: #d4d4d4;
+  --scrollbar-thumb: #d0d0d0;
   --scrollbar-thumb-hover: #a3a3a3;
 
   color-scheme: light;
 }
 
 .dark {
-  --c-canvas: 14 15 17;           /* #0E0F11 page */
-  --c-surface: 22 24 28;          /* #16181C columns, panels, sidebar */
-  --c-card: 30 32 37;             /* #1E2025 cards, inputs, menus */
-  --c-raised: 37 40 46;           /* #25282E hover / active */
-  --c-line: 42 45 51;             /* #2A2D33 */
-  --c-line-strong: 58 62 69;      /* #3A3E45 */
-  --c-ink: 242 242 243;           /* #F2F2F3 */
-  --c-ink-soft: 218 220 224;      /* #DADCE0 */
-  --c-muted: 160 164 172;         /* #A0A4AC */
-  --c-faint: 136 141 150;         /* #888D96 — 4.5:1 on card */
-  --c-clay: 224 90 51;            /* brand stays */
-  --c-clay-hover: 240 110 72;     /* #F06E48 — lighten on hover in dark */
-  --c-clay-dark: 184 69 42;       /* #B8452A — white text passes 4.5:1 */
-  --c-clay-tint: 52 32 26;        /* brand-washed dark surface */
-  --c-clay-tint2: 72 40 30;
-  --c-primary: 242 242 243;       /* near-white action */
-  --c-primary-fg: 14 15 17;       /* page-dark text on primary */
+  --c-canvas: 0 0 0;              /* #000000 page */
+  --c-surface: 10 10 10;          /* #0A0A0A columns, panels, sidebar */
+  --c-card: 17 17 17;             /* #111111 cards, inputs, menus */
+  --c-raised: 26 26 26;           /* #1A1A1A hover / active */
+  --c-line: 46 46 46;             /* #2E2E2E — visible, it does the layering */
+  --c-line-strong: 68 68 68;      /* #444444 */
+  --c-ink: 255 255 255;           /* #FFFFFF */
+  --c-ink-soft: 212 212 212;      /* #D4D4D4 */
+  --c-muted: 163 163 163;         /* #A3A3A3 */
+  --c-faint: 138 138 138;         /* #8A8A8A — 5.6:1 on card */
+  --c-clay: 255 122 80;           /* #FF7A50 */
+  --c-clay-hover: 255 146 112;    /* #FF9270 */
+  --c-clay-dark: 255 168 140;     /* #FFA88C */
+  --c-clay-fg: 0 0 0;             /* black on orange in dark */
+  --c-clay-tint: 38 20 13;        /* #26140D */
+  --c-clay-tint2: 56 28 18;
+  --c-primary: 255 255 255;       /* white action */
+  --c-primary-fg: 0 0 0;
   --c-success: 79 177 133;        /* #4FB185 */
   --c-warning: 224 182 89;        /* #E0B659 */
   --c-danger: 242 109 114;        /* #F26D72 */
   --c-info: 111 168 232;          /* #6FA8E8 */
 
-  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.22);
-  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 48px rgba(0, 0, 0, 0.5);
-  --grid-dot: #2a2d33;
-  --scrollbar-track: #16181c;
-  --scrollbar-thumb: #3a3e45;
-  --scrollbar-thumb-hover: #4a4f57;
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --shadow-lift: 0 0 0 1px rgb(46 46 46), 0 16px 48px rgba(0, 0, 0, 0.7);
+  --grid-dot: #262626;
+  --scrollbar-track: #0a0a0a;
+  --scrollbar-thumb: #444444;
+  --scrollbar-thumb-hover: #5a5a5a;
 
   color-scheme: dark;
 }

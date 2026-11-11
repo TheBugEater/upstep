@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import type { Comment, Label } from "@upstep/types";
 import type { ProjectStatus, WorkspaceItem } from "@/types/dashboard";
 import type { WorkspaceActions, TeamMember } from "./ProjectWorkspace";
@@ -15,9 +16,15 @@ interface Props {
   onClose: () => void;
   teamMembers: TeamMember[];
   currentUserId: string;
+  /** "modal" opens over the board and keeps its height to the window, so only
+   *  the comments scroll. "page" is the task's own page and scrolls as a whole. */
+  variant?: "modal" | "page";
 }
 
-export function DetailDrawer({ item, projectId, statuses, projectLabels, actions, onClose, teamMembers, currentUserId }: Props) {
+export function DetailDrawer({ item, projectId, statuses, projectLabels, actions, onClose, teamMembers, currentUserId, variant = "modal" }: Props) {
+  const isPage = variant === "page";
+  const commentsEnd = useRef<HTMLDivElement>(null);
+  const pageHref = `/dashboard/projects/${projectId}/tasks/${item.id}`;
   const [comments, setComments] = useState<Comment[]>([]);
   const [input, setInput] = useState("");
   const [posting, setPosting] = useState(false);
@@ -96,12 +103,21 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
   }, [item.id, projectId]);
 
   useEffect(() => {
+    if (isPage) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, isPage]);
+
+  // In the modal the newest comment sits at the bottom of a scrolling list;
+  // keep it in view when comments load or one is posted.
+  useEffect(() => {
+    // Only on wide screens, where the comment list is its own scroller; on a
+    // phone the whole sheet scrolls and jumping would hide the title.
+    if (!isPage && window.matchMedia("(min-width: 1024px)").matches) commentsEnd.current?.scrollIntoView({ block: "end" });
+  }, [comments.length, isPage]);
 
   async function postComment() {
     if (!input.trim() || posting) return;
@@ -137,7 +153,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/dashboard/projects/${projectId}?tab=feedback&issue=${item.id}`);
+      await navigator.clipboard.writeText(`${window.location.origin}${pageHref}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch { /* Clipboard access can be blocked; the URL bar still has the link. */ }
@@ -160,15 +176,16 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
   }
 
   const heading = item.title?.trim() || item.content;
+  const pad = isPage ? "" : "px-5 sm:px-7";
 
-  return (
-    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto sm:p-6 lg:p-10" role="dialog" aria-modal="true" aria-labelledby="task-detail-title">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <div className="relative flex min-h-full w-full max-w-[1040px] flex-col overflow-hidden border-line bg-card shadow-lift animate-card-in sm:min-h-0 sm:rounded-2xl sm:border">
+  const panel = (
+      <div className={isPage ? "mx-auto flex w-full max-w-[1160px] flex-col" : "relative flex h-full w-full max-w-[1040px] flex-col overflow-hidden border-line bg-card shadow-lift animate-card-in sm:h-[min(860px,calc(100dvh-48px))] sm:rounded-2xl sm:border"}>
         {/* Header */}
-        <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line pl-5 pr-3 sm:pl-6">
+        <div className={isPage ? "flex min-h-14 flex-wrap items-center gap-2 border-b border-line pb-3" : "flex h-14 shrink-0 items-center gap-2 border-b border-line pl-5 pr-3 sm:pl-6"}>
           <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-2 text-xs text-faint">
-            <button type="button" onClick={onClose} className="shrink-0 hover:text-ink">Board</button>
+            {isPage
+              ? <Link href={`/dashboard/projects/${projectId}?tab=feedback`} className="inline-flex shrink-0 items-center gap-1 font-medium text-muted hover:text-ink"><span aria-hidden>←</span> Board</Link>
+              : <button type="button" onClick={onClose} className="shrink-0 hover:text-ink">Board</button>}
             <span aria-hidden>/</span>
             <span className="truncate font-medium text-ink-soft">{heading}</span>
           </nav>
@@ -176,6 +193,13 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
             {copied ? "Copied" : "Copy link"}
           </button>
+          {!isPage && (
+            <Link href={pageHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-raised px-3 text-xs font-semibold text-ink transition hover:border-line-strong" title="Open this task on its own page">
+              <span className="hidden sm:inline">Open full page</span>
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M14 4h6v6M20 4l-8 8M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5" /></svg>
+              <span className="sr-only sm:hidden">Open full page</span>
+            </Link>
+          )}
           <div className="relative">
             <button type="button" onClick={() => { setShowMenu((v) => !v); setConfirmDelete(false); }} aria-expanded={showMenu} aria-label="More actions" className="grid h-10 w-10 place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-ink">
               <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-hidden><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>
@@ -192,7 +216,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
                 {confirmDelete ? (
                   <div className="flex items-center gap-2 px-2.5 py-2">
                     <span className="flex-1 text-xs text-danger">Delete permanently?</span>
-                    <button type="button" onClick={() => void actions.deleteItem(item.id)} className="rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-danger/85">Delete</button>
+                    <button type="button" onClick={() => void actions.deleteItem(item.id).then(() => { if (isPage) onClose(); })} className="rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-danger/85">Delete</button>
                     <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-muted hover:text-ink">Cancel</button>
                   </div>
                 ) : (
@@ -201,35 +225,38 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
               </div>
             </>}
           </div>
-          <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-ink" aria-label="Close">
+          {!isPage && <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-ink" aria-label="Close">
             <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
-          </button>
+          </button>}
         </div>
 
-        <div className="flex flex-1 flex-col lg:flex-row">
+        <div className={isPage ? "flex flex-col gap-8 pt-8 lg:flex-row lg:items-start" : "flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden"}>
           {/* Main column */}
-          <div className="min-w-0 flex-1 space-y-6 p-5 sm:p-7">
-            <div className="space-y-3">
-              <h2 id="task-detail-title" className="text-[22px] font-bold leading-snug tracking-[-0.02em] text-ink">{heading}</h2>
-              {item.title?.trim() && <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-soft">{item.content}</p>}
+          <div className={isPage ? "min-w-0 flex-1 space-y-8" : "flex min-w-0 flex-1 flex-col lg:min-h-0"}>
+            <div className={isPage ? "space-y-4" : `shrink-0 space-y-3 pb-5 pt-5 sm:pt-6 lg:max-h-[40%] lg:overflow-y-auto ${pad}`}>
+              {isPage
+                ? <h1 id="task-detail-title" className="text-[30px] font-bold leading-tight tracking-[-0.025em] text-ink">{heading}</h1>
+                : <h2 id="task-detail-title" className="text-[22px] font-bold leading-snug tracking-[-0.02em] text-ink">{heading}</h2>}
+              {item.title?.trim() && <p className={`whitespace-pre-wrap leading-relaxed text-ink-soft ${isPage ? "text-[15px]" : "text-sm"}`}>{item.content}</p>}
             </div>
 
             {/* Comments */}
-            <section aria-labelledby="task-comments-heading">
-              <div className="mb-3 flex items-center gap-2 border-b border-line pb-2">
-                <h3 id="task-comments-heading" className="text-[13px] font-semibold text-ink">Comments</h3>
+            <section aria-labelledby="task-comments-heading" className={isPage ? "" : "flex flex-col lg:min-h-0 lg:flex-1"}>
+              <div className={isPage ? "mb-3 flex items-center gap-2 border-b border-line pb-2" : `flex h-11 shrink-0 items-center gap-2 border-y border-line ${pad}`}>
+                <h3 id="task-comments-heading" className={`font-semibold text-ink ${isPage ? "text-base" : "text-[13px]"}`}>Comments</h3>
                 <span className="text-xs text-faint">{comments.length}</span>
               </div>
+              <div className={isPage ? "" : `py-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${pad}`}>
               {comments.length === 0 ? (
                 <p className="mb-3 text-xs text-faint">{loadingComments ? "Loading comments…" : "Start a conversation about this task."}</p>
               ) : (
-                <div className="mb-4 space-y-3">
+                <div className="mb-4 space-y-1">
                   {comments.map((c) => {
                     const parent = comments.find((p) => p.id === c.parentId);
                     const authorName = c.author?.name?.trim() || c.authorName?.trim() || "UpStep Team";
-                    return <div key={c.id} className={`flex gap-2.5 ${c.parentId ? "ml-8" : ""}`}>
+                    return <div key={c.id} className={`-mx-2.5 flex gap-3 rounded-xl px-2.5 py-2.5 transition hover:bg-raised/60 ${c.parentId ? "ml-6" : ""}`}>
                       <span aria-hidden="true" className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-raised text-[11px] font-semibold text-ink ring-1 ring-line-strong">{authorName[0]?.toUpperCase()}</span>
-                      <div className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2.5">
+                      <div className="min-w-0 flex-1">
                         <div className="mb-1 flex items-baseline gap-2">
                           <span className="text-xs font-semibold text-ink">{authorName}</span>
                           <time dateTime={c.createdAt} title={new Date(c.createdAt).toLocaleString()} className="text-[11px] text-faint">{new Date(c.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</time>
@@ -242,8 +269,11 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
                   })}
                 </div>
               )}
+              <div ref={commentsEnd} />
+              </div>
+              <div className={isPage ? "" : `shrink-0 border-t border-line pb-4 pt-3 ${pad}`}>
               {commentError && <p role="alert" className="mb-2 text-xs text-danger">{commentError}</p>}
-              <div className="rounded-xl border border-line-strong bg-surface focus-within:border-clay/50 focus-within:ring-4 focus-within:ring-clay/10">
+              <div className="rounded-xl border border-line-strong bg-canvas focus-within:border-ink/40 focus-within:ring-4 focus-within:ring-ink/5">
                 {replyTo && <div className="flex items-center gap-2 border-b border-line px-3 py-1.5 text-xs text-muted"><span className="flex-1 truncate">Replying to {replyTo.author?.name || replyTo.authorName || "UpStep Team"}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Cancel reply">✕</button></div>}
                 <textarea
                   value={input}
@@ -271,11 +301,12 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
                   </button>
                 </div>
               </div>
+              </div>
             </section>
           </div>
 
           {/* Properties */}
-          <aside className="shrink-0 space-y-5 border-t border-line bg-surface p-5 lg:w-[320px] lg:border-l lg:border-t-0">
+          <aside className={isPage ? "w-full shrink-0 space-y-5 rounded-2xl border border-line bg-surface p-5 lg:w-[320px]" : "shrink-0 space-y-5 border-t border-line bg-surface p-5 lg:w-[320px] lg:overflow-y-auto lg:border-l lg:border-t-0"}>
             <dl className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 text-xs">
               <dt className="text-faint">Status</dt>
               <dd><StatusMenu statuses={statuses} value={item.statusId} onChange={(id) => actions.moveItem(item.id, id)} className="[&>div:last-child]:left-0 [&>div:last-child]:right-auto" /></dd>
@@ -362,7 +393,7 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
               <dd className="text-ink-soft">{item.internal ? "Dev only" : "Public"}</dd>
 
               <dt className="text-faint">Created</dt>
-              <dd className="text-ink-soft">{new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</dd>
+              <dd className="text-ink-soft" suppressHydrationWarning>{new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</dd>
             </dl>
 
             {chatSpaces.length > 0 && <section aria-labelledby="gchat-heading" className={`space-y-2.5 rounded-xl border p-4 ${selectedChatSpace?.threadUrl ? "border-success/30 bg-success/10" : "border-line bg-card"}`}>
@@ -387,6 +418,13 @@ export function DetailDrawer({ item, projectId, statuses, projectLabels, actions
           </aside>
         </div>
       </div>
+  );
+
+  if (isPage) return <article aria-labelledby="task-detail-title">{panel}</article>;
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="task-detail-title">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+      {panel}
     </div>
   );
 }

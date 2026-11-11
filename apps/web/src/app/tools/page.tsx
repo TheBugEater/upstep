@@ -63,7 +63,7 @@ export default function ToolsIndexPage() {
         <div className="mt-16 text-center">
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft"
+            className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-7 py-3.5 text-sm font-semibold hover:bg-clay-hover transition shadow-soft"
           >
             Get started free
             <span aria-hidden>→</span>

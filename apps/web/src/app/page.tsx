@@ -120,7 +120,7 @@ function Hero() {
               />
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft shrink-0"
+                className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft shrink-0"
               >
                 Get started free
                 <span aria-hidden>→</span>
@@ -464,7 +464,7 @@ function CTA() {
             />
             <button
               type="submit"
-              className="inline-flex items-center gap-2 bg-clay text-white rounded-full px-7 py-3.5 text-sm font-medium hover:bg-clay-hover transition shadow-soft shrink-0"
+              className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-7 py-3.5 text-sm font-medium hover:bg-clay-hover transition shadow-soft shrink-0"
             >
               Get started free
               <span aria-hidden>→</span>

@@ -43,7 +43,7 @@ export async function Pricing({ heading = true }: { heading?: boolean }) {
               }`}
             >
               {popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-clay text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-clay text-clay-fg text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm">
                   Most popular
                 </span>
               )}
@@ -75,7 +75,7 @@ export async function Pricing({ heading = true }: { heading?: boolean }) {
                     label={`Upgrade to ${plan.name}`}
                     className={`block text-center w-full py-3 rounded-xl text-sm font-medium transition ${
                       popular
-                        ? "bg-clay text-white hover:bg-clay-hover shadow-soft"
+                        ? "bg-clay text-clay-fg hover:bg-clay-hover shadow-soft"
                         : "bg-primary text-primary-fg hover:bg-primary/85"
                     }`}
                   />
