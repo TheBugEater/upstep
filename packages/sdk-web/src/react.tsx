@@ -59,7 +59,7 @@ function isHostDark(): boolean {
 function usePalette(
   mode: ThemeMode,
   look: {
-    accentColor: string;
+    accentColor: string | undefined;
     colors: UpstepColorOverrides | undefined;
     radius: number | undefined;
   },
@@ -123,7 +123,10 @@ interface UpstepContextValue {
   open: () => void;
   close: () => void;
   identify: (userId: string | undefined) => void;
+  /** The configured accent, or the light-mode default when none was set. */
   accentColor: string;
+  /** The configured accent; undefined means each mode uses its brand default. */
+  customAccentColor: string | undefined;
   theme: ThemeMode;
   colors: UpstepColorOverrides | undefined;
   radius: number | undefined;
@@ -225,6 +228,7 @@ export function UpstepProvider({
         close,
         identify,
         accentColor: config.accentColor ?? DEFAULT_ACCENT,
+        customAccentColor: config.accentColor,
         theme: config.theme ?? "auto",
         colors: config.colors,
         radius: config.radius,
@@ -275,7 +279,7 @@ export function FeedbackWidget({
 }: FeedbackWidgetProps) {
   const ctx = useUpstep();
   const p = usePalette(theme ?? ctx.theme, {
-    accentColor: accentColor ?? ctx.accentColor,
+    accentColor: accentColor ?? ctx.customAccentColor,
     colors: colors ?? ctx.colors,
     radius: radius ?? ctx.radius,
   });

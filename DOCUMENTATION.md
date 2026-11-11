@@ -371,7 +371,7 @@ reads `data-*` attributes:
   src="https://unpkg.com/@upstep/js/dist/index.js"
   data-api-key="upstep_xxx"
   data-base-url="https://your-upstep-url"
-  data-accent-color="#D97757"
+  data-accent-color="#C9481F"
   data-position="right"
 ></script>
 ```
@@ -401,7 +401,7 @@ export default function App() {
     <FeedbackProvider
       apiKey="upstep_xxx"
       userId={currentUser?.id} // optional — ties votes to this user
-      accentColor="#D97757" // optional
+      accentColor="#C9481F" // optional
       theme="auto" // "light" | "dark" | "auto"
     >
       {/* your app */}
@@ -455,7 +455,7 @@ The button uses the provider's `accentColor`.
 | `apiKey`      | `string`                          | —                    | **Required.** Your project's API key                                                                                                             |
 | `userId`      | `string`                          | —                    | End-user id from your app; enables per-user vote deduplication and visibility of the user's own pending items                                    |
 | `baseUrl`     | `string`                          | `https://upstep.dev` | Point at your Upstep deployment when self-hosting                                                                                                |
-| `accentColor` | `string`                          | `#D97757`            | Any CSS hex color for the button, tabs, and highlights                                                                                           |
+| `accentColor` | `string`                          | `#C9481F` / `#FF7A50` | Any CSS color for the button, tabs, and highlights. Unset, it uses the brand orange for light / dark panels |
 | `theme`       | `"light"` \| `"dark"` \| `"auto"` | `"auto"`             | Panel color theme. `"auto"` follows the OS/browser `prefers-color-scheme`                                                                        |
 | `position`    | `"left"` \| `"right"`             | `"right"`            | Launcher position (vanilla web widget only)                                                                                                      |
 | `colors`      | `UpstepColorOverrides`            | —                    | Panel colors: `background`, `surface`, `border`, `text`, `textMuted`, `accentText`, plus `light` / `dark` variants. Unset keys keep the defaults |
@@ -501,9 +501,13 @@ rgb (anything else is dropped there), and shades can only be derived from hex
 or rgb.
 
 **Accent text.** When `accentText` is unset it is chosen for you: white while
-white keeps at least 3:1 contrast on the accent, otherwise near-black. The
-default accent and mid-tone brand colors stay white; light accents such as
-yellow get dark text.
+white keeps at least 3:1 contrast on the accent, otherwise near-black.
+Mid-tone brand colors stay white; light accents such as yellow get dark text.
+
+**Default accent.** Without `accentColor` the widgets use the Upstep brand
+orange of the current mode, matching the dashboard: `#C9481F` with white text
+on light panels and `#FF7A50` with dark text on dark panels. Set
+`accentColor` to use one color in both modes.
 
 **Vanilla JS**
 

@@ -22,6 +22,7 @@ class FeedbackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final upstep = Upstep.of(context);
+    final accent = upstep.accentFor(Theme.of(context).brightness);
     final alignment = position == FeedbackButtonPosition.bottomLeft
         ? Alignment.bottomLeft
         : Alignment.bottomRight;
@@ -35,12 +36,12 @@ class FeedbackButton extends StatelessWidget {
             padding: margin,
             child: FloatingActionButton.extended(
               heroTag: null,
-              backgroundColor: upstep.accentColor,
+              backgroundColor: accent,
               foregroundColor:
                   upstep.colors
                       ?.resolve(Theme.of(context).brightness)
                       .accentText ??
-                  readableTextOn(upstep.accentColor),
+                  readableTextOn(accent),
               onPressed: upstep.openSheet,
               icon: icon,
               label: Text(label),

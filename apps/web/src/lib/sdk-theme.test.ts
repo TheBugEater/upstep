@@ -24,11 +24,15 @@ test("widget palette is unchanged when nothing is overridden", () => {
     textFaint: "#9b9890",
     border: "#e8e6df",
     overlay: "rgba(26,25,21,.45)",
-    accent: "#D97757",
+    accent: "#C9481F",
     accentText: "#ffffff",
-    accentTint: "#d977571a",
+    accentTint: "#c9481f1a",
     radius: 12,
   });
+  // Dark panels default to the brighter orange, which takes dark text.
+  const darkDefault = buildWidgetPalette({ mode: "dark" });
+  assert.equal(darkDefault.accent, "#FF7A50");
+  assert.equal(darkDefault.accentText, "#1a1915");
   const dark = buildWidgetPalette({ mode: "dark", accentColor: "#1d4ed8" });
   assert.equal(dark.bg, "#000000");
   assert.equal(dark.textFaint, "#7d7a72");
@@ -116,7 +120,11 @@ test("support chat URL keeps its old shape and carries only safe overrides", () 
   });
   assert.equal(
     client.supportFrameUrl("light"),
-    "https://upstep.test/support/pk_1?theme=light&accent=%23D97757",
+    "https://upstep.test/support/pk_1?theme=light&accent=%23C9481F",
+  );
+  assert.equal(
+    client.supportFrameUrl("dark"),
+    "https://upstep.test/support/pk_1?theme=dark&accent=%23FF7A50",
   );
   const url = new URL(
     client.supportFrameUrl("dark", "#1d4ed8", {

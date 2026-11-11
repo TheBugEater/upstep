@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0
+
+- Theme the sheet and support chat to your brand with `colors` (`background`, `surface`, `border`, `text`, `textMuted`, `accentText`, plus `light` / `dark` variants) and `radius`. Unset keys keep the defaults.
+- Text on the accent is picked for contrast when `accentText` isn't set.
+- The default accent now matches the Upstep brand per mode: `#C9481F` on light, `#FF7A50` with dark text on dark. Set `accentColor` to keep a single color.
+- `SupportView` takes `colors` and `radius` when used on its own.
+
 ## 0.8.0
 
 - Redesigned support chat: neutral message bubbles with AI and team tags, a labelled quick-reply tray with accent-tinted chips, and follow-up forms that open from "Talk to a person" or "Add details" only when the AI offers them.

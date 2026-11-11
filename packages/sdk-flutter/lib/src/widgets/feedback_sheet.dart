@@ -78,6 +78,7 @@ class _SheetScaffold extends StatelessWidget {
           UpstepThemeMode.dark => Brightness.dark,
           UpstepThemeMode.auto => inherited.brightness,
         };
+        final accent = controller.accentFor(brightness);
         final look = controller.themeFor(brightness);
         // Only overridden colors replace Material's seeded ones, so defaults stay as they were.
         final custom =
@@ -86,11 +87,11 @@ class _SheetScaffold extends StatelessWidget {
           brightness: brightness,
           colorScheme:
               ColorScheme.fromSeed(
-                seedColor: controller.accentColor,
+                seedColor: accent,
                 brightness: brightness,
                 surface: look.background,
               ).copyWith(
-                primary: controller.accentColor,
+                primary: accent,
                 onPrimary: look.accentText,
                 onSurface: custom.text,
                 onSurfaceVariant: custom.textMuted,
@@ -139,8 +140,8 @@ class _SheetScaffold extends StatelessWidget {
                       ),
                     ),
                     TabBar(
-                      indicatorColor: controller.accentColor,
-                      labelColor: controller.accentColor,
+                      indicatorColor: accent,
+                      labelColor: accent,
                       tabs: [
                         if (chat) const Tab(text: 'Support'),
                         const Tab(text: 'Top requests'),
@@ -222,7 +223,7 @@ class _FeedTab extends StatelessWidget {
               final item = controller.feedItems[index];
               return _FeedbackCard(
                 item: item,
-                accentColor: controller.accentColor,
+                accentColor: Theme.of(context).colorScheme.primary,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -533,7 +534,7 @@ class _SubmitTabState extends State<_SubmitTab> {
           const SizedBox(height: 24),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: widget.controller.accentColor,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor:
                   Theme.of(context).extension<UpstepThemeData>()?.accentText ??
                   Colors.white,

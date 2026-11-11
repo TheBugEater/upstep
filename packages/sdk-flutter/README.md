@@ -55,9 +55,22 @@ Same idea as the web and React Native SDKs: one package, one project API key, on
 | `apiKey` | `String` | — | Required. Your project's API key. |
 | `userId` | `String?` | `null` | End-user id from your app for vote dedupe. |
 | `baseUrl` | `String` | `https://upstep.dev` | Only needed for self-hosted or staging setups. |
-| `accentColor` | `Color?` | `null` | Overrides the launcher and primary action color. |
+| `accentColor` | `Color?` | `null` | Overrides the launcher and primary action color. Defaults to the brand orange: `#C9481F` light, `#FF7A50` dark. |
 | `themeMode` | `UpstepThemeMode` | `auto` | `light`, `dark`, or `auto`. |
+| `colors` | `UpstepColors?` | `null` | Brand colors: `background`, `surface`, `border`, `text`, `textMuted`, `accentText`, plus `light` / `dark` variants. Null fields keep the defaults. |
+| `radius` | `double?` | `12` | Base corner radius. Every corner scales with it; `0` is square. Clamped to 0–32. |
 | `child` | `Widget` | — | Your app subtree. |
+
+```dart
+Upstep(
+  apiKey: 'upstep_xxx',
+  colors: const UpstepColors(
+    dark: UpstepColors(background: Color(0xFF0F172A), surface: Color(0xFF1E293B)),
+  ),
+  radius: 8,
+  child: const MyApp(),
+);
+```
 
 ## API
 

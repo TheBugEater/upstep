@@ -34,7 +34,14 @@ class UpstepController extends ChangeNotifier {
   bool get showBranding => _showBranding;
   bool get isOpen => _isOpen;
   Object? get lastError => _lastError;
-  Color get accentColor => _config.accentColor ?? const Color(0xFFD97757);
+
+  /// The configured accent, or the light-mode brand default.
+  Color get accentColor => _config.accentColor ?? upstepAccentLight;
+
+  /// The configured accent, or the brand default for [brightness].
+  Color accentFor(Brightness brightness) =>
+      _config.accentColor ??
+      (brightness == Brightness.dark ? upstepAccentDark : upstepAccentLight);
   UpstepThemeMode get themeMode => _config.themeMode;
   UpstepColors? get colors => _config.colors;
   double? get radius => _config.radius;
@@ -42,7 +49,7 @@ class UpstepController extends ChangeNotifier {
   /// The resolved look for [brightness]: defaults, then [colors] and [radius].
   UpstepThemeData themeFor(Brightness brightness) => UpstepThemeData.resolve(
     brightness: brightness,
-    accent: accentColor,
+    accent: accentFor(brightness),
     colors: colors,
     radius: radius,
   );

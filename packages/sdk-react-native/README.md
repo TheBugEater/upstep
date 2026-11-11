@@ -56,8 +56,19 @@ If `expo-sensors` isn't installed, the hook is a no-op — safe to call uncondit
 | `apiKey` | `string` | — | **Required.** Your project's API key. |
 | `userId` | `string` | — | End-user id from your app, used to deduplicate votes per user. Call `identify(userId)` if it's only known after login. |
 | `baseUrl` | `string` | `https://upstep.dev` | Only needed for self-hosted or staging setups. |
-| `accentColor` | `string` | `#D97757` | Any CSS color, used for the launcher button and highlights. |
+| `accentColor` | `string` | `#C9481F` light / `#FF7A50` dark | Any CSS color, used for the launcher button and highlights. |
 | `theme` | `"light" \| "dark" \| "auto"` | `"auto"` | `"auto"` follows the device color scheme. |
+| `colors` | `object` | — | Brand colors: `background`, `surface`, `border`, `text`, `textMuted`, `accentText`, plus `light` / `dark` variants. Use hex or `rgb()`. Unset keys keep the defaults. |
+| `radius` | `number` | `12` | Base corner radius. Every corner scales with it; `0` is square. Clamped to 0–32. |
+
+```tsx
+<FeedbackProvider
+  apiKey="upstep_xxx"
+  accentColor="#4f46e5"
+  colors={{ dark: { background: "#0f172a", surface: "#1e293b", text: "#f8fafc" } }}
+  radius={8}
+>
+```
 
 ## API
 

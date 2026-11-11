@@ -90,6 +90,12 @@ class UpstepColors {
   );
 }
 
+/// Brand orange on light panels; white text reads on it.
+const Color upstepAccentLight = Color(0xFFC9481F);
+
+/// Brighter brand orange on dark panels; dark text reads on it.
+const Color upstepAccentDark = Color(0xFFFF7A50);
+
 /// Default base corner radius. Every corner in the widgets scales from it.
 const double upstepDefaultRadius = 12;
 
