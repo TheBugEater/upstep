@@ -89,6 +89,7 @@ model User {
   mcpCredentials McpCredential[]
   supportPresence SupportPresence[]
   supportAssignments SupportConversation[] @relation("SupportAssignee")
+  emailPreferences EmailPreference[]
   supportUsage SupportUsage[]
 }
 
@@ -123,6 +124,7 @@ model Project {
   supportConversations SupportConversation[]
   supportPresence SupportPresence[]
   knowledgePages SupportKnowledgePage[]
+  emailPreferences EmailPreference[]
 
   @@index([ownerId, updatedAt])
 }
@@ -561,4 +563,22 @@ model SupportUsage {
   learningCalls Int @default(0)
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   @@unique([ownerId, month])
+}
+
+// Which notification emails a person gets for one project. A missing row (or a
+// null newFeedback) means "use the defaults": new feedback only for the owner,
+// assignments and comments on, status changes off.
+model EmailPreference {
+  userId        String
+  projectId     String
+  newFeedback   Boolean?
+  assigned      Boolean  @default(true)
+  comments      Boolean  @default(true)
+  statusChanges Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, projectId])
+  @@index([projectId])
 }

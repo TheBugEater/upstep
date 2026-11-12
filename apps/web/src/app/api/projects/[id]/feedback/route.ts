@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
 import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
+import { queueTaskActivityEmail } from "@/lib/email-notifications";
 import { assertProjectAssignee } from "@/lib/task-assignment";
 import { CollaborationError, collaborationTransaction } from "@/lib/project-collaboration";
 
@@ -160,6 +161,8 @@ export async function POST(
     project: { id, name: project?.name ?? "" },
     feedback: { id: feedback.id, title: feedback.title, content: feedback.content, type: feedback.type, status: feedback.status, flagged: false },
   });
+  // A task created already assigned to someone else tells them.
+  await queueTaskActivityEmail({ projectId: id, recipientId: feedback.assigneeId, actorId: session.user.id, actorName: session.user.name?.trim() || session.user.email || "A teammate", event: "ASSIGNED", task: feedback });
   kickNotificationProcessor();
 
   return NextResponse.json(feedback, { status: 201 });

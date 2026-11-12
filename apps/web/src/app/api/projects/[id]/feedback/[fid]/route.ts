@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectAccess } from "@/lib/project-auth";
 import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
+import { queueTaskActivityEmail } from "@/lib/email-notifications";
 import { assertProjectAssignee } from "@/lib/task-assignment";
 import { CollaborationError, collaborationTransaction } from "@/lib/project-collaboration";
 
@@ -111,6 +112,19 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     });
     kickNotificationProcessor();
   }
+
+  // Personal emails: the new assignee, and the assignee when the status moves.
+  const actor = { actorId: session.user.id, actorName: session.user.name?.trim() || session.user.email || "A teammate" };
+  const task = { id: fid, title: updated.title, content: updated.content };
+  const emailed = await Promise.all([
+    parsed.data.assigneeId !== undefined && parsed.data.assigneeId !== feedback.assigneeId
+      ? queueTaskActivityEmail({ projectId: id, recipientId: parsed.data.assigneeId, event: "ASSIGNED", task, ...actor })
+      : false,
+    effectiveNewStatus && (effectiveNewStatus !== feedback.status || updated.statusId !== feedback.statusId)
+      ? queueTaskActivityEmail({ projectId: id, recipientId: updated.assigneeId, event: "STATUS", task, detail: `${feedback.boardStatus?.name ?? feedback.status} → ${updated.boardStatus?.name ?? effectiveNewStatus}`, ...actor })
+      : false,
+  ]);
+  if (emailed.some(Boolean)) kickNotificationProcessor();
 
   return NextResponse.json(updated);
 }

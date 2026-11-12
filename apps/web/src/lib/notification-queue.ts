@@ -4,6 +4,7 @@ import { db } from "./db";
 import {
   sendFeedbackNotification,
   sendProjectInvitationNotification,
+  sendTaskActivityNotification,
   type EmailNotificationPayload,
 } from "./email";
 import { triggerIntegrations, type IntegrationPayload } from "./integrations";
@@ -129,6 +130,8 @@ async function deliver(type: NotificationJobType, payload: Prisma.JsonValue, cli
       });
       if (!active) return;
       await sendProjectInvitationNotification(email);
+    } else if (email.kind === "TASK_ACTIVITY") {
+      await sendTaskActivityNotification(email);
     } else {
       // Existing feedback jobs predate the kind discriminator.
       await sendFeedbackNotification(email);

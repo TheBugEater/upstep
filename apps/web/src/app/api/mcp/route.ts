@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { enforceProjectAndClientLimits, rateLimitResponse } from "@/lib/rate-limit";
 import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
+import { queueTaskActivityEmail } from "@/lib/email-notifications";
 import { authenticateMcpKey } from "@/lib/mcp-access";
 import { assertProjectAssignee } from "@/lib/task-assignment";
 import { CollaborationError, collaborationTransaction } from "@/lib/project-collaboration";
@@ -522,6 +523,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         project: { id: project.id, name: project.name },
         feedback: { id: created.id, title, content: content || title, type },
       });
+      await queueTaskActivityEmail({ projectId: project.id, recipientId: created.assigneeId, event: "ASSIGNED", task: created, actorId: project.actor?.id, actorName: project.actor?.name?.trim() || "An agent" });
       kickNotificationProcessor();
 
       return toolText({ created: serialize(created) });
@@ -596,6 +598,15 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         });
         kickNotificationProcessor();
       }
+      const emailed = await Promise.all([
+        assigneeId !== undefined && assigneeId !== existing.assigneeId
+          ? queueTaskActivityEmail({ projectId: project.id, recipientId: assigneeId, event: "ASSIGNED", task: updated, actorId: project.actor?.id, actorName: project.actor?.name?.trim() || "An agent" })
+          : false,
+        statusPatch && (statusPatch.status !== existing.status || statusPatch.statusId !== existing.statusId)
+          ? queueTaskActivityEmail({ projectId: project.id, recipientId: updated.assigneeId, event: "STATUS", task: updated, detail: `${existing.boardStatus?.name ?? existing.status} → ${updated.boardStatus?.name ?? statusPatch.status}`, actorId: project.actor?.id, actorName: project.actor?.name?.trim() || "An agent" })
+          : false,
+      ]);
+      if (emailed.some(Boolean)) kickNotificationProcessor();
 
       return toolText({ updated: serialize(updated) });
     }
@@ -626,6 +637,7 @@ async function callTool(project: Project, name: string, args: Record<string, unk
         feedback: { id: feedback.id, title: feedback.title, content: feedback.content, type: feedback.type },
         comment: { content, authorName: comment.authorName },
       });
+      await queueTaskActivityEmail({ projectId: project.id, recipientId: feedback.assigneeId, event: "COMMENT", task: feedback, detail: content, actorId: project.actor?.id, actorName: comment.authorName ?? "An agent" });
       kickNotificationProcessor();
 
       return toolText({ posted: true, comment_id: comment.id });

@@ -82,7 +82,58 @@ export type ProjectInvitationPayload = {
   projectId: string;
 };
 
-export type EmailNotificationPayload = FeedbackNotificationPayload | ProjectInvitationPayload;
+/** Something happened on a task the recipient asked to hear about. */
+export type TaskActivityPayload = {
+  kind: "TASK_ACTIVITY";
+  event: "ASSIGNED" | "COMMENT" | "STATUS";
+  idempotencyKey?: string;
+  toEmail: string;
+  projectName: string;
+  projectId: string;
+  taskId: string;
+  taskTitle: string;
+  actorName: string;
+  /** The comment text, or "Open → Planned" for a status change. */
+  detail?: string;
+};
+
+export type EmailNotificationPayload = FeedbackNotificationPayload | ProjectInvitationPayload | TaskActivityPayload;
+
+export function emailSettingsUrl(projectId: string) {
+  return `${getSiteUrl()}/dashboard/projects/${encodeURIComponent(projectId)}?tab=settings&panel=email`;
+}
+
+export function taskActivityEmail(payload: TaskActivityPayload) {
+  const task = payload.taskTitle.length > 120 ? `${payload.taskTitle.slice(0, 120)}…` : payload.taskTitle;
+  const actor = payload.actorName.trim() || "A teammate";
+  const headline = payload.event === "ASSIGNED" ? `${actor} assigned you a task in ${payload.projectName}`
+    : payload.event === "COMMENT" ? `${actor} commented on your task in ${payload.projectName}`
+    : `${actor} changed the status of your task in ${payload.projectName}`;
+  const subject = payload.event === "ASSIGNED" ? `Assigned to you: ${task}`
+    : payload.event === "COMMENT" ? `New comment: ${task}`
+    : `Status changed: ${task}`;
+  const detail = (payload.detail ?? "").slice(0, 600);
+  return renderEmailTemplate(EMAIL_TEMPLATES.activity, {
+    subject: subject.replace(/[\r\n]+/g, " "),
+    headline,
+    task_title: task,
+    detail,
+    detail_display: detail ? "block" : "none",
+    task_url: `${getSiteUrl()}/dashboard/projects/${encodeURIComponent(payload.projectId)}/tasks/${encodeURIComponent(payload.taskId)}`,
+    project_name: payload.projectName,
+    settings_url: emailSettingsUrl(payload.projectId),
+  });
+}
+
+export async function sendTaskActivityNotification(payload: TaskActivityPayload) {
+  // Like feedback alerts, activity emails are optional without a provider.
+  if (!process.env.SENDPANDA_API_KEY) return;
+  await sendEmail({
+    to: payload.toEmail,
+    ...taskActivityEmail(payload),
+    ...(payload.idempotencyKey === undefined ? {} : { idempotencyKey: payload.idempotencyKey }),
+  });
+}
 
 export async function sendProjectInvitationNotification({
   idempotencyKey,
@@ -140,6 +191,7 @@ export async function sendFeedbackNotification({
     project_name: projectName,
     dashboard_url: dashboardUrl,
     action_label: isPending ? "Review in dashboard" : "View in dashboard",
+    settings_url: emailSettingsUrl(projectId),
   };
   const templateId = process.env.SENDPANDA_FEEDBACK_TEMPLATE_ID;
   await sendEmail({

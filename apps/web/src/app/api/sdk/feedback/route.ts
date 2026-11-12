@@ -5,7 +5,8 @@ import { getProjectFromRequest } from "@/lib/sdk-auth";
 import { getPlan } from "@/lib/plans";
 import { containsProfanity } from "@/lib/profanity";
 import { enforceProjectAndClientLimits, rateLimitResponse } from "@/lib/rate-limit";
-import { kickNotificationProcessor, queueEmail, queueIntegration } from "@/lib/notification-queue";
+import { kickNotificationProcessor, queueIntegration } from "@/lib/notification-queue";
+import { queueNewFeedbackEmails } from "@/lib/email-notifications";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -181,12 +182,7 @@ export async function POST(req: NextRequest) {
         project: { id: project.id, name: project.name },
         feedback: { id: created.id, title: created.title, content: created.content, type: created.type, status: created.status, flagged: created.flagged },
       }, tx),
-      queueEmail({
-        toEmail: project.owner.email,
-        projectName: project.name,
-        projectId: project.id,
-        feedback: { title: created.title, content: created.content, type: created.type, flagged: created.flagged, status: created.status },
-      }, tx),
+      queueNewFeedbackEmails(project.id, { title: created.title, content: created.content, type: created.type, flagged: created.flagged, status: created.status }, tx),
     ]);
     return created;
   });

@@ -3,6 +3,7 @@ import { db } from "./db";
 import { getProjectAccess } from "./project-auth";
 import { collaborationTransaction, CollaborationError } from "./project-collaboration";
 import { queueIntegration } from "./notification-queue";
+import { queueTaskActivityEmail } from "./email-notifications";
 
 export async function addTaskComment(input: { projectId: string; feedbackId: string; actorId: string; content: string; parentId?: string }, client: PrismaClient = db) {
   const content = input.content.trim();
@@ -20,6 +21,7 @@ export async function addTaskComment(input: { projectId: string; feedbackId: str
       data: { feedbackId: input.feedbackId, content, authorId: input.actorId, authorName: author.name?.trim() || author.email, parentId: input.parentId ?? null, isOwner: access.isOwner },
       include: { author: { select: { id: true, name: true, image: true } } },
     });
+    await queueTaskActivityEmail({ projectId: input.projectId, recipientId: feedback.assigneeId, actorId: input.actorId, actorName: comment.authorName ?? "A teammate", event: "COMMENT", task: feedback, detail: content }, tx);
     await queueIntegration({ event: "NEW_COMMENT", project: { id: input.projectId, name: feedback.project.name }, feedback: { id: feedback.id, title: feedback.title, content: feedback.content, type: feedback.type }, comment: { content, authorName: comment.authorName } }, tx);
     return comment;
   }, client);

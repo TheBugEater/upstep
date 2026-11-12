@@ -17,7 +17,8 @@ export const EMAIL_TEMPLATES = {
 Best,
 The UpStep Team
 
-You're receiving this because you own the {{project_name}} project on UpStep.`,
+You're receiving this because of your email settings for {{project_name}}.
+Change what you receive: {{settings_url}}`,
     html: `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -50,7 +51,7 @@ You're receiving this because you own the {{project_name}} project on UpStep.`,
         </td></tr>
         <tr><td style="padding-top:20px;">
           <p style="margin:0 0 12px;font-size:13px;color:#4a4945;text-align:center;">Best,<br><strong>The UpStep Team</strong></p>
-          <p style="margin:0;font-size:12px;color:#9b9991;text-align:center;">You're receiving this because you own the <strong>{{project_name}}</strong> project on UpStep.</p>
+          <p style="margin:0;font-size:12px;color:#9b9991;text-align:center;">You're receiving this because of your email settings for <strong>{{project_name}}</strong>. <a href="{{settings_url}}" style="color:#6b6a65;">Change what you receive</a></p>
         </td></tr>
       </table>
     </td></tr>
@@ -92,6 +93,41 @@ If you weren't expecting this, you can ignore this email.`,
         <p style="font-size:15px;line-height:1.6;">Best,<br><strong>The UpStep Team</strong></p>
       </td></tr>
       <tr><td style="padding-top:20px;font-size:12px;line-height:1.6;color:#737373;">If you weren't expecting this, you can ignore this email.</td></tr>
+    </table>
+  </td></tr></table>
+</body>
+</html>`,
+  },
+  activity: {
+    name: "UpStep — Task activity",
+    subject: "{{subject}}",
+    text: `{{headline}}
+
+{{task_title}}
+
+{{detail}}
+
+Open the task: {{task_url}}
+
+Best,
+The UpStep Team
+
+You're receiving this because of your email settings for {{project_name}}.
+Change what you receive: {{settings_url}}`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:40px 16px;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#000000;">
+  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+      <tr><td style="padding-bottom:24px;font-size:18px;font-weight:700;">UpStep</td></tr>
+      <tr><td style="padding:24px;border:1px solid #e5e5e5;border-radius:16px;">
+        <p style="margin:0 0 8px;font-size:13px;color:#525252;">{{headline}}</p>
+        <p style="margin:0 0 16px;font-size:18px;font-weight:600;line-height:1.4;">{{task_title}}</p>
+        <p style="display:{{detail_display}};margin:0 0 20px;padding:12px 14px;border-left:3px solid #d0d0d0;background:#fafafa;font-size:14px;line-height:1.6;color:#333333;white-space:pre-wrap;">{{detail}}</p>
+        <p style="margin:0;"><a href="{{task_url}}" style="display:inline-block;padding:11px 18px;border-radius:8px;background:#000000;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;">Open the task →</a></p>
+      </td></tr>
+      <tr><td style="padding-top:20px;font-size:12px;line-height:1.6;color:#6b6b6b;">You're receiving this because of your email settings for <strong>{{project_name}}</strong>. <a href="{{settings_url}}" style="color:#333333;">Change what you receive</a></td></tr>
     </table>
   </td></tr></table>
 </body>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import type { TeamMember } from "@/components/workspace/ProjectWorkspace";
 import { Avatar } from "@/components/Avatar";
+import { EmailSettings } from "./EmailSettings";
 
 interface Props {
   projectId: string;
@@ -193,6 +194,8 @@ export function SettingsTab({
 
   return (
     <div className="space-y-6 max-w-xl">
+
+      <EmailSettings projectId={projectId} />
 
       {/* ── Team ─────────────────────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-line bg-card shadow-soft p-6">
