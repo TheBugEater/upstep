@@ -130,7 +130,7 @@ export const reviewSchema = z.object({
     .max(6)
     .default([]),
   answers: z
-    .record(z.string().trim().max(1000))
+    .record(z.string(), z.string().trim().max(1000))
     .refine((x) => Object.keys(x).length <= 3)
     .default({}),
   mode: z.enum(["AI_FIRST", "HUMAN_FIRST", "HUMAN_ONLY"]).default("AI_FIRST"),
