@@ -15,6 +15,8 @@ import { availableAgents, createSupportTicket } from "./service";
 import { SupportError } from "./policy";
 import { processCrawlPage } from "./crawler";
 import { supportLimits, usageMonth } from "./policy";
+import { queueSupportPush } from "../mobile/push";
+import { kickNotificationProcessor } from "../notification-queue";
 
 export async function knowledgeSources(
   projectId: string,
@@ -235,10 +237,25 @@ export async function processAIConversation(
           aiLock: null,
           aiLockedAt: null,
           aiError: null,
-          // Ticket creation is queued only by the customer contact card.
+          // A verified AI escalation enters the human queue immediately. Contact
+          // details remain optional for a live chat; ticket creation is separate.
+          ...(result.inScope && result.resolution === "escalate"
+            ? { state: "WAITING", humanRequested: true }
+            : {}),
         },
       });
       if (!current.count) return;
+      if (result.inScope && result.resolution === "escalate")
+        await queueSupportPush(
+          {
+            eventId: `escalated:${c.id}:${candidate.revision}`,
+            projectId: c.projectId,
+            conversationId: c.id,
+            kind: "HUMAN_REQUEST",
+            occurredAt: new Date().toISOString(),
+          },
+          tx,
+        );
       const citations = [...new Set(result.sources)]
         .filter((i) => i >= 0 && i < sources.length)
         .map((i) => ({ url: sources[i]!.url, title: sources[i]!.title }));
@@ -295,7 +312,17 @@ export async function processAIConversation(
           aiLockedAt: null,
         },
       });
-      if (changed.count)
+      if (changed.count) {
+        await queueSupportPush(
+          {
+            eventId: `ai-error:${c.id}:${candidate.revision}`,
+            projectId: c.projectId,
+            conversationId: c.id,
+            kind: "AI_FAILED",
+            occurredAt: new Date().toISOString(),
+          },
+          tx,
+        );
         await tx.supportMessage.upsert({
           where: {
             conversationId_clientMessageId: {
@@ -312,6 +339,7 @@ export async function processAIConversation(
           },
           update: {},
         });
+      }
     });
   } finally {
     // Leave pending=true when a newer visitor message invalidated this generation.
@@ -325,6 +353,7 @@ export async function processAIConversation(
 }
 let running = false;
 export async function processSupportJobs(budgetMs = 25_000) {
+  kickNotificationProcessor();
   if (running) return { busy: true, ai: 0, pages: 0 };
   running = true;
   let ai = 0,
@@ -368,6 +397,7 @@ export async function processSupportJobs(budgetMs = 25_000) {
     return { ai, pages };
   } finally {
     running = false;
+    kickNotificationProcessor();
   }
 }
 
@@ -434,6 +464,7 @@ export async function resumeOfflineConversations(client: PrismaClient = db) {
   const waiting = await client.supportConversation.findMany({
     where: {
       state: "WAITING",
+      humanRequested: false,
       assignedToId: null,
       aiError: null,
       updatedAt: { lt: new Date(Date.now() - 60_000) },

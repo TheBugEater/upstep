@@ -62,6 +62,7 @@ export async function assertEscalationAllowed(
   customerId: string,
   conversationId: string,
   client: Client = db,
+  explicitHuman = false,
 ) {
   const context = await supportInteraction(
     projectId,
@@ -74,14 +75,24 @@ export async function assertEscalationAllowed(
       "This conversation is resolved. Start a new conversation.",
       409,
     );
-  if (!context.conversation.humanRequested && !context.canEscalate)
+  if (
+    explicitHuman &&
+    !context.conversation.messages.some((m) => m.role === "CUSTOMER")
+  )
+    throw new SupportError("Describe the issue before asking the team.", 400);
+  if (
+    !explicitHuman &&
+    !context.conversation.humanRequested &&
+    !context.canEscalate
+  )
     throw new SupportError(
       "Let AI understand the issue and try to help before asking the team.",
       409,
     );
   if (
-    !context.conversation.customer.name?.trim() ||
-    !context.conversation.customer.email
+    !explicitHuman &&
+    (!context.conversation.customer.name?.trim() ||
+      !context.conversation.customer.email)
   )
     throw new SupportError(
       "Share your name and email so the team can follow up.",

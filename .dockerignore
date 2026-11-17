@@ -8,5 +8,16 @@ node_modules
 .turbo
 .env
 **/.env
+**/.env.*
+!**/.env.example
+.claude
+**/.expo
+apps/mobile/ios
+apps/mobile/android
+apps/mobile/credentials.json
+**/*.keystore
+**/*.jks
+**/*.p12
+**/*.mobileprovision
 marketing
 *.log

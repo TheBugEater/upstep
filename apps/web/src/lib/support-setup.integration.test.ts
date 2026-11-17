@@ -23,7 +23,7 @@ import {
   resumeOfflineConversations,
 } from "./support/worker";
 import type { SupportAIProvider } from "./support/ai";
-import { supportInteraction } from "./support/interactions";
+import { supportInteraction, assertEscalationAllowed } from "./support/interactions";
 const url = process.env.UPSTEP_INVITATION_TEST_DATABASE_URL;
 test(
   "guided support setup verifies website knowledge before activation and AI handles offline escalation",
@@ -224,7 +224,7 @@ test(
             false,
           );
           await assert.rejects(
-            requestHuman(p.id, c.id, session.customerId, db),
+            assertEscalationAllowed(p.id, session.customerId, c.id, db),
             /understand/,
           );
           await customerMessage(
@@ -245,7 +245,7 @@ test(
           assert.equal(beforeContact.ticketId, null);
           assert.equal(beforeContact.ticketPending, false);
           await assert.rejects(
-            requestHuman(p.id, c.id, session.customerId, db),
+            assertEscalationAllowed(p.id, session.customerId, c.id, db),
             (error: unknown) =>
               error instanceof Error && /name and email/.test(error.message),
           );
@@ -285,7 +285,7 @@ test(
           const after = await db.supportConversation.findUniqueOrThrow({
             where: { id: c.id },
           });
-          assert.equal(after.state, "AI");
+          assert.equal(after.state, "WAITING");
           assert.ok(after.ticketId);
           const ticket = await db.feedback.findUniqueOrThrow({
             where: { id: after.ticketId! },
@@ -330,7 +330,7 @@ test(
         },
       );
       await t.test(
-        "requesting an offline person preserves AI help and a single ticket",
+        "requesting an offline person keeps the human queue and a single ticket",
         async () => {
           await requestHuman(p.id, c.id, session.customerId, db);
           await processPendingSupportTicket(db, c.id);
@@ -340,7 +340,7 @@ test(
                 where: { id: c.id },
               })
             ).state,
-            "AI",
+            "WAITING",
           );
           assert.equal(
             await db.feedback.count({ where: { projectId: p.id } }),
@@ -402,7 +402,7 @@ test(
           );
           assert.equal(context.canEscalate, false);
           await assert.rejects(
-            requestHuman(p.id, conversation.id, identity.customerId, db),
+            assertEscalationAllowed(p.id, identity.customerId, conversation.id, db),
             /understand/,
           );
           const values = {
@@ -479,7 +479,7 @@ test(
               },
               db,
             ),
-            /understand/,
+            /resolved/,
           );
         },
       );
@@ -534,7 +534,7 @@ test(
             true,
           );
           await assert.rejects(
-            requestHuman(p.id, conversation.id, identity.customerId, db),
+            assertEscalationAllowed(p.id, identity.customerId, conversation.id, db),
             /name and email/,
           );
           await submitSupportContact(
@@ -561,7 +561,7 @@ test(
         },
       );
       await t.test(
-        "anonymous waiting conversations can resume AI without bypassing contact requirements",
+        "explicit human requests stay queued when the team goes offline",
         async () => {
           const auth = await createSupportSession(p.id, undefined, db);
           const identity = await authenticateSupportSession(
@@ -597,8 +597,8 @@ test(
           const resumed = await db.supportConversation.findUniqueOrThrow({
             where: { id: conversation.id },
           });
-          assert.equal(resumed.state, "AI");
-          assert.equal(resumed.aiPending, true);
+          assert.equal(resumed.state, "WAITING");
+          assert.equal(resumed.aiPending, false);
           assert.equal(resumed.ticketPending, false);
           await db.supportConversation.update({
             where: { id: conversation.id },

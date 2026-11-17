@@ -11,29 +11,56 @@ import { triggerIntegrations, type IntegrationPayload } from "./integrations";
 import { hashInvitationToken } from "./invitation-tokens";
 import { GoogleChatDeliveryError } from "./google-chat";
 import { withIntegrationContext } from "./integration-context";
+import {
+  deliverSupportPush,
+  PushDeliveryError,
+  type SupportPushEvent,
+  type PushClient,
+} from "./mobile/push";
 
 type QueueClient = Pick<Prisma.TransactionClient, "notificationJob">;
-type NotificationClient = Pick<Prisma.TransactionClient, "notificationJob" | "rateLimitBucket" | "projectInvitation" | "project" | "googleChatThread">;
+type NotificationClient = Pick<
+  Prisma.TransactionClient,
+  | "notificationJob"
+  | "rateLimitBucket"
+  | "projectInvitation"
+  | "project"
+  | "googleChatThread"
+>;
 let retryTimer: NodeJS.Timeout | null = null;
 
-export async function queueIntegration(payload: IntegrationPayload, client: QueueClient & Pick<Prisma.TransactionClient, "feedback"> = db) {
+export async function queueIntegration(
+  payload: IntegrationPayload,
+  client: QueueClient & Pick<Prisma.TransactionClient, "feedback"> = db,
+) {
   const enriched = await withIntegrationContext(payload, client);
   return client.notificationJob.create({
-    data: { type: "INTEGRATION", payload: enriched as unknown as Prisma.InputJsonValue },
+    data: {
+      type: "INTEGRATION",
+      payload: enriched as unknown as Prisma.InputJsonValue,
+    },
   });
 }
 
-export async function queueEmail(payload: EmailNotificationPayload, client: QueueClient = db) {
+export async function queueEmail(
+  payload: EmailNotificationPayload,
+  client: QueueClient = db,
+) {
   return client.notificationJob.create({
     data: {
       type: "EMAIL",
-      payload: { ...payload, idempotencyKey: payload.idempotencyKey ?? randomUUID() } as unknown as Prisma.InputJsonValue,
+      payload: {
+        ...payload,
+        idempotencyKey: payload.idempotencyKey ?? randomUUID(),
+      } as unknown as Prisma.InputJsonValue,
     },
   });
 }
 
 export function kickNotificationProcessor() {
-  void processNotificationJobs(10).catch((error) => console.error("Notification processor failed", error));
+  void processNotificationJobs(10).catch((error) =>
+    console.error("Notification processor failed", error),
+  );
 }
 
 function scheduleRetry(delayMs: number) {
@@ -45,7 +72,10 @@ function scheduleRetry(delayMs: number) {
   retryTimer.unref();
 }
 
-export async function processNotificationJobs(limit = 25, client: NotificationClient = db) {
+export async function processNotificationJobs(
+  limit = 25,
+  client: NotificationClient = db,
+) {
   const now = new Date();
   const staleLock = new Date(now.getTime() - 5 * 60_000);
   await client.notificationJob.updateMany({
@@ -64,7 +94,11 @@ export async function processNotificationJobs(limit = 25, client: NotificationCl
   for (const job of jobs) {
     const claimed = await client.notificationJob.updateMany({
       where: { id: job.id, status: "PENDING" },
-      data: { status: "PROCESSING", lockedAt: new Date(), attempts: { increment: 1 } },
+      data: {
+        status: "PROCESSING",
+        lockedAt: new Date(),
+        attempts: { increment: 1 },
+      },
     });
     if (!claimed.count) continue;
 
@@ -74,7 +108,10 @@ export async function processNotificationJobs(limit = 25, client: NotificationCl
       if (job.type === "EMAIL") {
         const payload = job.payload as unknown as EmailNotificationPayload;
         if (!payload.idempotencyKey) {
-          job.payload = { ...payload, idempotencyKey: randomUUID() } as unknown as Prisma.JsonValue;
+          job.payload = {
+            ...payload,
+            idempotencyKey: randomUUID(),
+          } as unknown as Prisma.JsonValue;
           await client.notificationJob.update({
             where: { id: job.id },
             data: { payload: job.payload as Prisma.InputJsonValue },
@@ -84,38 +121,73 @@ export async function processNotificationJobs(limit = 25, client: NotificationCl
       await deliver(job.type, job.payload, client);
       await client.notificationJob.update({
         where: { id: job.id },
-        data: { status: "COMPLETED", completedAt: new Date(), lockedAt: null, lastError: null },
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date(),
+          lockedAt: null,
+          lastError: null,
+        },
       });
       completed++;
     } catch (error) {
       const attempts = job.attempts + 1;
-      const terminal = attempts >= 5 || (error instanceof GoogleChatDeliveryError && !error.retryable);
+      const terminal =
+        attempts >= 5 ||
+        (error instanceof GoogleChatDeliveryError && !error.retryable) ||
+        (error instanceof PushDeliveryError && !error.retryable);
       await client.notificationJob.update({
         where: { id: job.id },
         data: {
           status: terminal ? "FAILED" : "PENDING",
           lockedAt: null,
-          lastError: error instanceof Error ? error.message.slice(0, 2000) : String(error).slice(0, 2000),
-          availableAt: new Date(Date.now() + Math.min(60, 2 ** attempts) * 60_000),
+          lastError:
+            error instanceof Error
+              ? error.message.slice(0, 2000)
+              : String(error).slice(0, 2000),
+          availableAt: new Date(
+            Date.now() +
+              (job.type === "PUSH"
+                ? Math.min(60, 2 ** attempts) * 1000
+                : Math.min(60, 2 ** attempts) * 60_000),
+          ),
         },
       });
-      if (!terminal) scheduleRetry(Math.min(60, 2 ** attempts) * 60_000 + 1_000);
+      if (!terminal)
+        scheduleRetry(
+          (job.type === "PUSH"
+            ? Math.min(60, 2 ** attempts) * 1000
+            : Math.min(60, 2 ** attempts) * 60_000) + 1_000,
+        );
       retried++;
     }
   }
 
   // Opportunistic cleanup keeps fixed-window buckets and successful jobs bounded.
   await Promise.all([
-    client.rateLimitBucket.deleteMany({ where: { expiresAt: { lt: new Date(Date.now() - 60 * 60_000) } } }),
+    client.rateLimitBucket.deleteMany({
+      where: { expiresAt: { lt: new Date(Date.now() - 60 * 60_000) } },
+    }),
     client.notificationJob.deleteMany({
-      where: { status: "COMPLETED", completedAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60_000) } },
+      where: {
+        status: "COMPLETED",
+        completedAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60_000) },
+      },
     }),
   ]);
   return { found: jobs.length, completed, retried };
 }
 
-async function deliver(type: NotificationJobType, payload: Prisma.JsonValue, client: NotificationClient) {
-  if (type === "INTEGRATION") {
+async function deliver(
+  type: NotificationJobType,
+  payload: Prisma.JsonValue,
+  client: NotificationClient,
+) {
+  if (type === "PUSH") {
+    await deliverSupportPush(
+      payload as unknown as SupportPushEvent,
+      client as unknown as PushClient,
+    );
+  } else if (type === "INTEGRATION") {
     await triggerIntegrations(payload as unknown as IntegrationPayload, client);
   } else {
     const email = payload as unknown as EmailNotificationPayload;
@@ -123,10 +195,15 @@ async function deliver(type: NotificationJobType, payload: Prisma.JsonValue, cli
       // A revoke, acceptance or resend makes the previous queued link obsolete.
       const active = await client.projectInvitation.findFirst({
         where: {
-          id: email.invitationId, projectId: email.projectId, email: email.toEmail,
+          id: email.invitationId,
+          projectId: email.projectId,
+          email: email.toEmail,
           tokenHash: hashInvitationToken(email.token),
-          acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() },
-        }, select: { id: true },
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true },
       });
       if (!active) return;
       await sendProjectInvitationNotification(email);

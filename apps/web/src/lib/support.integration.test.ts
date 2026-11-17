@@ -114,7 +114,7 @@ test(
       const otherC = await startConversation(project.id, b.customerId, db);
       await assert.rejects(
         requestHuman(project.id, c.id, a.customerId, db),
-        /understand/,
+        /Describe the issue/,
       );
       await assert.rejects(
         submitSupportContact(

@@ -298,7 +298,7 @@ test("support presentation removes em dashes and separates readable paragraphs",
   );
 });
 
-test("asking for an agent cannot bypass AI diagnosis and a genuine help attempt", async () => {
+test("automatic escalation requires a help attempt while explicit human requests bypass it", async () => {
   const { assessEscalation, hasTriedToHelp } =
     await import("./support/escalation");
   const premature = {
@@ -314,6 +314,7 @@ test("asking for an agent cannot bypass AI diagnosis and a genuine help attempt"
     escalationReason: "unresolved" as const,
   };
   assert.equal(assessEscalation(premature, []).resolution, "clarify");
+  assert.equal(assessEscalation({ ...premature, escalationReason: "human_requested" }, []).resolution, "escalate");
   const clarified = [
     { role: "ASSISTANT", metadata: { inScope: true, resolution: "clarify" } },
   ];
