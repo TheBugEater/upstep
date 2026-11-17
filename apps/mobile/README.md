@@ -6,8 +6,14 @@ someone else's product.
 
 Android internal preview: [download APK, version 0.1.0 (2)](https://expo.dev/artifacts/eas/d4BBNDlIL01-F5uOa0qRLdsS44JMLPd-i5GVMNsVkoU.apk)
 or [view the Expo build](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/b8b29581-d499-450f-b736-b189966b6e20).
-This preview includes runtime server selection. Deploy the mobile-compatible
-backend before signing in; platform push provisioning remains a separate step.
+
+iPhone internal preview: [install on the registered test iPhone](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/a3e8ed9e-7bbd-4d25-ae88-9b6b505da35a).
+Apple signing and the APNs push key are configured for this build.
+
+Both previews include runtime server selection. Deploy the mobile-compatible
+backend before signing in. Android still needs its Firebase/FCM configuration and
+a new build before push notifications can work. Physical-device push delivery
+has not yet been verified.
 
 ## Included
 
