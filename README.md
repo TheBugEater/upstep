@@ -187,6 +187,7 @@ Never treat a publishable SDK key as protection for private data, and read the
 
 ```text
 apps/web/                    Next.js dashboard, API, MCP and marketing site
+apps/mobile/                 iPhone/Android teammate support app (Expo)
 packages/sdk-web/            @upstep/js
 packages/sdk-react-native/   @upstep/react-native
 packages/sdk-flutter/        upstep_flutter
@@ -206,7 +207,8 @@ packages/types/              @upstep/types
 
 ## Deployment
 
-`railway.toml` configures the hosted deployment, but any platform that runs a
+Dokploy and other container hosts can use the included `Dockerfile`;
+`railway.toml` is also available for Railway. Any platform that runs a
 Node.js container and PostgreSQL works. Run `prisma migrate deploy` before each
 release, call `POST /api/internal/notifications` every minute with
 `Authorization: Bearer $CRON_SECRET`, and test database restores regularly.

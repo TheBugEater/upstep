@@ -91,6 +91,10 @@ model User {
   supportAssignments SupportConversation[] @relation("SupportAssignee")
   emailPreferences EmailPreference[]
   supportUsage SupportUsage[]
+  mobileSessions MobileSession[]
+  mobileLoginCodes MobileLoginCode[]
+  supportReads SupportRead[]
+  supportPushPreferences SupportPushPreference[]
 }
 
 model Project {
@@ -125,6 +129,8 @@ model Project {
   supportPresence SupportPresence[]
   knowledgePages SupportKnowledgePage[]
   emailPreferences EmailPreference[]
+
+  supportPushPreferences SupportPushPreference[]
 
   @@index([ownerId, updatedAt])
 }
@@ -398,6 +404,7 @@ model BoardColumn {
 enum NotificationJobType {
   INTEGRATION
   EMAIL
+  PUSH
 }
 
 enum NotificationJobStatus {
@@ -525,6 +532,7 @@ model SupportConversation {
   assignee User? @relation("SupportAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   ticket Feedback? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
   messages SupportMessage[]
+  reads SupportRead[]
   @@index([projectId, updatedAt])
   @@index([aiPending, aiLockedAt])
 }
@@ -552,6 +560,81 @@ model SupportPresence {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([projectId, userId])
+}
+
+// Native teammate credentials are separate from web cookies and customer SDK sessions.
+model MobileLoginCode {
+  id String @id @default(cuid())
+  codeHash String @unique
+  challenge String
+  userId String
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+}
+
+model MobileSession {
+  id String @id @default(cuid())
+  userId String
+  accessHash String @unique
+  refreshHash String @unique
+  accessExpiresAt DateTime
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device MobileDevice?
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model MobileDevice {
+  id String @id @default(cuid())
+  sessionId String @unique
+  pushToken String @unique
+  platform String
+  enabled Boolean @default(true)
+  activeConversationId String?
+  lastActiveAt DateTime?
+  lastNotifiedAt DateTime?
+  session MobileSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  deliveries SupportPushDelivery[]
+}
+
+model SupportPushPreference {
+  id String @id @default(cuid())
+  projectId String
+  userId String
+  enabled Boolean @default(true)
+  onCall Boolean @default(true)
+  quietUntil DateTime?
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([projectId, userId])
+}
+
+model SupportRead {
+  id String @id @default(cuid())
+  userId String
+  conversationId String
+  readAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  @@unique([userId, conversationId])
+}
+
+// A ticket/receipt is provider acceptance, never proof of a notification being read.
+model SupportPushDelivery {
+  id String @id @default(cuid())
+  eventId String
+  deviceId String
+  ticketId String?
+  receiptCheckedAt DateTime?
+  lastError String?
+  createdAt DateTime @default(now())
+  device MobileDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  @@unique([eventId, deviceId])
+  @@index([receiptCheckedAt, createdAt])
 }
 
 // Shared across an owner's projects: limits cannot be multiplied by creating projects.

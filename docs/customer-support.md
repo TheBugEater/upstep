@@ -13,8 +13,9 @@ business domain or its www alias.
 - Anonymous browser chat; optional contact name/email; signed-in customer sessions.
 - AI-first, human-first (60-second fallback), or human-only routing.
 - Shared inbox, assignment, availability heartbeats, private notes, resolve/reopen.
-- AI creates private tickets for unresolved issues when the team is offline and
-  continues helping. Tickets have stable UP- references and show the confirmed
+- Explicit human requests and AI escalations enter the human queue immediately,
+  including without contact details. Optional contact forms and teammate actions
+  create private follow-up tickets. Tickets have stable UP- references and show the confirmed
   business support email. Repeated requests reuse the same ticket. Transcripts
   are not exposed by public feedback/roadmap APIs.
 - Read-only website knowledge with source links, sitemap/link discovery,
@@ -66,11 +67,22 @@ Full-text retrieval uses PostgreSQL and relevant passages; changing AI provider
 never requires re-embedding content. Old generations are retained, not searched.
 Conversation and knowledge retention/deletion controls are future work.
 
-AI can queue a ticket automatically when an unresolved issue requires follow-up
-and no teammate is available. Customers and teammates can also create one directly. Private notes stay out of customer responses and model context. Human
+Human requests stay queued while the team is offline. A teammate can explicitly
+return the conversation to AI. Customers and teammates can create follow-up tickets.
+Private notes stay out of customer responses and model context. Human
 replies/takeover increment a revision so in-flight AI replies cannot land afterward.
 
 The public integration guide lives at `/guides/customer-support`.
+
+## Mobile teammate inbox
+
+`apps/mobile` provides the iPhone/Android support companion. Native sign-in uses
+the existing account with a PKCE-bound, single-use browser handoff and revocable
+mobile sessions. On-call notification preferences survive closing the app and
+are independent of the 90-second live-presence heartbeat. Durable push jobs route
+handoffs, assignments, customer replies and AI failures to authorized teammates.
+Private AI summaries/drafts exclude notes and share the existing AI allowance.
+See [mobile setup](../apps/mobile/README.md) for provisioning and device validation.
 
 ## Guided business setup
 

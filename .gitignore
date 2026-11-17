@@ -47,3 +47,14 @@ pubspec.lock
 # Generated self-hosted browser embed
 apps/web/public/sdk/
 output/playwright/
+
+# Expo local state and generated native projects (use Expo prebuild)
+.expo/
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/credentials.json
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+firebase-debug.log

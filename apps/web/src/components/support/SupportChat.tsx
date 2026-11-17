@@ -788,6 +788,12 @@ export function SupportChat({
         )}
       </div>
       <footer className="shrink-0 bg-[var(--sx-bg)] px-3 pb-3 pt-1.5 sm:px-4">
+        {chat && !chat.humanRequested && !["HUMAN", "RESOLVED"].includes(chat.state) && chat.messages.some(m => m.role === "CUSTOMER") && (
+          <button type="button" disabled={busy} onClick={() => void act("human")}
+            className="mb-2 rounded-full border border-[var(--sx-border)] px-3 py-2 text-xs font-medium text-[var(--sx-ink)] disabled:opacity-50">
+            Ask for a person
+          </button>
+        )}
         {chat && widgets.length > 0 && (
           <section
             aria-label="Suggested next step"

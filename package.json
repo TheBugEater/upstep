@@ -25,7 +25,12 @@
   },
   "pnpm": {
     "overrides": {
-      "postcss@<8.5.10": "8.5.10"
+      "postcss@<8.5.23": "8.5.23",
+      "shell-quote@>=1.0.0 <1.11.0": "1.11.0",
+      "@prisma/config>deepmerge-ts": "8.0.0",
+      "@expo/fingerprint>minimatch": "11.0.9",
+      "@microsoft/api-extractor>minimatch": "11.0.9",
+      "@vue/language-core>minimatch": "11.0.9"
     }
   }
 }

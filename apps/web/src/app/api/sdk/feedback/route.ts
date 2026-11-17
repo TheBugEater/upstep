@@ -106,7 +106,7 @@ const submitSchema = z.object({
   type: z.enum(["BUG", "FEATURE", "GENERAL"]).optional(),
   endUserId: z.string().max(200).optional(),
   anonymousId: z.string().max(200).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function POST(req: NextRequest) {

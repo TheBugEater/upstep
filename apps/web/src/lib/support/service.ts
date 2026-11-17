@@ -7,6 +7,7 @@ import { getProjectAccess } from "../project-auth";
 import { assertProjectAssignee } from "../task-assignment";
 import { collaborationTransaction } from "../project-collaboration";
 import { queueIntegration } from "../notification-queue";
+import { queueSupportPush } from "../mobile/push";
 import { getPlan } from "../plans";
 import { hashSupportToken, newSupportToken, verifyIdentity } from "./identity";
 import {
@@ -169,7 +170,7 @@ export async function startConversation(
         projectId,
         customerId,
         humanRequested: false,
-        state: config.mode === "HUMAN_ONLY" ? "WAITING" : "AI",
+        state: config.mode === "AI_FIRST" ? "AI" : "WAITING",
         messages: {
           create: {
             clientMessageId: "welcome",
@@ -252,6 +253,17 @@ export async function customerMessage(
         aiAttempts: 0,
       },
     });
+    if (c.state === "HUMAN" || c.state === "WAITING" || c.humanRequested)
+      await queueSupportPush(
+        {
+          eventId: message.id,
+          projectId: c.projectId,
+          conversationId: c.id,
+          kind: "CUSTOMER_MESSAGE",
+          occurredAt: message.createdAt.toISOString(),
+        },
+        tx,
+      );
     return message;
   }, client);
 }
@@ -365,7 +377,7 @@ export async function createSupportTicket(
         clientMessageId: "ticket-created",
         role: "SYSTEM",
         authorName: `${c.project.supportConfig?.businessName || c.project.name} Team`,
-        content: `Your ticket ${reference} has been created.${contactEmail ? ` You can email ${contactEmail} and quote this reference.` : ""} The team can follow up here. You can optionally add your email for the team; AI can keep helping in this chat.`,
+        content: `Your ticket ${reference} has been created.${contactEmail ? ` You can email ${contactEmail} and quote this reference.` : ""} The team can follow up here. You can optionally add your email for the team.`,
         metadata: {
           ticketId: ticket.id,
           ticketReference: reference,
@@ -410,7 +422,13 @@ export async function requestHuman(
   client: PrismaClient = db,
 ) {
   return collaborationTransaction(async (tx) => {
-    await assertEscalationAllowed(projectId, customerId, conversationId, tx);
+    await assertEscalationAllowed(
+      projectId,
+      customerId,
+      conversationId,
+      tx,
+      true,
+    );
     const c = await tx.supportConversation.findFirst({
       where: { id: conversationId, projectId, customerId },
       include: {
@@ -433,12 +451,10 @@ export async function requestHuman(
     }
     if (c.state === "HUMAN") return;
     const online = await availableAgents(projectId, tx);
-    const useAI =
-      !online.length && c.project.supportConfig?.mode !== "HUMAN_ONLY";
     await tx.supportConversation.update({
       where: { id: c.id },
       data: {
-        state: useAI ? "AI" : "WAITING",
+        state: "WAITING",
         humanRequested: true,
         revision: { increment: 1 },
         aiPending: false,
@@ -447,7 +463,7 @@ export async function requestHuman(
         aiLockedAt: null,
       },
     });
-    await tx.supportMessage.create({
+    const handoffMessage = await tx.supportMessage.create({
       data: {
         conversationId: c.id,
         clientMessageId: `handoff:${randomUUID()}`,
@@ -455,11 +471,19 @@ export async function requestHuman(
         authorName: `${c.project.supportConfig?.businessName || c.project.name} Team`,
         content: online.length
           ? "You've been added to the team's queue. A teammate will join when they can."
-          : useAI
-            ? "The team is away right now. Your contact details are saved for follow-up. AI can keep helping while we prepare your ticket."
-            : "The team is away. Your request and contact details are saved for follow-up.",
+          : "Your request is saved for the team. A teammate can follow up in this chat when available.",
       },
     });
+    await queueSupportPush(
+      {
+        eventId: `handoff:${c.id}:${c.revision}`,
+        projectId,
+        conversationId: c.id,
+        kind: "HUMAN_REQUEST",
+        occurredAt: handoffMessage.createdAt.toISOString(),
+      },
+      tx,
+    );
   }, client);
 }
 export async function teamConversationAction(
@@ -488,6 +512,40 @@ export async function teamConversationAction(
       },
     });
     if (!c) throw new SupportError("Conversation not found.", 404);
+    const retry =
+      input.action === "reply" && input.clientMessageId
+        ? await tx.supportMessage.findUnique({
+            where: {
+              conversationId_clientMessageId: {
+                conversationId: c.id,
+                clientMessageId: input.clientMessageId,
+              },
+            },
+          })
+        : null;
+    if (retry) {
+      if (retry.role !== "AGENT" || retry.content !== input.content?.trim())
+        throw new SupportError("Message identifier is already in use.", 409);
+      return;
+    }
+    if (
+      input.action === "takeover" &&
+      c.state === "HUMAN" &&
+      c.assignedToId === input.actorId
+    )
+      return;
+    if (
+      ["reply", "takeover"].includes(input.action) &&
+      c.state === "HUMAN" &&
+      c.assignedToId &&
+      c.assignedToId !== input.actorId
+    )
+      throw new SupportError(
+        "Another teammate is handling this conversation. Reassign it before replying.",
+        409,
+      );
+    if (["reply", "takeover"].includes(input.action) && c.state === "RESOLVED")
+      throw new SupportError("This conversation is resolved.", 409);
     const author = await tx.user.findUniqueOrThrow({
       where: { id: input.actorId },
       select: { name: true, email: true },
@@ -569,6 +627,22 @@ export async function teamConversationAction(
       data.aiPending = last?.role === "CUSTOMER";
     }
     await tx.supportConversation.update({ where: { id: c.id }, data });
+    if (
+      input.action === "assign" &&
+      input.assigneeId &&
+      input.assigneeId !== c.assignedToId
+    )
+      await queueSupportPush(
+        {
+          eventId: `assigned:${c.id}:${c.revision}`,
+          projectId: c.projectId,
+          conversationId: c.id,
+          kind: "ASSIGNED",
+          recipientId: input.assigneeId,
+          occurredAt: new Date().toISOString(),
+        },
+        tx,
+      );
     if (c.ticketId && data.assignedToId !== undefined)
       await tx.feedback.updateMany({
         where: { id: c.ticketId, projectId: input.projectId },
@@ -636,6 +710,8 @@ export async function submitSupportContact(
       input.conversationId,
       tx,
     );
+    if (context.conversation.state === "RESOLVED")
+      throw new SupportError("This conversation is resolved.", 409);
     if (!context.canEscalate && !context.conversation.humanRequested)
       throw new SupportError(
         "AI needs to understand the issue and try to help first.",

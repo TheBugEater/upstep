@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSiteUrl } from "../site-url";
 import { CollaborationError } from "../project-collaboration";
 import { auth } from "../auth";
+import { mobileRequest } from "../mobile/auth";
 import { db } from "../db";
 import { getProjectFromRequest } from "../sdk-auth";
 import { enforceProjectAndClientLimits } from "../rate-limit";
@@ -24,10 +25,12 @@ export async function teamRequest(
     origin !== new URL(process.env.AUTH_URL || getSiteUrl()).origin
   )
     throw new SupportError("Invalid request origin.", 403);
-  const session = await auth();
-  if (!session?.user?.id) throw new SupportError("Unauthorized", 401);
-  const access = await supportTeamAccess(projectId, session.user.id, manage);
-  return { userId: session.user.id, access };
+  const userId = req.headers.has("authorization")
+    ? (await mobileRequest(req)).userId
+    : (await auth())?.user?.id;
+  if (!userId) throw new SupportError("Unauthorized", 401);
+  const access = await supportTeamAccess(projectId, userId, manage);
+  return { userId, access };
 }
 export async function sdkRequest(
   req: NextRequest,

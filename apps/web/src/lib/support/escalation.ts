@@ -1,7 +1,9 @@
 import type { SupportReply } from "./ai";
 type Turn = { role: string; metadata: unknown };
-/** A request for an agent is not evidence that AI has tried to help. */
+/** Automatic escalation needs a help attempt; a direct human request is always allowed. */
 export function hasTriedToHelp(history: Turn[], reason: string) {
+  // Customers can request a person without exhausting automatic troubleshooting.
+  if (reason === "human_requested") return true;
   const previous = history
     .filter((m) => m.role === "ASSISTANT")
     .map((m) => m.metadata as { inScope?: boolean; resolution?: string } | null)

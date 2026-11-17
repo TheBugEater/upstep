@@ -24,7 +24,8 @@ function LoginForm() {
   const requestedReturn = searchParams.get("returnTo") ?? "";
   const inviteReturn = /^\/invite\/[A-Za-z0-9-]+$/.test(requestedReturn) ? requestedReturn : null;
   const issueReturn = /^\/dashboard\/projects\/[A-Za-z0-9-]+(\?issue=|\/tasks\/)[A-Za-z0-9-]+$/.test(requestedReturn) ? requestedReturn : null;
-  const callbackUrl = inviteReturn ?? issueReturn ?? (appName ? `/dashboard?newProject=${encodeURIComponent(appName)}` : "/dashboard");
+  const mobileReturn = /^\/mobile\/connect\?challenge=[A-Za-z0-9_-]{43}&state=[A-Za-z0-9_-]{43}$/.test(requestedReturn) ? requestedReturn : null;
+  const callbackUrl = mobileReturn ?? inviteReturn ?? issueReturn ?? (appName ? `/dashboard?newProject=${encodeURIComponent(appName)}` : "/dashboard");
 
   useEffect(() => {
     void getProviders().then(setProviders);
