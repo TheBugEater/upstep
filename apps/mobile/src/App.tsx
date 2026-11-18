@@ -705,7 +705,7 @@ function InboxScreen({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0 }}
+        style={{ flexGrow: 0, flexShrink: 0 }}
         contentContainerStyle={t.styles.tabs}
       >
         {filters.map(([value, label]) => (

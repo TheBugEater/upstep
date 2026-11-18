@@ -48,92 +48,107 @@ export function NotificationSetup({
   };
   if (alerts.success || (alerts.ready && !alerts.paused))
     return (
-      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 28, gap: 24 }}>
-        <Brand t={t} />
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            gap: 24,
-            paddingVertical: 30,
-          }}
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1, padding: 28, gap: 24 }}
         >
+          <Brand t={t} />
           <View
             style={{
-              width: 110,
-              height: 110,
-              borderRadius: 38,
-              alignSelf: "center",
-              alignItems: "center",
+              flexGrow: 1,
+              flexShrink: 0,
               justifyContent: "center",
-              backgroundColor: t.colors.accent,
-              marginBottom: 12,
+              gap: 24,
+              paddingVertical: 30,
             }}
           >
-            <Bell size={44} strokeWidth={1.4} color={t.colors.ink} />
             <View
               style={{
-                position: "absolute",
-                right: -5,
-                bottom: 1,
-                padding: 7,
-                borderRadius: 20,
-                backgroundColor: t.colors.forest,
-                borderWidth: 4,
-                borderColor: t.colors.bg,
+                width: 110,
+                height: 110,
+                borderRadius: 38,
+                alignSelf: "center",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: t.colors.accent,
+                marginBottom: 12,
               }}
             >
-              <Check size={18} color={t.colors.onForest} />
+              <Bell size={44} strokeWidth={1.4} color={t.colors.ink} />
+              <View
+                style={{
+                  position: "absolute",
+                  right: -5,
+                  bottom: 1,
+                  padding: 7,
+                  borderRadius: 20,
+                  backgroundColor: t.colors.forest,
+                  borderWidth: 4,
+                  borderColor: t.colors.bg,
+                }}
+              >
+                <Check size={18} color={t.colors.onForest} />
+              </View>
+            </View>
+            <Text
+              style={[
+                t.styles.heroTitle,
+                { textAlign: "center", fontSize: 37, lineHeight: 43 },
+              ]}
+            >
+              You’re in the loop.
+            </Text>
+            <Text style={[t.styles.body, { textAlign: "center" }]}>
+              Customer alerts are enabled for {projectName}. You can change your
+              availability any time.
+            </Text>
+            <View style={t.styles.card}>
+              <SettingsRow
+                title="This phone is connected"
+                subtitle="Assignments and customer replies can reach you."
+                icon={CheckCheck}
+                t={t}
+              />
+              <View style={t.styles.divider} />
+              <SettingsRow
+                title={
+                  alerts.preference?.onCall
+                    ? "On call for new requests"
+                    : "Assigned conversations only"
+                }
+                subtitle={
+                  alerts.preference?.onCall
+                    ? "Your team can reach you when a customer needs a person."
+                    : "You’ll hear about conversations assigned to you."
+                }
+                icon={Users}
+                t={t}
+              />
             </View>
           </View>
-          <Text
-            style={[
-              t.styles.heroTitle,
-              { textAlign: "center", fontSize: 37, lineHeight: 43 },
-            ]}
-          >
-            You’re in the loop.
+        </ScrollView>
+        <View
+          style={{
+            paddingHorizontal: 28,
+            paddingTop: 12,
+            paddingBottom: 8,
+            gap: 12,
+          }}
+        >
+          <Button
+            title="Open my inbox"
+            icon={ArrowRight}
+            primary
+            onPress={onComplete || alerts.finish}
+            t={t}
+            style={{ minHeight: 56 }}
+          />
+          <Text style={[t.styles.small, { textAlign: "center" }]}>
+            Focus mode and your phone’s settings can silence alerts.
           </Text>
-          <Text style={[t.styles.body, { textAlign: "center" }]}>
-            Customer alerts are enabled for {projectName}. You can change your
-            availability any time.
-          </Text>
-          <View style={t.styles.card}>
-            <SettingsRow
-              title="This phone is connected"
-              subtitle="Assignments and customer replies can reach you."
-              icon={CheckCheck}
-              t={t}
-            />
-            <View style={t.styles.divider} />
-            <SettingsRow
-              title={
-                alerts.preference?.onCall
-                  ? "On call for new requests"
-                  : "Assigned conversations only"
-              }
-              subtitle={
-                alerts.preference?.onCall
-                  ? "Your team can reach you when a customer needs a person."
-                  : "You’ll hear about conversations assigned to you."
-              }
-              icon={Users}
-              t={t}
-            />
-          </View>
         </View>
-        <Button
-          title="Open my inbox"
-          icon={ArrowRight}
-          primary
-          onPress={onComplete || alerts.finish}
-          t={t}
-          style={{ minHeight: 56 }}
-        />
-        <Text style={[t.styles.small, { textAlign: "center" }]}>
-          Focus mode and your phone’s settings can silence alerts.
-        </Text>
-      </ScrollView>
+      </View>
     );
   const needsSettings =
     !!alerts.permission &&
@@ -205,11 +220,21 @@ export function NotificationSetup({
             t={t}
           />
         </View>
-        <View style={[t.styles.card, { padding: 16 }]}>
+      </ScrollView>
+      <View
+        style={{
+          gap: 8,
+          paddingHorizontal: 26,
+          paddingTop: 12,
+          paddingBottom: 4,
+          borderTopWidth: 1,
+          borderColor: t.colors.line,
+        }}
+      >
+        <View style={{ paddingBottom: 4 }}>
           <SettingsRow
             title="On call for new requests"
-            subtitle={`Receive unassigned requests from ${projectName}.`}
-            icon={Users}
+            subtitle="Include unassigned requests."
             t={t}
             end={
               <Switch
@@ -242,17 +267,6 @@ export function NotificationSetup({
             </Text>
           </View>
         )}
-      </ScrollView>
-      <View
-        style={{
-          gap: 8,
-          paddingHorizontal: 26,
-          paddingTop: 12,
-          paddingBottom: 4,
-          borderTopWidth: 1,
-          borderColor: t.colors.line,
-        }}
-      >
         {alerts.checking && <ActivityIndicator color={t.colors.forest} />}
         <Button
           title={
