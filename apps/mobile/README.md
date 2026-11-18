@@ -4,12 +4,12 @@ Native teammate inbox for iPhone and Android, built with Expo SDK 58. This is
 separate from `packages/sdk-react-native`, which embeds customer-facing chat in
 someone else's product.
 
-Android internal preview: [download APK, version 0.1.0 (3)](https://expo.dev/artifacts/eas/DYwi-qBSnACSdMd45G9qv7lf_Kncp218pwSI2k2V1ig.apk)
-or [view the Expo build](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/71bf235f-cedc-4144-9ba5-c74161a8fbdc).
+Android internal preview: [download APK, version 0.1.0 (6)](https://expo.dev/artifacts/eas/oI5yqGgbiPAfuhciZV4sX4bY6_D9E35WynUdVp2hA64.apk)
+or [view the Expo build](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/48ffae2f-7e08-43ac-8ed9-ca578dd232de).
 This build includes native Firebase configuration. Its FCM v1 credential is
 configured in Expo and passed Google's validation-only send check.
 
-iPhone internal preview: [install on the registered test iPhone](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/a3e8ed9e-7bbd-4d25-ae88-9b6b505da35a).
+iPhone internal preview: [install version 0.1.0 (4) on the registered test iPhone](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/2d9a21c2-2250-4abc-873c-b9ad15ee5835).
 Apple signing and the APNs push key are configured for this build.
 
 Both previews include runtime server selection. The mobile-compatible backend is
