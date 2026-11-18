@@ -26,9 +26,10 @@ const notification = {
 
 beforeEach(() => {
   process.env.SENDPANDA_API_KEY = "test-only-key";
-  process.env.SENDPANDA_FROM_EMAIL = "UpStep Team <hello@upstep.dev>";
+  process.env.SENDPANDA_FROM_EMAIL = "Upstep Team <hello@upstep.dev>";
   delete process.env.SENDPANDA_FEEDBACK_TEMPLATE_ID;
   delete process.env.SENDPANDA_INVITATION_TEMPLATE_ID;
+  delete process.env.SENDPANDA_ACTIVITY_TEMPLATE_ID;
   process.env.AUTH_URL = "https://upstep.dev";
   // All tests must stub fetch explicitly; never contact a real recipient.
   mock.method(globalThis, "fetch", async () => {
@@ -38,7 +39,7 @@ beforeEach(() => {
 
 afterEach(() => {
   mock.restoreAll();
-  for (const name of ["SENDPANDA_API_KEY", "SENDPANDA_FROM_EMAIL", "SENDPANDA_FEEDBACK_TEMPLATE_ID", "SENDPANDA_INVITATION_TEMPLATE_ID", "AUTH_URL"]) {
+  for (const name of ["SENDPANDA_API_KEY", "SENDPANDA_FROM_EMAIL", "SENDPANDA_FEEDBACK_TEMPLATE_ID", "SENDPANDA_INVITATION_TEMPLATE_ID", "SENDPANDA_ACTIVITY_TEMPLATE_ID", "AUTH_URL"]) {
     if (originalEnv[name] === undefined) delete process.env[name];
     else process.env[name] = originalEnv[name];
   }
@@ -56,7 +57,7 @@ test("sends the API contract with a fresh UUID for each new email", async () => 
     assert.match(key, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
     keys.add(key);
     assert.deepEqual(JSON.parse(init?.body as string), {
-      from: "UpStep Team <hello@upstep.dev>",
+      from: "Upstep Team <hello@upstep.dev>",
       ...message,
       to: [message.to],
     });
@@ -72,7 +73,7 @@ test("supports HTML and recipient arrays, with the placeholder sender as default
   delete process.env.SENDPANDA_FROM_EMAIL;
   mock.method(globalThis, "fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
     assert.deepEqual(JSON.parse(init?.body as string), {
-      from: "UpStep Team <hello@your-verified-domain.example>",
+      from: "Upstep Team <hello@your-verified-domain.example>",
       ...message,
       to: [message.to],
       html: "<p>Test</p>",
@@ -164,7 +165,7 @@ test("feedback notifications preserve content and forward their persisted UUID",
     assert.match(body.text, /Details & more/);
     assert.match(body.text, /Pending review/);
     assert.match(body.text, /Flagged/);
-    assert.match(body.text, /The UpStep Team/);
+    assert.match(body.text, /The Upstep Team/);
     assert.match(body.text, /https:\/\/upstep.dev\/dashboard\/projects\/project-test/);
     return new Response(null, { status: 202 });
   });
@@ -184,11 +185,29 @@ test("published feedback templates receive variables without inline HTML or text
     const rendered = renderEmailTemplate(EMAIL_TEMPLATES.feedback, body.variables);
     assert.equal(rendered.subject, "New bug report on Upstep & friends");
     assert.match(rendered.html, /A &lt;bug&gt;/);
-    assert.match(rendered.html, /The UpStep Team/);
+    assert.match(rendered.html, /The Upstep Team/);
     assert.ok(!rendered.html.includes("{{"));
     return new Response(null, { status: 202 });
   });
   await sendFeedbackNotification(notification);
+});
+
+test("published activity templates receive the same branded content as inline emails", async () => {
+  process.env.SENDPANDA_ACTIVITY_TEMPLATE_ID = "tpl_activity_test";
+  mock.method(globalThis, "fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(init?.body as string);
+    assert.equal(body.template_id, "tpl_activity_test");
+    assert.equal(body.html, undefined);
+    const rendered = renderEmailTemplate(EMAIL_TEMPLATES.activity, body.variables);
+    assert.equal(rendered.subject, "New comment: Review <copy>");
+    assert.match(rendered.html, /https:\/\/upstep.dev\/logo.png/);
+    assert.match(rendered.html, /Review &lt;copy&gt;/);
+    assert.match(rendered.html, /The Upstep Team/);
+    assert.ok(!rendered.html.includes("{{"));
+    return new Response(null, { status: 202 });
+  });
+  await sendTaskActivityNotification({ kind: "TASK_ACTIVITY", event: "COMMENT", toEmail: message.to,
+    projectName: "Website", projectId: "project-test", taskId: "task-test", taskTitle: "Review <copy>", actorName: "Alex", detail: "Ready" });
 });
 
 test("local template rendering rejects missing variables and subject header injection", () => {
@@ -212,14 +231,14 @@ test("project invitations greet the recipient, name the inviter, and explain sig
   mock.method(globalThis, "fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
     const body = JSON.parse(init?.body as string);
     assert.deepEqual(body.to, [message.to]);
-    assert.equal(body.from, "UpStep Team <hello@upstep.dev>");
-    assert.equal(body.subject, "You're invited to Website <Launch> on UpStep");
+    assert.equal(body.from, "Upstep Team <hello@upstep.dev>");
+    assert.equal(body.subject, "You're invited to Website <Launch> on Upstep");
     assert.match(body.html, /Hi Alex &lt;Teammate&gt;/);
     assert.match(body.html, /Jane &amp; Sam/);
     assert.match(body.html, /Website &lt;Launch&gt;/);
     assert.match(body.text, /creates your account automatically/);
     assert.match(body.text, /expires in seven days/);
-    assert.match(body.text, /The UpStep Team/);
+    assert.match(body.text, /The Upstep Team/);
     assert.ok(body.html.includes(`https://upstep.dev/api/invitations/open?token=${invitation.token}`));
     assert.equal(new Headers(init?.headers).get("Idempotency-Key"), idempotencyKey);
     return new Response(null, { status: 202 });

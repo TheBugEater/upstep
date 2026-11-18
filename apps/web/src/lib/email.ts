@@ -51,7 +51,7 @@ export async function sendEmail({
       "Idempotency-Key": idempotencyKey,
     },
     body: JSON.stringify({
-      from: process.env.SENDPANDA_FROM_EMAIL || "UpStep Team <hello@your-verified-domain.example>",
+      from: process.env.SENDPANDA_FROM_EMAIL || "Upstep Team <hello@your-verified-domain.example>",
       to: recipients,
       ...(content.templateId
         ? { template_id: content.templateId, variables: content.variables }
@@ -126,7 +126,7 @@ export function emailSettingsUrl(projectId: string) {
   return `${getSiteUrl()}/dashboard/projects/${encodeURIComponent(projectId)}?tab=settings&panel=email`;
 }
 
-export function taskActivityEmail(payload: TaskActivityPayload) {
+function taskActivityVariables(payload: TaskActivityPayload) {
   const task = payload.taskTitle.length > 120 ? `${payload.taskTitle.slice(0, 120)}…` : payload.taskTitle;
   const actor = payload.actorName.trim() || "A teammate";
   const headline = payload.event === "ASSIGNED" ? `${actor} assigned you a task in ${payload.projectName}`
@@ -136,7 +136,7 @@ export function taskActivityEmail(payload: TaskActivityPayload) {
     : payload.event === "COMMENT" ? `New comment: ${task}`
     : `Status changed: ${task}`;
   const detail = (payload.detail ?? "").slice(0, 600);
-  return renderEmailTemplate(EMAIL_TEMPLATES.activity, {
+  return {
     subject: subject.replace(/[\r\n]+/g, " "),
     headline,
     task_title: task,
@@ -145,15 +145,20 @@ export function taskActivityEmail(payload: TaskActivityPayload) {
     task_url: `${getSiteUrl()}/dashboard/projects/${encodeURIComponent(payload.projectId)}/tasks/${encodeURIComponent(payload.taskId)}`,
     project_name: payload.projectName,
     settings_url: emailSettingsUrl(payload.projectId),
-  });
+  };
+}
+
+export function taskActivityEmail(payload: TaskActivityPayload) {
+  return renderEmailTemplate(EMAIL_TEMPLATES.activity, taskActivityVariables(payload));
 }
 
 export async function sendTaskActivityNotification(payload: TaskActivityPayload) {
   // Like feedback alerts, activity emails are optional without a provider.
   if (!process.env.SENDPANDA_API_KEY) return;
+  const templateId = process.env.SENDPANDA_ACTIVITY_TEMPLATE_ID;
   await sendEmail({
     to: payload.toEmail,
-    ...taskActivityEmail(payload),
+    ...(templateId ? { templateId, variables: taskActivityVariables(payload) } : taskActivityEmail(payload)),
     ...(payload.idempotencyKey === undefined ? {} : { idempotencyKey: payload.idempotencyKey }),
   });
 }
