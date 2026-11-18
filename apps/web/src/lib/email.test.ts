@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, mock, test } from "node:test";
-import { sendEmail, sendFeedbackNotification, sendProjectInvitationNotification, type ProjectInvitationPayload } from "./email";
+import { EmailRecipientError, sendEmail, sendFeedbackNotification, sendProjectInvitationNotification, sendTaskActivityNotification, type ProjectInvitationPayload } from "./email";
 import { EMAIL_TEMPLATES, renderEmailTemplate } from "./email-templates";
 import { generateInvitationToken } from "./invitation-tokens";
 
@@ -102,6 +102,46 @@ test("caller-provided UUID stays the same when retrying a failed request", async
   await assert.rejects(sendEmail({ ...message, idempotencyKey }));
   await sendEmail({ ...message, idempotencyKey });
   assert.equal(attempts, 2);
+});
+
+test("reserved recipients are blocked before any provider request, even in a mixed list", async () => {
+  let requests = 0;
+  mock.method(globalThis, "fetch", async () => {
+    requests++;
+    return new Response(null, { status: 202 });
+  });
+  for (const to of [
+    "collaboration-aacdd494-79c7-43e0-aa42-049037d84841@example.test",
+    "person@TEST", "person@sub.example.invalid", "person@sub.example",
+    "person@localhost", "person@dev.local", "person@example.com",
+    "person@sub.example.net", "person@example.org",
+    "Test User <person@EXAMPLE.TEST.>",
+  ]) {
+    await assert.rejects(sendEmail({ ...message, to }), EmailRecipientError);
+    await assert.rejects(sendEmail({ ...message, to: [message.to, to] }), EmailRecipientError);
+  }
+  assert.equal(requests, 0);
+});
+
+test("feedback, invitations and task activity all reject fixture recipients", async () => {
+  const toEmail = "collaboration-fixture@example.test";
+  await assert.rejects(sendFeedbackNotification({ ...notification, toEmail }), EmailRecipientError);
+  await assert.rejects(sendProjectInvitationNotification({ ...invitation, toEmail }), EmailRecipientError);
+  await assert.rejects(sendTaskActivityNotification({
+    kind: "TASK_ACTIVITY", event: "COMMENT", toEmail, projectName: "Test",
+    projectId: "test", taskId: "task", taskTitle: "Task", actorName: "Owner",
+  }), EmailRecipientError);
+});
+
+test("normal domains containing reserved words are still submitted", async () => {
+  const to = ["person@contest.com", "person@example.company", "person@myexample.org"];
+  const requests: string[][] = [];
+  mock.method(globalThis, "fetch", async (_url: RequestInfo | URL, init?: RequestInit) => {
+    requests.push(JSON.parse(init?.body as string).to);
+    return new Response(null, { status: 202 });
+  });
+  await sendEmail({ ...message, to });
+  assert.deepEqual(requests, [to]);
 });
 
 test("missing credentials throw for direct sends and keep feedback notifications optional", async () => {

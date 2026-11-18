@@ -2,6 +2,19 @@ import { randomUUID } from "node:crypto";
 import { EMAIL_TEMPLATES, renderEmailTemplate } from "./email-templates";
 import { getSiteUrl } from "./site-url";
 
+/** Permanent: fixture addresses must never reach the real mail provider. */
+export class EmailRecipientError extends Error {
+  constructor() {
+    super("Email recipient uses a reserved test domain; delivery blocked.");
+    this.name = "EmailRecipientError";
+  }
+}
+
+const RESERVED_EMAIL_DOMAINS = [
+  "test", "invalid", "example", "localhost", "local",
+  "example.com", "example.net", "example.org",
+];
+
 export type EmailPayload = {
   to: string | string[];
   /** Reuse this UUID when retrying the same logical email. */
@@ -17,6 +30,16 @@ export async function sendEmail({
   idempotencyKey = randomUUID(),
   ...content
 }: EmailPayload): Promise<void> {
+  const recipients = Array.isArray(to) ? to : [to];
+  // Check the entire list before submitting anything, including display-name
+  // addresses and case/trailing-dot variants of reserved domains.
+  for (const recipient of recipients) {
+    const address = (recipient.match(/<([^<>]+)>\s*$/)?.[1] ?? recipient).trim();
+    const domain = address.slice(address.lastIndexOf("@") + 1).toLowerCase().replace(/\.+$/, "");
+    if (RESERVED_EMAIL_DOMAINS.some((reserved) => domain === reserved || domain.endsWith(`.${reserved}`))) {
+      throw new EmailRecipientError();
+    }
+  }
   const apiKey = process.env.SENDPANDA_API_KEY;
   if (!apiKey) throw new Error("SENDPANDA_API_KEY is not configured.");
 
@@ -29,7 +52,7 @@ export async function sendEmail({
     },
     body: JSON.stringify({
       from: process.env.SENDPANDA_FROM_EMAIL || "UpStep Team <hello@your-verified-domain.example>",
-      to: Array.isArray(to) ? to : [to],
+      to: recipients,
       ...(content.templateId
         ? { template_id: content.templateId, variables: content.variables }
         : { subject: content.subject, text: content.text, html: content.html }),

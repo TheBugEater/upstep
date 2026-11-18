@@ -5,6 +5,42 @@ import { processNotificationJobs } from "./notification-queue";
 
 afterEach(() => mock.restoreAll());
 
+test("a leftover fixture email fails permanently on its first attempt without contacting SendPanda", async () => {
+  const originalKey = process.env.SENDPANDA_API_KEY;
+  process.env.SENDPANDA_API_KEY = "test-only-key";
+  let requests = 0;
+  mock.method(globalThis, "fetch", async () => {
+    requests++;
+    return new Response(null, { status: 202 });
+  });
+  const updates: Record<string, unknown>[] = [];
+  const job = {
+    id: "leftover-email", type: "EMAIL", status: "PENDING", attempts: 0,
+    payload: { kind: "TASK_ACTIVITY", event: "COMMENT", toEmail: "collaboration-fixture@example.test",
+      projectName: "Collaboration test", projectId: "project-test", taskId: "task-test", taskTitle: "Task", actorName: "Owner" },
+  };
+  const client = {
+    notificationJob: {
+      findMany: async () => [job], updateMany: async () => ({ count: 1 }),
+      update: async ({ data }: { data: Record<string, unknown> }) => { updates.push(data); return job; },
+      deleteMany: async () => ({ count: 0 }),
+    },
+    rateLimitBucket: { deleteMany: async () => ({ count: 0 }) },
+  } as unknown as Parameters<typeof processNotificationJobs>[1];
+  try {
+    const result = await processNotificationJobs(1, client);
+    assert.equal(requests, 0);
+    assert.equal(result.completed, 0);
+    assert.equal(updates.at(-1)?.status, "FAILED");
+    assert.match(String(updates.at(-1)?.lastError), /reserved test domain/);
+    assert.equal(updates.at(-1)?.lockedAt, null);
+    assert.ok(updates.some((data) => (data.payload as { idempotencyKey?: string } | undefined)?.idempotencyKey));
+  } finally {
+    if (originalKey === undefined) delete process.env.SENDPANDA_API_KEY;
+    else process.env.SENDPANDA_API_KEY = originalKey;
+  }
+});
+
 for (const [httpStatus, expectedStatus] of [[400, "FAILED"], [429, "PENDING"], [200, "COMPLETED"]] as const) {
   test(`Google Chat HTTP ${httpStatus} transitions the queued discussion to ${expectedStatus}`, async () => {
     const updates: Record<string, unknown>[] = [];

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mock, test } from "node:test";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import { changeMemberRole, removeProjectMember, collaborationTransaction, CollaborationError } from "./project-collaboration";
 import { assertProjectAssignee } from "./task-assignment";
 import { getProjectAccess } from "./project-auth";
@@ -19,12 +19,17 @@ test("project task collaboration permissions and lifecycle", { skip: !databaseUr
   const users = await Promise.all(["Owner", "Admin", "Member", "Outsider"].map((name) => client.user.create({ data: { name, email: `collaboration-${randomUUID()}@example.test` } })));
   const [owner, admin, member, outsider] = users as [typeof users[number], typeof users[number], typeof users[number], typeof users[number]];
   const project = await client.project.create({ data: { ownerId: owner.id, name: "Collaboration test", slug: `collaboration-${randomUUID()}` } });
+  const jobScope: Prisma.NotificationJobWhereInput = { OR: [
+    { payload: { path: ["project", "id"], equals: project.id } },
+    { payload: { path: ["projectId"], equals: project.id } },
+  ] };
   await client.projectMember.createMany({ data: [{ projectId: project.id, userId: admin.id, role: "ADMIN" }, { projectId: project.id, userId: member.id }] });
   const task = await client.feedback.create({ data: { projectId: project.id, title: "Task", content: "Discussion" } });
   const otherTask = await client.feedback.create({ data: { projectId: project.id, content: "Another task" } });
   t.after(async () => {
     // Only these isolated fixtures are removed, never any pre-existing records.
-    await client.notificationJob.deleteMany({ where: { payload: { path: ["project", "id"], equals: project.id } } });
+    await client.notificationJob.deleteMany({ where: jobScope });
+    assert.equal(await client.notificationJob.count({ where: jobScope }), 0);
     await client.project.delete({ where: { id: project.id } });
     await client.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
     await client.$disconnect();
@@ -75,6 +80,7 @@ test("project task collaboration permissions and lifecycle", { skip: !databaseUr
     assert.equal(reply.parentId, first.id);
     assert.equal(reply.content, "Investigating\nnow");
     assert.equal(await client.notificationJob.count({ where: { payload: { path: ["project", "id"], equals: project.id } } }), 2);
+    assert.equal(await client.notificationJob.count({ where: { type: "EMAIL", payload: { path: ["projectId"], equals: project.id } } }), 1);
     const job = await client.notificationJob.findFirstOrThrow({ where: { payload: { path: ["comment", "content"], equals: "First comment" } } });
     const snapshot = job.payload as unknown as IntegrationPayload;
     assert.equal(snapshot.feedback.boardStatus?.color, "#a855f7");

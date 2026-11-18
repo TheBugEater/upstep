@@ -153,6 +153,13 @@ when the key is blank; direct calls to `sendEmail` throw if it is missing.
 Invitations never silently complete without a key: they remain retryable and
 eventually record a failure if sending stays misconfigured.
 
+The mail helper rejects reserved test domains (`.test`, `.invalid`, `.example`,
+`.localhost`, `.local`, and `example.com/net/org`, including subdomains) before
+contacting SendPanda. The queue records these as permanent failures without
+retrying, including jobs left by older test runs. The web test runner also removes
+inherited SendPanda credentials and disables unmocked `fetch` requests. Tests that
+exercise provider delivery must install an explicit fetch mock and a dummy key.
+
 Keep the real send-only key in `apps/web/.env` (ignored by Git), or your deployment's
 environment settings. Set `SENDPANDA_FROM_EMAIL` to a sender on a verified domain.
 The sender name is **UpStep Team**, e.g. `UpStep Team <hello@upstep.dev>`.

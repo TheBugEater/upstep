@@ -5,6 +5,7 @@ import {
   sendFeedbackNotification,
   sendProjectInvitationNotification,
   sendTaskActivityNotification,
+  EmailRecipientError,
   type EmailNotificationPayload,
 } from "./email";
 import { triggerIntegrations, type IntegrationPayload } from "./integrations";
@@ -133,6 +134,7 @@ export async function processNotificationJobs(
       const attempts = job.attempts + 1;
       const terminal =
         attempts >= 5 ||
+        error instanceof EmailRecipientError ||
         (error instanceof GoogleChatDeliveryError && !error.retryable) ||
         (error instanceof PushDeliveryError && !error.retryable);
       await client.notificationJob.update({

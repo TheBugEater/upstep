@@ -50,7 +50,9 @@ test("project invitation database lifecycle", { skip: !databaseUrl }, async (t) 
     get(target, property) { return property === "notificationJob" ? deliveryQueue : Reflect.get(target, property); },
   });
   async function invite() {
-    const email = `invite-${randomUUID()}@example.test`;
+    // Delivery assertions use the fetch mock above and a unique SES simulator
+    // address, never a customer mailbox. Reserved domains fail before transport.
+    const email = `success+invite-${randomUUID()}@simulator.amazonses.com`;
     const result = await client.$transaction((tx) => createProjectInvitation({ ...base, email }, tx));
     assert.ok(result.invitation);
     const record = await client.projectInvitation.findUniqueOrThrow({ where: { id: result.invitation!.id } });
