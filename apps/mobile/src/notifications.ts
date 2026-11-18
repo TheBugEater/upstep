@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { api } from "./client";
 import { parseNotificationTarget } from "./api";
+import { alertPermissionAction } from "./alert-setup";
 
 let activeConversation: string | null = null;
 export function setActiveConversation(id: string | null) {
@@ -29,7 +30,14 @@ export function notificationTarget(
   const data = response?.notification.request.content.data;
   return parseNotificationTarget(data, api.baseUrl);
 }
-export async function registerNotifications() {
+export async function registerNotifications({
+  requestPermission = true,
+  devicePushToken,
+}: {
+  requestPermission?: boolean;
+  devicePushToken?: Notifications.DevicePushToken;
+} = {}) {
+  const generation = api.sessionGeneration;
   const projectId =
     Constants.easConfig?.projectId ||
     Constants.expoConfig?.extra?.eas?.projectId;
@@ -43,13 +51,40 @@ export async function registerNotifications() {
       importance: Notifications.AndroidImportance.HIGH,
     });
   let permission = await Notifications.getPermissionsAsync();
-  if (!permission.granted)
-    permission = await Notifications.requestPermissionsAsync();
-  if (!permission.granted)
+  if (
+    alertPermissionAction(permission) !== "allowed" &&
+    requestPermission &&
+    alertPermissionAction(permission) === "request"
+  )
+    permission = await Notifications.requestPermissionsAsync({
+      ios: { allowAlert: true, allowBadge: false, allowSound: true },
+    });
+  if (alertPermissionAction(permission) !== "allowed")
     throw new Error(
       "Notifications are off. Enable them in your phone’s settings; your inbox still works.",
     );
-  const token = await Notifications.getExpoPushTokenAsync({ projectId });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let token: Notifications.ExpoPushToken;
+  try {
+    token = await Promise.race([
+      Notifications.getExpoPushTokenAsync({ projectId, devicePushToken }),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(
+              new Error(
+                "Connecting alerts took too long. Your inbox still works; please try again.",
+              ),
+            ),
+          15_000,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+  if (generation !== api.sessionGeneration || !api.hasSession)
+    throw new Error("Your sign-in changed. Please enable alerts again.");
   await api.request("/api/mobile/device", "PUT", {
     pushToken: token.data,
     platform: Platform.OS,
@@ -58,6 +93,9 @@ export async function registerNotifications() {
 // Reinstallation/token rotation must not leave an opted-in phone silently unregistered.
 // This path never opens the OS permission prompt.
 export async function refreshNotificationRegistration() {
-  if ((await Notifications.getPermissionsAsync()).granted)
-    await registerNotifications();
+  if (
+    alertPermissionAction(await Notifications.getPermissionsAsync()) ===
+    "allowed"
+  )
+    await registerNotifications({ requestPermission: false });
 }

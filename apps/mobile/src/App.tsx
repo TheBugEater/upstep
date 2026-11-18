@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -23,12 +29,7 @@ import * as Notifications from "expo-notifications";
 import * as Crypto from "expo-crypto";
 import { api, restoreClient, changeServerUrl } from "./client";
 import { signIn } from "./auth";
-import {
-  notificationTarget,
-  registerNotifications,
-  refreshNotificationRegistration,
-  setActiveConversation,
-} from "./notifications";
+import { notificationTarget, setActiveConversation } from "./notifications";
 import {
   ApiError,
   conversationPath,
@@ -41,6 +42,32 @@ import {
   type Assistance,
 } from "./api";
 import { theme, type Theme } from "./theme";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bell,
+  Check,
+  CheckCheck,
+  ChevronDown,
+  ChevronRight,
+  Clock3,
+  Globe,
+  Inbox as InboxIcon,
+  LogOut,
+  MessageCircle,
+  MoreHorizontal,
+  NotebookPen,
+  Send,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react-native";
+import { Avatar, Badge, Brand, Button, IconButton, SettingsRow } from "./ui";
+import { Welcome } from "./Welcome";
+import { NotificationSetup, AlertBanner } from "./NotificationSetup";
+import { useAlertSetup, type AlertSetupController } from "./use-alert-setup";
 
 type Target = { projectId: string; conversationId: string };
 type Draft = {
@@ -53,40 +80,9 @@ const describe = (e: unknown) =>
     ? e.message
     : "Could not complete the request. Please try again.";
 
-function Button({
-  title,
-  onPress,
-  primary = false,
-  disabled = false,
-  t,
-}: {
-  title: string;
-  onPress(): void;
-  primary?: boolean;
-  disabled?: boolean;
-  t: Theme;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      onPress={onPress}
-      disabled={disabled}
-      style={[
-        t.styles.button,
-        primary && t.styles.primary,
-        disabled && t.styles.disabled,
-      ]}
-    >
-      <Text style={[t.styles.buttonText, primary && t.styles.primaryText]}>
-        {title}
-      </Text>
-    </Pressable>
-  );
-}
-
 export default function App() {
-  const t = theme(useColorScheme() === "dark");
+  const dark = useColorScheme() === "dark";
+  const t = useMemo(() => theme(dark), [dark]);
   const [ready, setReady] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -97,8 +93,10 @@ export default function App() {
   const [serverUrl, setServerUrl] = useState(api.baseUrl);
   const [serverInput, setServerInput] = useState(api.baseUrl);
   const [showServer, setShowServer] = useState(false);
+  const [showProjects, setShowProjects] = useState(false);
   const [serverError, setServerError] = useState("");
   const [active, setActive] = useState(AppState.currentState === "active");
+  const alerts = useAlertSetup(me?.user.id, projectId, serverUrl, active);
   const pendingTarget = useRef<Target | null>(null);
   const handledNotification = useRef("");
   const drafts = useRef<Record<string, Draft>>({});
@@ -194,16 +192,9 @@ export default function App() {
   }, [me, target]);
   useEffect(() => {
     if (!me) return;
-    void refreshNotificationRegistration().catch(() => {});
-    const listener = Notifications.addPushTokenListener(() => {
-      void refreshNotificationRegistration().catch(() => {});
-    });
-    return () => listener.remove();
-  }, [me]);
-  useEffect(() => {
-    if (!me) return;
     const heartbeat = () => {
-      const conversation = active && !settings ? target : null;
+      const conversation =
+        active && !settings && !alerts.showSetup ? target : null;
       setActiveConversation(conversation?.conversationId || null);
       void api
         .request("/api/mobile/device", "POST", {
@@ -218,7 +209,7 @@ export default function App() {
       clearInterval(timer);
       setActiveConversation(null);
     };
-  }, [me, target, active, settings]);
+  }, [me, target, active, settings, alerts.showSetup]);
   const login = async () => {
     setBusy(true);
     setError("");
@@ -245,64 +236,112 @@ export default function App() {
               <Text style={t.styles.small}>Opening your inbox…</Text>
             </View>
           ) : !me ? (
+            <Welcome
+              t={t}
+              busy={busy}
+              error={error}
+              server={serverUrl}
+              onLogin={() => void login()}
+              onServer={openServer}
+              onRetry={() => {
+                setError("");
+                void loadMe().catch((e) => setError(describe(e)));
+              }}
+            />
+          ) : project && alerts.showSetup ? (
+            <NotificationSetup
+              key={alerts.context}
+              alerts={alerts}
+              projectName={project.name}
+              onChooseProject={() => setShowProjects(true)}
+              onComplete={() => {
+                alerts.finish();
+                setSettings(false);
+                setTarget(null);
+              }}
+              t={t}
+            />
+          ) : project && alerts.checking && !alerts.loaded ? (
             <View style={t.styles.center}>
-              <Text style={t.styles.brand}>upstep ↗</Text>
-              <Text style={t.styles.title}>Your customers, one tap away.</Text>
-              <Text style={t.styles.text}>
-                Get notified when someone needs a person. See what AI tried,
-                take over and reply from your phone.
-              </Text>
-              <Button
-                title={busy ? "Signing in…" : "Sign in to Upstep"}
-                onPress={() => void login()}
-                disabled={busy}
-                primary
-                t={t}
-              />
-              {!!error && (
-                <Button
-                  title="Try again"
-                  onPress={() => {
-                    setError("");
-                    void loadMe().catch((e) => setError(describe(e)));
-                  }}
-                  t={t}
-                />
-              )}
-              <Text style={t.styles.small}>
-                Use the same Google or GitHub account as your dashboard.
-              </Text>
-              <Text style={t.styles.small}>Server: {serverUrl}</Text>
-              <Button
-                title="Change server"
-                onPress={openServer}
-                disabled={busy}
-                t={t}
-              />
-              {!!error && (
-                <Text accessibilityRole="alert" style={t.styles.error}>
-                  {error}
-                </Text>
-              )}
+              <ActivityIndicator color={t.colors.forest} />
+              <Text style={t.styles.small}>Preparing your workspace…</Text>
             </View>
           ) : (
             <>
-              <View style={t.styles.header}>
+              <View
+                style={[
+                  t.styles.header,
+                  target && !settings && { paddingBottom: 10 },
+                ]}
+              >
                 <View style={t.styles.row}>
-                  <Text style={t.styles.brand}>upstep ↗</Text>
-                  <Button
-                    title={settings ? "Inbox" : "Settings"}
-                    onPress={() => {
-                      setSettings(!settings);
-                      setError("");
-                    }}
-                    t={t}
-                  />
+                  <Brand t={t} />
+                  <View style={t.styles.inline}>
+                    <IconButton
+                      label="Customer alert setup"
+                      icon={Bell}
+                      onPress={alerts.open}
+                      disabled={!project}
+                      t={t}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Your account and settings"
+                      onPress={() => setSettings(true)}
+                    >
+                      <Avatar
+                        name={me.user.name || me.user.email}
+                        size={40}
+                        t={t}
+                      />
+                    </Pressable>
+                  </View>
                 </View>
-                <Text style={t.styles.small}>
-                  {project?.name || "Support inbox"} ·{" "}
-                  {me.user.name || me.user.email}
-                </Text>
+                {(!target || settings) && (
+                  <View style={t.styles.row}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Choose support workspace"
+                      onPress={() => setShowProjects(true)}
+                      style={{ gap: 5, flexShrink: 1 }}
+                    >
+                      <Text style={t.styles.eyebrow}>WORKSPACE</Text>
+                      <View style={t.styles.inline}>
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            t.styles.label,
+                            { fontSize: 17, flexShrink: 1 },
+                          ]}
+                        >
+                          {project?.name || "Choose a project"}
+                        </Text>
+                        <ChevronDown size={15} color={t.colors.muted} />
+                      </View>
+                    </Pressable>
+                    {project && (
+                      <Badge
+                        title={
+                          alerts.checking
+                            ? "Checking alerts"
+                            : !alerts.ready
+                              ? "Alerts off"
+                              : alerts.paused
+                                ? "Paused"
+                                : alerts.preference?.onCall
+                                  ? "On call"
+                                  : "Assigned only"
+                        }
+                        kind={
+                          (!alerts.ready && !alerts.checking) || alerts.paused
+                            ? "human"
+                            : "neutral"
+                        }
+                        t={t}
+                      />
+                    )}
+                  </View>
+                )}
               </View>
               {!!error && (
                 <Text accessibilityRole="alert" style={t.styles.error}>
@@ -321,6 +360,7 @@ export default function App() {
                   }}
                   onRefresh={loadMe}
                   onChangeServer={openServer}
+                  alerts={alerts}
                 />
               ) : !project ? (
                 <View style={t.styles.center}>
@@ -354,6 +394,7 @@ export default function App() {
               ) : (
                 <InboxScreen
                   key={projectId}
+                  alerts={alerts}
                   projectId={project.id}
                   enabled={!!project.supportConfig?.enabled}
                   onOpen={(cid) =>
@@ -363,9 +404,103 @@ export default function App() {
                   active={active}
                 />
               )}
+              {(!target || settings) && (
+                <View style={t.styles.bottomBar}>
+                  {[
+                    [false, "Inbox", InboxIcon],
+                    [true, "Settings", Settings2],
+                  ].map(([isSettings, label, Icon]) => {
+                    const selected = settings === isSettings;
+                    const TabIcon = Icon as typeof InboxIcon;
+                    return (
+                      <Pressable
+                        key={String(label)}
+                        accessibilityRole="tab"
+                        accessibilityLabel={String(label)}
+                        accessibilityState={{ selected }}
+                        onPress={() => {
+                          setSettings(!!isSettings);
+                          setError("");
+                        }}
+                        style={[
+                          t.styles.navItem,
+                          selected && { backgroundColor: t.colors.soft },
+                        ]}
+                      >
+                        <TabIcon
+                          size={21}
+                          strokeWidth={selected ? 2 : 1.6}
+                          color={selected ? t.colors.forest : t.colors.muted}
+                        />
+                        <Text
+                          style={[
+                            t.styles.navLabel,
+                            selected && { color: t.colors.forest },
+                          ]}
+                        >
+                          {String(label)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
             </>
           )}
         </View>
+        <Modal
+          visible={showProjects}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowProjects(false)}
+        >
+          <SafeAreaView style={t.styles.screen}>
+            <ScrollView contentContainerStyle={{ padding: 24, gap: 20 }}>
+              <View style={t.styles.row}>
+                <Text style={t.styles.title}>Your workspaces</Text>
+                <IconButton
+                  label="Close workspaces"
+                  icon={X}
+                  onPress={() => setShowProjects(false)}
+                  t={t}
+                />
+              </View>
+              <Text style={t.styles.body}>
+                Choose the team you’re here to help.
+              </Text>
+              {me?.projects.map((p) => (
+                <Pressable
+                  key={p.id}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setProjectId(p.id);
+                    setTarget(null);
+                    setShowProjects(false);
+                  }}
+                  style={t.styles.card}
+                >
+                  <SettingsRow
+                    title={p.name}
+                    subtitle={
+                      p.supportConfig?.enabled
+                        ? "Customer support enabled"
+                        : "Customer support paused"
+                    }
+                    icon={Users}
+                    end={
+                      p.id === projectId ? (
+                        <Check size={21} color={t.colors.forest} />
+                      ) : (
+                        <ChevronRight size={18} color={t.colors.muted} />
+                      )
+                    }
+                    t={t}
+                  />
+                </Pressable>
+              ))}
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
         <Modal
           visible={showServer}
           animationType="slide"
@@ -460,8 +595,8 @@ export default function App() {
 }
 
 const filters = [
-  ["needs_human", "Needs a human"],
-  ["mine", "Mine"],
+  ["needs_human", "Needs you"],
+  ["mine", "Assigned"],
   ["ai", "AI handling"],
   ["resolved", "Resolved"],
 ] as const;
@@ -471,12 +606,14 @@ function InboxScreen({
   onOpen,
   t,
   active,
+  alerts,
 }: {
   projectId: string;
   enabled: boolean;
   onOpen(id: string): void;
   t: Theme;
   active: boolean;
+  alerts: AlertSetupController;
 }) {
   const [filter, setFilter] = useState<string>("needs_human");
   const [data, setData] = useState<Inbox>({
@@ -542,26 +679,62 @@ function InboxScreen({
   }, [filter, active]);
   return (
     <View style={{ flex: 1 }}>
-      <View style={t.styles.tabs}>
+      <View
+        style={[
+          t.styles.section,
+          t.styles.row,
+          { alignItems: "flex-end", paddingTop: 0, paddingBottom: 20 },
+        ]}
+      >
+        <View style={{ gap: 5 }}>
+          <Text style={[t.styles.title, { fontSize: 34, lineHeight: 40 }]}>
+            Your inbox
+          </Text>
+          <Text style={t.styles.small}>
+            A human touch makes all the difference.
+          </Text>
+        </View>
+        <View style={[t.styles.inline, { gap: 5, paddingBottom: 4 }]}>
+          <View style={t.styles.statusDot} />
+          <Text style={t.styles.eyebrow}>
+            {active && !error ? "LIVE" : error ? "RETRY" : "PAUSED"}
+          </Text>
+        </View>
+      </View>
+      <AlertBanner alerts={alerts} t={t} />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
+        contentContainerStyle={t.styles.tabs}
+      >
         {filters.map(([value, label]) => (
           <Pressable
             key={value}
-            accessibilityRole="button"
+            accessibilityRole="tab"
             accessibilityState={{ selected: value === filter }}
             onPress={() => setFilter(value)}
-            style={[t.styles.tab, value === filter && t.styles.primary]}
+            style={({ pressed }) => [
+              t.styles.tab,
+              value === filter && t.styles.primary,
+              pressed && t.styles.pressed,
+            ]}
           >
             <Text
-              style={[t.styles.small, value === filter && t.styles.primaryText]}
+              style={[
+                t.styles.small,
+                { fontWeight: "600" },
+                value === filter && t.styles.primaryText,
+              ]}
             >
               {label}
             </Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
       {!enabled && (
         <Text style={t.styles.error}>
-          Support is disabled for this project. Existing conversations remain
+          Support is paused for this workspace. Existing conversations are still
           available.
         </Text>
       )}
@@ -572,6 +745,7 @@ function InboxScreen({
       )}
       <FlatList
         data={data.conversations}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
         keyExtractor={(c) => c.id}
         refreshControl={
           <RefreshControl
@@ -580,55 +754,211 @@ function InboxScreen({
               setLoading(true);
               void load();
             }}
-            tintColor={t.colors.text}
+            tintColor={t.colors.forest}
           />
         }
         ListEmptyComponent={
-          <View style={t.styles.center}>
-            <Text style={t.styles.title}>
-              {loading ? "Loading conversations…" : "You’re all caught up"}
-            </Text>
-            <Text style={t.styles.small}>
-              {loading
-                ? ""
-                : "Pull to refresh. Enable notifications in Settings to hear when help is needed."}
-            </Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => onOpen(item.id)}
-            style={t.styles.item}
-          >
-            <View style={t.styles.row}>
-              <Text style={t.styles.label}>
-                {item.unread ? "● " : ""}
-                {item.customer.name || "Visitor"}
+          loading ? (
+            <View
+              accessibilityLabel="Loading conversations"
+              style={{ paddingTop: 6 }}
+            >
+              {[0, 1, 2].map((i) => (
+                <View key={i} style={[t.styles.item, { gap: 15 }]}>
+                  <View style={t.styles.inline}>
+                    <View style={t.styles.avatar} />
+                    <View
+                      style={{
+                        height: 12,
+                        width: "40%",
+                        borderRadius: 5,
+                        backgroundColor: t.colors.soft,
+                      }}
+                    />
+                  </View>
+                  <View
+                    style={{
+                      height: 10,
+                      width: "90%",
+                      borderRadius: 5,
+                      backgroundColor: t.colors.soft,
+                    }}
+                  />
+                  <View
+                    style={{
+                      height: 10,
+                      width: "60%",
+                      borderRadius: 5,
+                      backgroundColor: t.colors.soft,
+                    }}
+                  />
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View
+              style={[t.styles.center, { minHeight: 290, paddingBottom: 50 }]}
+            >
+              <View
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: 30,
+                  backgroundColor: t.colors.soft,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 7,
+                }}
+              >
+                <InboxIcon
+                  size={35}
+                  strokeWidth={1.3}
+                  color={t.colors.forest}
+                />
+                <View
+                  style={{
+                    position: "absolute",
+                    right: -4,
+                    bottom: 0,
+                    backgroundColor: t.colors.accent,
+                    borderRadius: 12,
+                    padding: 5,
+                    borderWidth: 3,
+                    borderColor: t.colors.bg,
+                  }}
+                >
+                  <Check size={14} color={t.colors.ink} />
+                </View>
+              </View>
+              <Text style={[t.styles.title, { fontSize: 23 }]}>
+                {error
+                  ? "Let’s reconnect"
+                  : filter === "resolved"
+                    ? "Good endings start here"
+                    : filter === "ai"
+                      ? "No AI conversations yet"
+                      : "All clear for now."}
               </Text>
-              <Text style={t.styles.small}>
-                {new Date(item.updatedAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+              <Text
+                style={[
+                  t.styles.body,
+                  { textAlign: "center", fontSize: 14, maxWidth: 270 },
+                ]}
+              >
+                {error
+                  ? "Pull down to try loading your conversations again."
+                  : filter === "needs_human"
+                    ? alerts.ready
+                      ? "When someone needs a person, you’ll find their conversation here."
+                      : "Human requests will appear here. Turn on alerts to hear when you’re needed."
+                    : filter === "mine"
+                      ? "Conversations you take over or get assigned will appear here."
+                      : filter === "ai"
+                        ? "Conversations your AI assistant is handling will appear here."
+                        : "Resolved conversations will be saved here."}
               </Text>
             </View>
-            <Text numberOfLines={2} style={t.styles.text}>
-              {item.messages[0]?.content || "New support conversation"}
-            </Text>
-            <Text style={t.styles.small}>
-              {item.assignee?.name
-                ? `Assigned to ${item.assignee.name}`
-                : item.state === "AI" && !item.humanRequested
-                  ? "AI is helping"
-                  : "Waiting for your team"}
-            </Text>
-          </Pressable>
-        )}
+          )
+        }
+        renderItem={({ item }) => {
+          const name = item.customer.name || "Visitor";
+          const kind =
+            item.state === "RESOLVED"
+              ? "resolved"
+              : item.state === "AI" && !item.humanRequested
+                ? "ai"
+                : "human";
+          const time = new Date(item.updatedAt);
+          const sameDay = time.toDateString() === new Date().toDateString();
+          return (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${name}${item.unread ? ", unread" : ""}. ${item.messages[0]?.content || "New support conversation"}`}
+              onPress={() => onOpen(item.id)}
+              style={({ pressed }) => [
+                t.styles.item,
+                item.unread && { borderColor: t.dark ? "#426c4d" : "#c6d9b7" },
+                pressed && t.styles.pressed,
+              ]}
+            >
+              <View style={[t.styles.inline, { alignItems: "flex-start" }]}>
+                <Avatar name={name} t={t} />
+                <View style={{ flex: 1, gap: 7 }}>
+                  <View
+                    style={[
+                      t.styles.inline,
+                      { justifyContent: "space-between", gap: 8 },
+                    ]}
+                  >
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        t.styles.label,
+                        { flex: 1, fontWeight: item.unread ? "700" : "600" },
+                      ]}
+                    >
+                      {name}
+                    </Text>
+                    <Text style={[t.styles.small, { fontSize: 10 }]}>
+                      {sameDay
+                        ? time.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : time.toLocaleDateString([], {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                    </Text>
+                    {item.unread && <View style={t.styles.statusDot} />}
+                  </View>
+                  <Text
+                    numberOfLines={2}
+                    style={[
+                      t.styles.text,
+                      {
+                        color: item.unread ? t.colors.text : t.colors.muted,
+                        fontSize: 14,
+                        lineHeight: 21,
+                      },
+                    ]}
+                  >
+                    {item.messages[0]?.content || "New support conversation"}
+                  </Text>
+                </View>
+              </View>
+              <View style={t.styles.row}>
+                <Badge
+                  title={
+                    kind === "ai"
+                      ? "AI is helping"
+                      : kind === "resolved"
+                        ? "Resolved"
+                        : item.state === "HUMAN"
+                          ? "With your team"
+                          : "Needs a human"
+                  }
+                  kind={kind}
+                  t={t}
+                />
+                <View style={[t.styles.inline, { gap: 5 }]}>
+                  <Users size={11} color={t.colors.muted} />
+                  <Text style={[t.styles.small, { fontSize: 10 }]}>
+                    {item.assignee?.name || "Unassigned"}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          );
+        }}
         ListFooterComponent={
           data.nextCursor ? (
-            <View style={{ padding: 16 }}>
-              <Button title="Load more" onPress={() => void load(true)} t={t} />
+            <View style={{ padding: 20 }}>
+              <Button
+                title="Load more conversations"
+                onPress={() => void load(true)}
+                t={t}
+              />
             </View>
           ) : undefined
         }
@@ -676,6 +1006,7 @@ function Chat({
   const [suggestion, setSuggestion] = useState<Assistance | null>(null);
   const [teammates, setTeammates] = useState<ProjectDetails["teammates"]>([]);
   const [assigning, setAssigning] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const activeRef = useRef(active);
   activeRef.current = active;
   const alive = useRef(true);
@@ -837,19 +1168,75 @@ function Chat({
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={{ padding: 16, gap: 8 }}>
-        <View style={t.styles.row}>
-          <Button title="← Inbox" onPress={onBack} t={t} />
-          <Text style={t.styles.label}>
-            {conversation?.customer.name || "Visitor"}
-          </Text>
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 8,
+          paddingBottom: 15,
+          gap: 13,
+          borderBottomWidth: 1,
+          borderColor: t.colors.line,
+        }}
+      >
+        <View style={[t.styles.inline, { gap: 12 }]}>
+          <IconButton
+            label="Back to inbox"
+            icon={ArrowLeft}
+            onPress={onBack}
+            t={t}
+          />
+          <Avatar
+            name={conversation?.customer.name || "Visitor"}
+            size={42}
+            t={t}
+          />
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text numberOfLines={1} style={[t.styles.label, { fontSize: 17 }]}>
+              {conversation?.customer.name || "Visitor"}
+            </Text>
+            <Text style={t.styles.small}>
+              {conversation?.ticketReference || "Customer conversation"}
+            </Text>
+          </View>
+          <IconButton
+            label="Conversation actions"
+            icon={MoreHorizontal}
+            onPress={() => setShowActions(true)}
+            t={t}
+            disabled={!conversation}
+          />
         </View>
-        <Text style={t.styles.small}>
-          {label}
-          {conversation?.ticketReference
-            ? ` · ${conversation.ticketReference}`
-            : ""}
-        </Text>
+        <View style={t.styles.row}>
+          <Badge
+            title={label}
+            kind={
+              conversation?.state === "RESOLVED"
+                ? "resolved"
+                : mine ||
+                    conversation?.humanRequested ||
+                    conversation?.state === "WAITING"
+                  ? "human"
+                  : "ai"
+            }
+            t={t}
+          />
+          <Pressable
+            accessibilityRole="button"
+            disabled={busy || !conversation}
+            onPress={() => void assist("summary")}
+            style={[t.styles.inline, { minHeight: 32, gap: 5 }]}
+          >
+            <Sparkles size={13} color={t.colors.forest} />
+            <Text
+              style={[
+                t.styles.small,
+                { color: t.colors.forest, fontWeight: "600" },
+              ]}
+            >
+              AI summary
+            </Text>
+          </Pressable>
+        </View>
       </View>
       {!!error && (
         <Text accessibilityRole="alert" style={t.styles.error}>
@@ -857,33 +1244,45 @@ function Chat({
         </Text>
       )}
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 14 }}
+        contentContainerStyle={{ padding: 20, gap: 16 }}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={false}
             onRefresh={() => void refresh()}
-            tintColor={t.colors.text}
+            tintColor={t.colors.forest}
           />
         }
       >
-        {!conversation && <ActivityIndicator color={t.colors.text} />}
+        {!conversation && <ActivityIndicator color={t.colors.forest} />}
+        {conversation && (
+          <View style={{ alignItems: "center", paddingVertical: 3 }}>
+            <Text style={t.styles.eyebrow}>THE CONVERSATION SO FAR</Text>
+          </View>
+        )}
         {summary && (
-          <View style={t.styles.card}>
-            <Text style={t.styles.label}>
-              AI handoff summary
-              {summary.revision !== conversation?.revision
-                ? " · Older version"
-                : ""}
-            </Text>
+          <View style={[t.styles.card, { backgroundColor: t.colors.soft }]}>
+            <View style={t.styles.inline}>
+              <Sparkles size={17} color={t.colors.forest} />
+              <Text style={t.styles.label}>
+                AI handoff summary
+                {summary.revision !== conversation?.revision
+                  ? " · Older version"
+                  : ""}
+              </Text>
+            </View>
             <Text style={t.styles.text}>{summary.text}</Text>
+            <Text style={t.styles.small}>Only visible to your team</Text>
           </View>
         )}
         {conversation?.messages.map((message) =>
           message.role === "SYSTEM" ? (
             <Text
               key={message.id}
-              style={[t.styles.small, { textAlign: "center" }]}
+              style={[
+                t.styles.small,
+                { textAlign: "center", fontSize: 10, paddingVertical: 5 },
+              ]}
             >
               {message.content}
             </Text>
@@ -896,15 +1295,23 @@ function Chat({
                 message.role === "NOTE" && t.styles.note,
               ]}
             >
-              <Text
-                style={[
-                  t.styles.small,
-                  message.role === "AGENT" && { color: t.colors.ink },
-                ]}
-              >
-                {message.role === "NOTE" ? "Private note · " : ""}
-                {message.authorName}
-              </Text>
+              <View style={[t.styles.inline, { gap: 5 }]}>
+                {message.role === "NOTE" ? (
+                  <NotebookPen size={11} color={t.colors.amber} />
+                ) : message.role === "ASSISTANT" ? (
+                  <Sparkles size={11} color={t.colors.forest} />
+                ) : null}
+                <Text
+                  style={[
+                    t.styles.small,
+                    { fontWeight: "600", fontSize: 10 },
+                    message.role === "AGENT" && { color: t.colors.ink },
+                  ]}
+                >
+                  {message.role === "NOTE" ? "Private note · " : ""}
+                  {message.authorName}
+                </Text>
+              </View>
               <Text
                 selectable
                 style={[
@@ -917,6 +1324,7 @@ function Chat({
               <Text
                 style={[
                   t.styles.small,
+                  { alignSelf: "flex-end", fontSize: 9 },
                   message.role === "AGENT" && { color: t.colors.ink },
                 ]}
               >
@@ -929,48 +1337,65 @@ function Chat({
           ),
         )}
       </ScrollView>
-      {conversation && (
+      {conversation && conversation.state !== "RESOLVED" && (
         <View style={t.styles.composer}>
-          <View style={t.styles.row}>
-            <Button
-              title="AI summary"
-              onPress={() => void assist("summary")}
-              disabled={busy}
-              t={t}
-            />
-            {conversation.state !== "RESOLVED" && (
+          {!mine && conversation.state !== "HUMAN" && !note && (
+            <>
               <Button
-                title="Reassign"
-                onPress={() => setAssigning(true)}
-                disabled={busy}
-                t={t}
-              />
-            )}
-          </View>
-          {conversation.state !== "RESOLVED" &&
-            !mine &&
-            conversation.state !== "HUMAN" && (
-              <Button
-                title={busy ? "Taking over…" : "Take over conversation"}
-                onPress={() => void mutate("takeover")}
+                title={busy ? "Taking over…" : "Take over & reply"}
+                icon={MessageCircle}
                 primary
+                onPress={() => void mutate("takeover")}
                 disabled={busy}
                 t={t}
               />
-            )}
-          {(mine || note) && conversation.state !== "RESOLVED" && (
+              <Text
+                style={[t.styles.small, { textAlign: "center", fontSize: 10 }]}
+              >
+                You’re in control. Customer-facing AI pauses when you take over.
+              </Text>
+            </>
+          )}
+          {(mine || note) && (
             <>
               <View style={t.styles.row}>
-                <Text style={t.styles.label}>
-                  {note ? "Private team note" : "Your reply"}
-                </Text>
-                <Switch
+                <View style={t.styles.inline}>
+                  {note ? (
+                    <NotebookPen size={14} color={t.colors.amber} />
+                  ) : (
+                    <MessageCircle size={14} color={t.colors.forest} />
+                  )}
+                  <Text style={[t.styles.label, { fontSize: 12 }]}>
+                    {note ? "Private team note" : "Reply to customer"}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="switch"
                   accessibilityLabel="Private note"
-                  value={note}
+                  accessibilityState={{
+                    checked: note,
+                    disabled: busy || !!pending,
+                  }}
                   disabled={busy || !!pending}
-                  onValueChange={changeMode}
-                  trackColor={{ true: t.colors.accent }}
-                />
+                  onPress={() => changeMode(!note)}
+                  style={{
+                    minHeight: 36,
+                    justifyContent: "center",
+                    paddingHorizontal: 8,
+                  }}
+                >
+                  <Text
+                    style={[
+                      t.styles.small,
+                      {
+                        fontWeight: "600",
+                        color: note ? t.colors.amber : t.colors.forest,
+                      },
+                    ]}
+                  >
+                    {note ? "Switch to reply" : "Add a note"}
+                  </Text>
+                </Pressable>
               </View>
               <TextInput
                 accessibilityLabel={note ? "Private note" : "Reply to customer"}
@@ -984,22 +1409,42 @@ function Chat({
                 }}
                 placeholder={
                   note
-                    ? "Only your team can see this…"
-                    : "Write to your customer…"
+                    ? "Just between your team…"
+                    : "A thoughtful reply goes a long way…"
                 }
                 placeholderTextColor={t.colors.muted}
-                style={t.styles.input}
+                style={[
+                  t.styles.input,
+                  {
+                    minHeight: 74,
+                    maxHeight: 135,
+                    backgroundColor: note ? t.colors.note : t.colors.bg,
+                  },
+                ]}
               />
               {suggestion && (
                 <Text
-                  style={[t.styles.small, stale && { color: t.colors.error }]}
+                  style={[
+                    t.styles.small,
+                    { fontSize: 10 },
+                    stale && { color: t.colors.error },
+                  ]}
                 >
                   {stale
                     ? "New activity since this AI draft. Review before sending."
-                    : "AI draft · Review and edit before sending"}
+                    : "AI draft · Yours to review, edit, and send"}
                 </Text>
               )}
-              <View style={t.styles.row}>
+              <View style={[t.styles.inline, { gap: 9 }]}>
+                {!note && (
+                  <Button
+                    title="AI draft"
+                    icon={Sparkles}
+                    onPress={() => void assist("draft")}
+                    disabled={busy || !!pending || !!text.trim()}
+                    t={t}
+                  />
+                )}
                 <Button
                   title={
                     busy
@@ -1010,84 +1455,150 @@ function Chat({
                           ? "Save note"
                           : "Send reply"
                   }
-                  onPress={() => void send()}
+                  icon={note ? NotebookPen : Send}
                   primary
+                  onPress={() => void send()}
                   disabled={busy || !text.trim()}
                   t={t}
+                  style={{ flex: 1 }}
                 />
-                {!note && (
-                  <Button
-                    title="Suggest reply"
-                    onPress={() => void assist("draft")}
-                    disabled={busy || !!pending || !!text.trim()}
-                    t={t}
-                  />
-                )}
               </View>
             </>
           )}
-          {mine && (
-            <View style={t.styles.row}>
-              <Button
-                title="Resolve"
-                onPress={() => void mutate("resolve")}
-                disabled={busy || !!pending}
-                t={t}
-              />
-              <Button
-                title="Return to AI"
-                onPress={() =>
-                  Alert.alert(
-                    "Return to AI?",
-                    "The AI assistant will handle the next customer message.",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Return to AI",
-                        onPress: () => void mutate("ai"),
-                      },
-                    ],
-                  )
-                }
-                disabled={busy || !!pending}
-                t={t}
-              />
-            </View>
-          )}
-          {mine && (
-            <Button
-              title="Create task from conversation"
-              onPress={() => void mutate("ticket")}
-              disabled={busy}
-              t={t}
-            />
-          )}
-          {!mine && conversation.state !== "RESOLVED" && (
-            <Button
-              title={note ? "Close note" : "Add private note"}
-              onPress={() => changeMode(!note)}
+          {!mine && (
+            <Pressable
+              accessibilityRole="button"
               disabled={busy || !!pending}
-              t={t}
-            />
+              onPress={() => changeMode(!note)}
+              style={{
+                minHeight: 36,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={[t.styles.small, { fontWeight: "600" }]}>
+                {note ? "Close private note" : "Add a private team note"}
+              </Text>
+            </Pressable>
           )}
-          <Text style={t.styles.small}>
-            AI assistance uses your project’s shared AI allowance.
-          </Text>
         </View>
       )}
       <Modal
+        visible={showActions}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowActions(false)}
+      >
+        <SafeAreaView style={t.styles.screen}>
+          <ScrollView contentContainerStyle={{ padding: 24, gap: 20 }}>
+            <View style={t.styles.row}>
+              <Text style={t.styles.title}>Conversation</Text>
+              <IconButton
+                label="Close conversation actions"
+                icon={X}
+                onPress={() => setShowActions(false)}
+                t={t}
+              />
+            </View>
+            <Text style={t.styles.body}>
+              The right next step, with a little help.
+            </Text>
+            <Button
+              title="Get an AI summary"
+              icon={Sparkles}
+              onPress={() => {
+                setShowActions(false);
+                void assist("summary");
+              }}
+              disabled={busy}
+              t={t}
+            />
+            {conversation?.state !== "RESOLVED" && (
+              <Button
+                title="Reassign conversation"
+                icon={Users}
+                onPress={() => {
+                  setShowActions(false);
+                  setAssigning(true);
+                }}
+                disabled={busy}
+                t={t}
+              />
+            )}
+            {mine && (
+              <>
+                <Button
+                  title="Mark as resolved"
+                  icon={CheckCheck}
+                  onPress={() => {
+                    setShowActions(false);
+                    void mutate("resolve");
+                  }}
+                  disabled={busy || !!pending}
+                  primary
+                  t={t}
+                />
+                <Button
+                  title="Return to AI"
+                  icon={Sparkles}
+                  onPress={() => {
+                    setShowActions(false);
+                    Alert.alert(
+                      "Return to AI?",
+                      "The AI assistant will handle the next customer message.",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Return to AI",
+                          onPress: () => void mutate("ai"),
+                        },
+                      ],
+                    );
+                  }}
+                  disabled={busy || !!pending}
+                  t={t}
+                />
+                <Button
+                  title="Create a task from this conversation"
+                  icon={NotebookPen}
+                  onPress={() => {
+                    setShowActions(false);
+                    void mutate("ticket");
+                  }}
+                  disabled={busy}
+                  t={t}
+                />
+              </>
+            )}
+            <Text style={t.styles.small}>
+              AI assistance uses your project’s shared AI allowance. Drafts are
+              never sent automatically.
+            </Text>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+      <Modal
         visible={assigning}
         animationType="slide"
-        onRequestClose={() => setAssigning(false)}
         presentationStyle="pageSheet"
+        onRequestClose={() => setAssigning(false)}
       >
         <SafeAreaView style={t.styles.screen}>
           <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
-            <Text style={t.styles.title}>Assign this conversation</Text>
+            <View style={t.styles.row}>
+              <Text style={t.styles.title}>Find the right person</Text>
+              <IconButton
+                label="Close assignment"
+                icon={X}
+                onPress={() => setAssigning(false)}
+                t={t}
+              />
+            </View>
             {teammates.map((member) => (
               <Button
                 key={member.id}
                 title={`${member.id === userId ? "You" : member.name || "Teammate"}${member.id === conversation?.assignedToId ? " · Current assignee" : ""}`}
+                icon={Users}
                 onPress={() => {
                   setAssigning(false);
                   void mutate("assign", { assigneeId: member.id });
@@ -1103,7 +1614,6 @@ function Chat({
               }}
               t={t}
             />
-            <Button title="Cancel" onPress={() => setAssigning(false)} t={t} />
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -1118,6 +1628,7 @@ function Settings({
   onProject,
   onRefresh,
   onChangeServer,
+  alerts,
 }: {
   t: Theme;
   me: Me;
@@ -1125,28 +1636,34 @@ function Settings({
   onProject(id: string): void;
   onRefresh(): Promise<Me>;
   onChangeServer(): void;
+  alerts: AlertSetupController;
 }) {
   const [details, setDetails] = useState<ProjectDetails | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    if (projectId)
-      void api
-        .request<ProjectDetails>(projectPath(projectId))
-        .then(setDetails)
-        .catch((e) => setError(describe(e)));
+  const loadDetails = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      setDetails(await api.request<ProjectDetails>(projectPath(projectId)));
+      setError("");
+    } catch (e) {
+      setError(describe(e));
+    }
   }, [projectId]);
-  const update = async (value: Preferences, register = false) => {
+  useEffect(() => {
+    void loadDetails();
+  }, [loadDetails]);
+  const update = async (value: Preferences) => {
     if (!projectId) return;
     setBusy(true);
     setError("");
     try {
-      if (register) await registerNotifications();
       await api.request(projectPath(projectId), "PUT", value);
       setDetails((old) => ({
         teammates: old?.teammates || [],
         preference: value,
       }));
+      await alerts.retry();
     } catch (e) {
       setError(describe(e));
     } finally {
@@ -1158,97 +1675,213 @@ function Settings({
     onCall: true,
     quietUntil: null,
   };
+  const paused =
+    !!preference.quietUntil && Date.parse(preference.quietUntil) > Date.now();
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }}>
-      <Text style={t.styles.title}>Your support settings</Text>
+    <ScrollView
+      contentContainerStyle={{
+        paddingHorizontal: 20,
+        paddingBottom: 28,
+        gap: 22,
+      }}
+    >
+      <View style={{ gap: 5, paddingHorizontal: 4 }}>
+        <Text style={[t.styles.title, { fontSize: 34, lineHeight: 40 }]}>
+          Settings
+        </Text>
+        <Text style={t.styles.small}>Your workspace. Your availability.</Text>
+      </View>
       <View style={t.styles.card}>
-        <Text style={t.styles.label}>Upstep server</Text>
-        <Text style={t.styles.small}>{api.baseUrl}</Text>
-        <Button title="Change server" onPress={onChangeServer} t={t} />
+        <View style={t.styles.inline}>
+          <Avatar name={me.user.name || me.user.email} size={50} t={t} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={[t.styles.label, { fontSize: 17 }]}>
+              {me.user.name || "Your account"}
+            </Text>
+            <Text style={t.styles.small}>{me.user.email}</Text>
+          </View>
+        </View>
       </View>
       {!!error && (
         <Text accessibilityRole="alert" style={t.styles.error}>
           {error}
         </Text>
       )}
-      <View style={t.styles.card}>
-        <Text style={t.styles.label}>Projects</Text>
-        {me.projects.map((project) => (
-          <Button
-            key={project.id}
-            title={`${project.id === projectId ? "✓ " : ""}${project.name}`}
-            onPress={() => onProject(project.id)}
-            t={t}
-          />
-        ))}
-        <Button
-          title="Refresh projects"
-          onPress={() => void onRefresh().catch((e) => setError(describe(e)))}
-          t={t}
-        />
-      </View>
-      {projectId && details && (
+      <View style={{ gap: 10 }}>
+        <Text style={[t.styles.eyebrow, { paddingLeft: 4 }]}>
+          STAY IN THE LOOP
+        </Text>
         <View style={t.styles.card}>
-          <View style={t.styles.row}>
-            <Text style={t.styles.label}>Mobile notifications</Text>
-            <Switch
-              accessibilityLabel="Mobile notifications"
-              value={preference.enabled}
-              disabled={busy}
-              onValueChange={(enabled) =>
-                void update({ ...preference, enabled }, enabled)
-              }
-              trackColor={{ true: t.colors.accent }}
-            />
-          </View>
-          <Text style={t.styles.small}>
-            Alerts for assignments and customer replies. Customer messages stay
-            hidden on your lock screen.
-          </Text>
-          <View style={t.styles.row}>
-            <Text style={t.styles.label}>On call for new requests</Text>
-            <Switch
-              accessibilityLabel="On call for unassigned requests"
-              value={preference.onCall}
-              disabled={busy || !preference.enabled}
-              onValueChange={(onCall) => void update({ ...preference, onCall })}
-              trackColor={{ true: t.colors.accent }}
-            />
-          </View>
-          <Text style={t.styles.small}>
-            Stay reachable when the app is closed. This does not show you as
-            online to customers.
-          </Text>
-          <Button
-            title={
-              preference.quietUntil &&
-              Date.parse(preference.quietUntil) > Date.now()
-                ? "Resume notifications"
-                : "Pause alerts for one hour"
+          <SettingsRow
+            title="Customer alerts"
+            subtitle={
+              alerts.ready
+                ? "This phone is connected to your team."
+                : "Get notified when you’re needed."
             }
-            onPress={() =>
-              void update({
-                ...preference,
-                quietUntil:
-                  preference.quietUntil &&
-                  Date.parse(preference.quietUntil) > Date.now()
-                    ? null
-                    : new Date(Date.now() + 3600_000).toISOString(),
-              })
-            }
-            disabled={busy || !preference.enabled}
+            icon={Bell}
             t={t}
+            end={
+              <Switch
+                accessibilityLabel="Mobile notifications"
+                value={preference.enabled && alerts.ready}
+                disabled={busy || !details}
+                onValueChange={(enabled) =>
+                  enabled
+                    ? alerts.open()
+                    : void update({ ...preference, enabled: false })
+                }
+                trackColor={{ true: t.colors.forest }}
+                thumbColor={t.colors.card}
+              />
+            }
           />
+          {!details ? (
+            <Button
+              title="Reload alert settings"
+              onPress={() => void loadDetails()}
+              t={t}
+            />
+          ) : (
+            <>
+              {!alerts.ready && (
+                <Button
+                  title="Set up customer alerts"
+                  icon={ArrowRight}
+                  primary
+                  onPress={alerts.open}
+                  t={t}
+                />
+              )}
+              <View style={t.styles.divider} />
+              <SettingsRow
+                title="On call for new requests"
+                subtitle="Help customers who haven’t been assigned yet."
+                icon={Users}
+                t={t}
+                end={
+                  <Switch
+                    accessibilityLabel="On call for unassigned requests"
+                    value={preference.onCall}
+                    disabled={busy || !preference.enabled || !alerts.ready}
+                    onValueChange={(onCall) =>
+                      void update({ ...preference, onCall })
+                    }
+                    trackColor={{ true: t.colors.forest }}
+                    thumbColor={t.colors.card}
+                  />
+                }
+              />
+              <View style={t.styles.divider} />
+              <SettingsRow
+                title={
+                  paused ? "Resume customer alerts" : "Take a little break"
+                }
+                subtitle={
+                  paused
+                    ? "Alerts are paused for this workspace."
+                    : "Pause alerts for one hour."
+                }
+                icon={Clock3}
+                onPress={
+                  preference.enabled && !busy
+                    ? () =>
+                        void update({
+                          ...preference,
+                          quietUntil: paused
+                            ? null
+                            : new Date(Date.now() + 3600_000).toISOString(),
+                        })
+                    : undefined
+                }
+                t={t}
+              />
+            </>
+          )}
+          <View
+            style={[
+              t.styles.inline,
+              {
+                backgroundColor: t.colors.soft,
+                borderRadius: 12,
+                padding: 12,
+                alignItems: "flex-start",
+              },
+            ]}
+          >
+            <ShieldCheck size={14} color={t.colors.forest} />
+            <Text style={[t.styles.small, { flex: 1, fontSize: 10 }]}>
+              Customer messages stay hidden on your lock screen. Being on call
+              doesn’t show you as online.
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              void Linking.openSettings().catch((e) => setError(describe(e)))
+            }
+            style={{
+              minHeight: 36,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={[
+                t.styles.small,
+                { color: t.colors.forest, fontWeight: "600" },
+              ]}
+            >
+              Phone notification settings
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+      <View style={{ gap: 10 }}>
+        <Text style={[t.styles.eyebrow, { paddingLeft: 4 }]}>
+          YOUR WORKSPACES
+        </Text>
+        <View style={t.styles.card}>
+          {me.projects.map((project, index) => (
+            <React.Fragment key={project.id}>
+              {index > 0 && <View style={t.styles.divider} />}
+              <SettingsRow
+                title={project.name}
+                icon={Users}
+                onPress={() => onProject(project.id)}
+                end={
+                  project.id === projectId ? (
+                    <Check size={18} color={t.colors.forest} />
+                  ) : (
+                    <ChevronRight size={16} color={t.colors.muted} />
+                  )
+                }
+                t={t}
+              />
+            </React.Fragment>
+          ))}
           <Button
-            title="Register this phone again"
-            onPress={() => void update({ ...preference, enabled: true }, true)}
-            disabled={busy}
+            title="Refresh workspaces"
+            onPress={() => void onRefresh().catch((e) => setError(describe(e)))}
             t={t}
           />
         </View>
-      )}
+      </View>
+      <View style={{ gap: 10 }}>
+        <Text style={[t.styles.eyebrow, { paddingLeft: 4 }]}>CONNECTED TO</Text>
+        <View style={t.styles.card}>
+          <SettingsRow
+            title={api.baseUrl.replace(/^https?:\/\//, "")}
+            subtitle="Your Upstep server"
+            icon={Globe}
+            onPress={onChangeServer}
+            t={t}
+          />
+        </View>
+      </View>
       <Button
-        title={busy ? "Working…" : "Sign out and stop alerts on this phone"}
+        title={busy ? "Signing out…" : "Sign out on this phone"}
+        icon={LogOut}
         onPress={() => {
           setBusy(true);
           void api.signOut().catch((e) => {
@@ -1259,6 +1892,9 @@ function Settings({
         disabled={busy}
         t={t}
       />
+      <Text style={[t.styles.small, { textAlign: "center", fontSize: 10 }]}>
+        Signing out stops customer alerts on this phone.
+      </Text>
     </ScrollView>
   );
 }

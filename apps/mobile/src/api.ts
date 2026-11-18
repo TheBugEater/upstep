@@ -77,6 +77,9 @@ export class MobileApi {
   get hasSession() {
     return this.tokens !== null;
   }
+  get sessionGeneration() {
+    return this.generation;
+  }
   configureServer(origin: string) {
     if (this.tokens || this.refreshing)
       throw new ApiError("Sign out before changing servers.", 409);
