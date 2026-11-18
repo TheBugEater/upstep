@@ -1484,137 +1484,136 @@ function Chat({
         </View>
       )}
       <Modal
-        visible={showActions}
+        visible={showActions || assigning}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setShowActions(false)}
+        onRequestClose={() => {
+          setShowActions(false);
+          setAssigning(false);
+        }}
       >
         <SafeAreaView style={t.styles.screen}>
-          <ScrollView contentContainerStyle={{ padding: 24, gap: 20 }}>
-            <View style={t.styles.row}>
-              <Text style={t.styles.title}>Conversation</Text>
-              <IconButton
-                label="Close conversation actions"
-                icon={X}
-                onPress={() => setShowActions(false)}
+          {assigning ? (
+            <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
+              <View style={t.styles.row}>
+                <Text style={t.styles.title}>Find the right person</Text>
+                <IconButton
+                  label="Close assignment"
+                  icon={X}
+                  onPress={() => setAssigning(false)}
+                  t={t}
+                />
+              </View>
+              {teammates.map((member) => (
+                <Button
+                  key={member.id}
+                  title={`${member.id === userId ? "You" : member.name || "Teammate"}${member.id === conversation?.assignedToId ? " · Current assignee" : ""}`}
+                  icon={Users}
+                  onPress={() => {
+                    setAssigning(false);
+                    void mutate("assign", { assigneeId: member.id });
+                  }}
+                  t={t}
+                />
+              ))}
+              <Button
+                title="Return to unassigned queue"
+                onPress={() => {
+                  setAssigning(false);
+                  void mutate("assign", { assigneeId: null });
+                }}
                 t={t}
               />
-            </View>
-            <Text style={t.styles.body}>
-              The right next step, with a little help.
-            </Text>
-            <Button
-              title="Get an AI summary"
-              icon={Sparkles}
-              onPress={() => {
-                setShowActions(false);
-                void assist("summary");
-              }}
-              disabled={busy}
-              t={t}
-            />
-            {conversation?.state !== "RESOLVED" && (
+            </ScrollView>
+          ) : (
+            <ScrollView contentContainerStyle={{ padding: 24, gap: 20 }}>
+              <View style={t.styles.row}>
+                <Text style={t.styles.title}>Conversation</Text>
+                <IconButton
+                  label="Close conversation actions"
+                  icon={X}
+                  onPress={() => setShowActions(false)}
+                  t={t}
+                />
+              </View>
+              <Text style={t.styles.body}>
+                The right next step, with a little help.
+              </Text>
               <Button
-                title="Reassign conversation"
-                icon={Users}
+                title="Get an AI summary"
+                icon={Sparkles}
                 onPress={() => {
                   setShowActions(false);
-                  setAssigning(true);
+                  void assist("summary");
                 }}
                 disabled={busy}
                 t={t}
               />
-            )}
-            {mine && (
-              <>
+              {conversation?.state !== "RESOLVED" && (
                 <Button
-                  title="Mark as resolved"
-                  icon={CheckCheck}
+                  title="Reassign conversation"
+                  icon={Users}
                   onPress={() => {
                     setShowActions(false);
-                    void mutate("resolve");
-                  }}
-                  disabled={busy || !!pending}
-                  primary
-                  t={t}
-                />
-                <Button
-                  title="Return to AI"
-                  icon={Sparkles}
-                  onPress={() => {
-                    setShowActions(false);
-                    Alert.alert(
-                      "Return to AI?",
-                      "The AI assistant will handle the next customer message.",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Return to AI",
-                          onPress: () => void mutate("ai"),
-                        },
-                      ],
-                    );
-                  }}
-                  disabled={busy || !!pending}
-                  t={t}
-                />
-                <Button
-                  title="Create a task from this conversation"
-                  icon={NotebookPen}
-                  onPress={() => {
-                    setShowActions(false);
-                    void mutate("ticket");
+                    setAssigning(true);
                   }}
                   disabled={busy}
                   t={t}
                 />
-              </>
-            )}
-            <Text style={t.styles.small}>
-              AI assistance uses your project’s shared AI allowance. Drafts are
-              never sent automatically.
-            </Text>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-      <Modal
-        visible={assigning}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setAssigning(false)}
-      >
-        <SafeAreaView style={t.styles.screen}>
-          <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
-            <View style={t.styles.row}>
-              <Text style={t.styles.title}>Find the right person</Text>
-              <IconButton
-                label="Close assignment"
-                icon={X}
-                onPress={() => setAssigning(false)}
-                t={t}
-              />
-            </View>
-            {teammates.map((member) => (
-              <Button
-                key={member.id}
-                title={`${member.id === userId ? "You" : member.name || "Teammate"}${member.id === conversation?.assignedToId ? " · Current assignee" : ""}`}
-                icon={Users}
-                onPress={() => {
-                  setAssigning(false);
-                  void mutate("assign", { assigneeId: member.id });
-                }}
-                t={t}
-              />
-            ))}
-            <Button
-              title="Return to unassigned queue"
-              onPress={() => {
-                setAssigning(false);
-                void mutate("assign", { assigneeId: null });
-              }}
-              t={t}
-            />
-          </ScrollView>
+              )}
+              {mine && (
+                <>
+                  <Button
+                    title="Mark as resolved"
+                    icon={CheckCheck}
+                    onPress={() => {
+                      setShowActions(false);
+                      void mutate("resolve");
+                    }}
+                    disabled={busy || !!pending}
+                    primary
+                    t={t}
+                  />
+                  <Button
+                    title="Return to AI"
+                    icon={Sparkles}
+                    onPress={() => {
+                      Alert.alert(
+                        "Return to AI?",
+                        "The AI assistant will handle the next customer message.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Return to AI",
+                            onPress: () => {
+                              setShowActions(false);
+                              void mutate("ai");
+                            },
+                          },
+                        ],
+                      );
+                    }}
+                    disabled={busy || !!pending}
+                    t={t}
+                  />
+                  <Button
+                    title="Create a task from this conversation"
+                    icon={NotebookPen}
+                    onPress={() => {
+                      setShowActions(false);
+                      void mutate("ticket");
+                    }}
+                    disabled={busy}
+                    t={t}
+                  />
+                </>
+              )}
+              <Text style={t.styles.small}>
+                AI assistance uses your project’s shared AI allowance. Drafts
+                are never sent automatically.
+              </Text>
+            </ScrollView>
+          )}
         </SafeAreaView>
       </Modal>
     </KeyboardAvoidingView>
