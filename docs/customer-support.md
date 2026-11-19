@@ -82,7 +82,8 @@ follows new messages and layout changes while the customer is at the bottom;
 scrolling up pauses following until they return to the bottom or send a message.
 
 Each teammate can set **Support → Settings → Your support profile → Support
-display name**. This applies to new support replies across their projects,
+display name**, or **Settings → Support profile** in the mobile app. Both edit
+the same profile. This applies to new support replies across their projects,
 including replies sent from the mobile inbox. It leaves their sign-in identity
 and earlier message names intact. Leaving it blank uses their account name.
 

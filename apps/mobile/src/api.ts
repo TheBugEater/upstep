@@ -245,7 +245,7 @@ export type Project = {
   supportConfig: { enabled: boolean } | null;
 };
 export type Me = {
-  user: { id: string; name: string | null; email: string };
+  user: { id: string; name: string | null; email: string; supportDisplayName?: string | null };
   projects: Project[];
 };
 export type Message = {

@@ -4,13 +4,13 @@ Native teammate inbox for iPhone and Android, built with Expo SDK 58. This is
 separate from `packages/sdk-react-native`, which embeds customer-facing chat in
 someone else's product.
 
-Android internal preview: [download APK, version 0.1.0 (6)](https://expo.dev/artifacts/eas/oI5yqGgbiPAfuhciZV4sX4bY6_D9E35WynUdVp2hA64.apk)
-or [view the Expo build](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/48ffae2f-7e08-43ac-8ed9-ca578dd232de).
-This build includes native Firebase configuration. Its FCM v1 credential is
-configured in Expo and passed Google's validation-only send check.
+Get the newest finished **preview** build for your platform from the
+[Expo builds page](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds).
+Android previews provide an APK; iPhone previews install on registered test
+devices. New native settings require installing an updated preview.
 
-iPhone internal preview: [install version 0.1.0 (4) on the registered test iPhone](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/2d9a21c2-2250-4abc-873c-b9ad15ee5835).
-Apple signing and the APNs push key are configured for this build.
+Native Firebase/FCM configuration, Apple signing and the APNs push key are
+configured. FCM passed Google's validation-only send check.
 
 Both previews include runtime server selection. The mobile-compatible backend is
 deployed on `https://upstep.dev`; self-hosted servers need the backend update
@@ -28,6 +28,9 @@ before signing in. Physical-device push delivery has not yet been verified.
   foreground refresh and notification deep links.
 - Human takeover, idempotent replies, private notes, reassignment, resolve,
   return to AI and conversation-to-task creation.
+- **Settings → Support profile** lets each teammate edit their customer-facing
+  support display name. It syncs with the web support settings and applies to
+  new replies across projects. Leave it blank to use the account name.
 - Private AI summaries and editable draft replies. Nothing is auto-sent; private
   notes are excluded. Assistance uses the existing owner-level AI allowance.
 - Opt-in project notification preferences, on-call routing, one-hour snooze,

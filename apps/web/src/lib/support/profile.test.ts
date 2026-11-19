@@ -4,6 +4,8 @@ import test from "node:test";
 import { PrismaClient } from "@prisma/client";
 import { getSupportProfile, saveSupportProfile, supportAuthorName, supportProfileSchema } from "./profile";
 import { createSupportSession, startConversation, teamConversationAction } from "./service";
+import { createLoginCode, exchangeLoginCode, pkceChallenge, revokeMobileSession, mobileRequest, secret } from "../mobile/auth";
+import { saveMobileSupportProfile } from "../mobile/profile";
 
 test("support names accept a separate customer-facing name and reject account-field injection", () => {
   assert.deepEqual(supportProfileSchema.parse({ supportDisplayName: "  Alex from Support  " }), { supportDisplayName: "Alex from Support" });
@@ -44,4 +46,20 @@ test("support profile changes affect only the teammate and future replies", { sk
     action: "reply", content: "Second reply", clientMessageId: randomUUID() }, client);
   const replies = await client.supportMessage.findMany({ where: { conversationId: conversation.id, role: "AGENT" }, orderBy: { createdAt: "asc" } });
   assert.deepEqual(replies.map((m) => m.authorName), ["Taylor", "Other identity"]);
+  await t.test("native profile updates use the mobile session identity and reject revoked sessions", async () => {
+    const verifier = secret();
+    const code = await createLoginCode(teammate.id, pkceChallenge(verifier), client);
+    const tokens = await exchangeLoginCode(code, verifier, client);
+    const request = new Request("https://upstep.example/api/mobile/me", { headers: { Authorization: `Bearer ${tokens.accessToken}` } });
+    const saved = await saveMobileSupportProfile(request, { supportDisplayName: "Taylor on mobile" }, client);
+    assert.equal(saved.supportDisplayName, "Taylor on mobile");
+    assert.equal((await getSupportProfile(teammate.id, client)).supportDisplayName, "Taylor on mobile");
+    assert.equal((await getSupportProfile(owner.id, client)).supportDisplayName, "");
+    await assert.rejects(saveMobileSupportProfile(request, { supportDisplayName: "Other account", userId: owner.id }, client), /support name/);
+    await assert.rejects(saveMobileSupportProfile(new Request("https://upstep.example"), { supportDisplayName: "No session" }, client), /Unauthorized/);
+    const session = await mobileRequest(request, client);
+    await revokeMobileSession(session.sessionId, client);
+    await assert.rejects(saveMobileSupportProfile(request, { supportDisplayName: "Revoked" }, client), /Session expired/);
+    assert.equal((await getSupportProfile(teammate.id, client)).supportDisplayName, "Taylor on mobile");
+  });
 });

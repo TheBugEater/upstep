@@ -1925,6 +1925,34 @@ function Settings({
   const [details, setDetails] = useState<ProjectDetails | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [supportName, setSupportName] = useState(me.user.supportDisplayName || "");
+  const [savingName, setSavingName] = useState(false);
+  const [loadingName, setLoadingName] = useState(true);
+  const [nameError, setNameError] = useState("");
+  const [nameNotice, setNameNotice] = useState("");
+  useEffect(() => {
+    setSupportName(me.user.supportDisplayName || "");
+  }, [me.user.id, me.user.supportDisplayName]);
+  useEffect(() => {
+    let mounted = true;
+    void onRefresh().catch((e) => { if (mounted) setNameError(describe(e)); })
+      .finally(() => { if (mounted) setLoadingName(false); });
+    return () => { mounted = false; };
+  }, [onRefresh]);
+  const saveName = async () => {
+    if (savingName || loadingName) return;
+    setSavingName(true); setNameError(""); setNameNotice("");
+    try {
+      await api.request("/api/mobile/me", "PUT", { supportDisplayName: supportName });
+      await onRefresh();
+      setNameNotice("Your support name is saved.");
+    } catch (e) {
+      setNameError(e instanceof ApiError && [404, 405].includes(e.status)
+        ? "Update your Upstep server to change your support name."
+        : describe(e));
+    }
+    finally { setSavingName(false); }
+  };
   const loadDetails = useCallback(async () => {
     if (!projectId) return;
     try {
@@ -1972,6 +2000,8 @@ function Settings({
         />
       </View>
       <ScrollView
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingBottom: 28,
@@ -1998,6 +2028,39 @@ function Settings({
             {error}
           </Text>
         )}
+        <View style={{ gap: 10 }}>
+          <SectionLabel title="Support profile" t={t} />
+          <View style={[t.styles.group, { padding: 16, gap: 12 }]}>
+            <Text style={t.styles.label}>Support display name</Text>
+            <TextInput
+              accessibilityLabel="Support display name"
+              value={supportName}
+              onChangeText={(value) => { setSupportName(value); setNameNotice(""); setNameError(""); }}
+              placeholder={me.user.name || "Teammate"}
+              placeholderTextColor={t.colors.faint}
+              maxLength={80}
+              autoComplete="nickname"
+              autoCapitalize="words"
+              returnKeyType="done"
+              editable={!savingName && !loadingName}
+              onSubmitEditing={() => {
+                if (supportName.trim() !== (me.user.supportDisplayName || "")) void saveName();
+              }}
+              style={t.styles.input}
+            />
+            <Text style={t.styles.small}>
+              Customers will see {supportName.trim() || me.user.name || "Teammate"} on your new replies across your projects. Leave blank to use your account name.
+            </Text>
+            <Button
+              title={loadingName ? "Loading profile…" : savingName ? "Saving…" : "Save support name"}
+              disabled={loadingName || savingName || supportName.trim() === (me.user.supportDisplayName || "")}
+              onPress={() => void saveName()}
+              t={t}
+            />
+            {!!nameError && <Text accessibilityRole="alert" style={t.styles.error}>{nameError}</Text>}
+            {!!nameNotice && <Text accessibilityLiveRegion="polite" style={[t.styles.small, { color: t.colors.success }]}>{nameNotice}</Text>}
+          </View>
+        </View>
         <View style={{ gap: 10 }}>
           <SectionLabel title="Availability" t={t} />
           <View style={t.styles.group}>
