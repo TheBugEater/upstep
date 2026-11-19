@@ -1,14 +1,13 @@
 import React from "react";
-import { Pressable, Text, View, type ViewStyle } from "react-native";
 import {
-  ArrowUpRight,
-  Bell,
-  Check,
-  ChevronRight,
-  MessageCircle,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react-native";
+  Pressable,
+  Switch,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
+import { ArrowUpRight, ChevronRight, type LucideIcon } from "lucide-react-native";
 import type { Theme } from "./theme";
 
 export function Button({
@@ -26,7 +25,7 @@ export function Button({
   disabled?: boolean;
   icon?: LucideIcon;
   t: Theme;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
     <Pressable
@@ -44,9 +43,9 @@ export function Button({
     >
       {Icon && (
         <Icon
-          size={17}
-          strokeWidth={1.8}
-          color={primary ? t.colors.onForest : t.colors.text}
+          size={18}
+          strokeWidth={2}
+          color={primary ? t.colors.onPrimary : t.colors.text}
         />
       )}
       <Text style={[t.styles.buttonText, primary && t.styles.primaryText]}>
@@ -55,18 +54,21 @@ export function Button({
     </Pressable>
   );
 }
+
 export function IconButton({
   label,
   icon: Icon,
   onPress,
   t,
   disabled = false,
+  filled = false,
 }: {
   label: string;
   icon: LucideIcon;
   onPress(): void;
   t: Theme;
   disabled?: boolean;
+  filled?: boolean;
 }) {
   return (
     <Pressable
@@ -75,241 +77,271 @@ export function IconButton({
       accessibilityState={{ disabled }}
       onPress={onPress}
       disabled={disabled}
-      hitSlop={5}
+      hitSlop={4}
       style={({ pressed }) => [
-        t.styles.iconButton,
+        filled ? t.styles.roundButton : t.styles.iconButton,
         pressed && t.styles.pressed,
         disabled && t.styles.disabled,
       ]}
     >
-      <Icon size={20} strokeWidth={1.8} color={t.colors.text} />
+      <Icon size={filled ? 19 : 23} strokeWidth={1.9} color={t.colors.text} />
     </Pressable>
   );
 }
+
+export function BrandMark({ t, size = 30 }: { t: Theme; size?: number }) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.3,
+        backgroundColor: t.dark ? t.colors.card : "#0a0a0a",
+        borderWidth: t.dark ? 1 : 0,
+        borderColor: t.colors.line,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <ArrowUpRight size={size * 0.62} strokeWidth={2.8} color="#ff7a50" />
+    </View>
+  );
+}
+
 export function Brand({ t }: { t: Theme }) {
   return (
     <View
-      style={[t.styles.inline, { gap: 7 }]}
+      style={[t.styles.inline, { gap: 8 }]}
       accessibilityLabel="Upstep support"
     >
-      <View
-        style={{
-          width: 29,
-          height: 29,
-          backgroundColor: t.colors.forest,
-          borderRadius: 9,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <ArrowUpRight size={22} strokeWidth={2.5} color={t.colors.onForest} />
-      </View>
+      <BrandMark t={t} />
       <Text style={t.styles.brand}>upstep</Text>
     </View>
   );
 }
+
+export const initials = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase() || "V";
+
 export function Avatar({
   name,
   t,
-  size = 44,
+  size = 40,
+  round = false,
 }: {
   name: string;
   t: Theme;
   size?: number;
+  round?: boolean;
 }) {
-  const initials =
-    name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase() || "V";
+  let hash = 0;
+  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  const [bg, fg] = t.colors.tints[Math.abs(hash) % t.colors.tints.length] ?? [
+    t.colors.soft,
+    t.colors.body,
+  ];
   return (
     <View
-      style={[
-        t.styles.avatar,
-        { width: size, height: size, borderRadius: size * 0.34 },
-      ]}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: round ? size / 2 : size * 0.3,
+        backgroundColor: bg,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
-      <Text style={[t.styles.avatarText, { fontSize: size * 0.34 }]}>
-        {initials}
+      <Text
+        style={{ color: fg, fontSize: size * 0.36, fontWeight: "600" }}
+        maxFontSizeMultiplier={1.2}
+      >
+        {initials(name)}
       </Text>
     </View>
   );
 }
-export function Badge({
+
+export function Chip({
   title,
   t,
-  kind = "neutral",
+  tone = "neutral",
+  icon: Icon,
 }: {
   title: string;
   t: Theme;
-  kind?: "neutral" | "human" | "ai" | "resolved";
+  tone?: "neutral" | "clay" | "note";
+  icon?: LucideIcon;
 }) {
-  const Icon =
-    kind === "ai"
-      ? Sparkles
-      : kind === "resolved"
-        ? Check
-        : kind === "human"
-          ? MessageCircle
-          : undefined;
-  const color = kind === "human" ? t.colors.amber : t.colors.forest;
+  const [bg, fg] =
+    tone === "clay"
+      ? [t.colors.clayTint, t.colors.clayText]
+      : tone === "note"
+        ? [t.colors.note, t.colors.noteText]
+        : [t.colors.soft, t.colors.body];
   return (
-    <View
-      style={[
-        t.styles.pill,
-        kind === "human" && { backgroundColor: t.colors.amberBg },
-      ]}
-    >
-      {Icon && <Icon size={11} color={color} strokeWidth={2} />}
-      <Text style={[t.styles.pillText, { color }]}>{title}</Text>
+    <View style={[t.styles.chip, { backgroundColor: bg }]}>
+      {Icon && <Icon size={12} color={fg} strokeWidth={2.2} />}
+      <Text style={[t.styles.chipText, { color: fg }]}>{title}</Text>
     </View>
   );
 }
-export function NotificationArt({
+
+export function SectionLabel({
+  title,
   t,
-  large = false,
+  color,
 }: {
+  title: string;
   t: Theme;
-  large?: boolean;
+  color?: string;
 }) {
+  return (
+    <View style={[t.styles.inline, { gap: 8 }]}>
+      {color && <View style={[t.styles.dot, { backgroundColor: color }]} />}
+      <Text style={t.styles.sectionLabel}>{title}</Text>
+    </View>
+  );
+}
+
+export function Toggle({
+  value,
+  onValueChange,
+  label,
+  disabled,
+  t,
+}: {
+  value: boolean;
+  onValueChange(value: boolean): void;
+  label: string;
+  disabled?: boolean;
+  t: Theme;
+}) {
+  return (
+    <Switch
+      accessibilityLabel={label}
+      value={value}
+      disabled={disabled}
+      onValueChange={onValueChange}
+      trackColor={{ true: t.colors.primary, false: t.colors.line }}
+      thumbColor={t.dark && value ? "#000000" : "#ffffff"}
+      ios_backgroundColor={t.colors.line}
+    />
+  );
+}
+
+/** A believable lock-screen alert, used as onboarding art. */
+export function NotificationArt({ t }: { t: Theme }) {
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={{
-        width: "100%",
-        minHeight: large ? 250 : 202,
-        borderRadius: 28,
-        backgroundColor: t.colors.hero,
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-        overflow: "hidden",
-      }}
+      style={{ height: 172 }}
     >
       <View
         style={{
           position: "absolute",
-          width: 230,
-          height: 230,
-          borderRadius: 115,
-          borderWidth: 1,
-          borderColor: "#49684a",
-          right: -65,
-          top: -90,
+          left: 22,
+          right: 22,
+          top: 0,
+          height: 72,
+          borderRadius: 20,
+          backgroundColor: t.colors.surface,
+          borderWidth: t.dark ? 1 : 0,
+          borderColor: t.colors.hairline,
         }}
       />
       <View
         style={{
           position: "absolute",
-          width: 180,
-          height: 180,
-          borderRadius: 90,
-          borderWidth: 1,
-          borderColor: "#49684a",
-          left: -80,
-          bottom: -110,
+          left: 10,
+          right: 10,
+          top: 14,
+          height: 76,
+          borderRadius: 20,
+          backgroundColor: t.colors.soft,
         }}
       />
-      <View style={{ position: "absolute", right: 31, top: 24 }}>
-        <Sparkles size={20} color="#b3d992" strokeWidth={1.5} />
-      </View>
       <View
         style={[
           {
-            width: "100%",
-            maxWidth: 320,
-            backgroundColor: "#f8fbf3",
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: 30,
             borderRadius: 20,
-            padding: 17,
-            gap: 13,
-            transform: [{ rotate: "-3deg" }],
+            backgroundColor: t.colors.card,
+            borderWidth: 1,
+            borderColor: t.colors.line,
+            padding: 14,
+            flexDirection: "row",
+            gap: 12,
           },
           t.styles.shadow,
         ]}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-            <View
-              style={{
-                backgroundColor: "#204c38",
-                width: 20,
-                height: 20,
-                borderRadius: 6,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <ArrowUpRight size={15} color="#ffffff" />
-            </View>
-            <Text
-              style={{
-                color: "#204c38",
-                fontSize: 10,
-                fontWeight: "700",
-                letterSpacing: 1,
-              }}
-            >
-              UPSTEP
+        <BrandMark t={t} size={38} />
+        <View style={{ flex: 1, gap: 3 }}>
+          <View style={t.styles.row}>
+            <Text style={[t.styles.label, { fontSize: 14 }]}>
+              A customer needs you
             </Text>
+            <Text style={[t.styles.small, { fontSize: 12 }]}>now</Text>
           </View>
-          <Text style={{ color: "#82907e", fontSize: 10 }}>now</Text>
-        </View>
-        <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 14,
-              backgroundColor: "#e7efdc",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Bell size={21} strokeWidth={1.6} color="#204c38" />
-          </View>
-          <View style={{ flex: 1, gap: 3 }}>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#182e25" }}>
-              A customer needs your help
-            </Text>
-            <Text style={{ fontSize: 11, color: "#77837b" }}>
-              Your next great conversation starts here.
-            </Text>
-          </View>
+          <Text style={[t.styles.text, { fontSize: 14, lineHeight: 19 }]}>
+            They asked for a person after talking with AI.
+          </Text>
         </View>
       </View>
       <View
         style={{
+          position: "absolute",
+          right: 16,
+          top: 128,
           flexDirection: "row",
-          gap: 7,
-          alignItems: "center",
-          marginTop: 22,
+          gap: 6,
         }}
       >
         <View
           style={{
-            width: 5,
-            height: 5,
-            borderRadius: 3,
-            backgroundColor: "#d7efaa",
+            height: 30,
+            paddingHorizontal: 12,
+            borderRadius: 15,
+            backgroundColor: t.colors.primary,
+            justifyContent: "center",
           }}
-        />
-        <Text style={{ color: "#d4e1cb", fontSize: 10, letterSpacing: 0.3 }}>
-          A little heads-up. A big difference.
-        </Text>
+        >
+          <Text
+            style={{
+              color: t.colors.onPrimary,
+              fontSize: 12,
+              fontWeight: "600",
+            }}
+          >
+            Take over
+          </Text>
+        </View>
+        <View
+          style={{
+            height: 30,
+            paddingHorizontal: 12,
+            borderRadius: 15,
+            backgroundColor: t.colors.soft,
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: t.colors.text, fontSize: 12 }}>Reply</Text>
+        </View>
       </View>
     </View>
   );
 }
+
 export function SettingsRow({
   title,
   subtitle,
@@ -317,6 +349,8 @@ export function SettingsRow({
   onPress,
   t,
   end,
+  disabled,
+  destructive,
 }: {
   title: string;
   subtitle?: string;
@@ -324,41 +358,76 @@ export function SettingsRow({
   onPress?: () => void;
   t: Theme;
   end?: React.ReactNode;
+  disabled?: boolean;
+  destructive?: boolean;
 }) {
   const content = (
     <>
-      <View style={[t.styles.inline, { flex: 1 }]}>
-        {Icon && (
-          <View
-            style={[
-              t.styles.avatar,
-              { width: 38, height: 38, borderRadius: 12 },
-            ]}
-          >
-            <Icon size={18} color={t.colors.forest} strokeWidth={1.7} />
-          </View>
-        )}
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={t.styles.label}>{title}</Text>
-          {subtitle && <Text style={t.styles.small}>{subtitle}</Text>}
+      {Icon && (
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            backgroundColor: t.colors.soft,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon
+            size={18}
+            color={destructive ? t.colors.error : t.colors.text}
+            strokeWidth={1.9}
+          />
         </View>
+      )}
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text
+          style={[
+            t.styles.label,
+            { fontWeight: "500" },
+            destructive && { color: t.colors.error },
+          ]}
+        >
+          {title}
+        </Text>
+        {subtitle && <Text style={t.styles.small}>{subtitle}</Text>}
       </View>
-      {end || (onPress && <ChevronRight size={17} color={t.colors.muted} />)}
+      {end || (onPress && <ChevronRight size={18} color={t.colors.faint} />)}
     </>
   );
+  const style = [
+    t.styles.inline,
+    { gap: 12, paddingHorizontal: 14, paddingVertical: 12, minHeight: 56 },
+  ];
   return onPress ? (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
-        t.styles.inline,
-        { paddingVertical: 4 },
-        pressed && t.styles.pressed,
+        style,
+        pressed && { backgroundColor: t.colors.surface },
+        disabled && t.styles.disabled,
       ]}
     >
       {content}
     </Pressable>
   ) : (
-    <View style={[t.styles.inline, { paddingVertical: 4 }]}>{content}</View>
+    <View style={style}>{content}</View>
   );
+}
+
+/** "now", "14m", "3h", "2d", then a short date. */
+export function since(iso: string, now = Date.now()) {
+  const minutes = Math.max(0, Math.floor((now - Date.parse(iso)) / 60_000));
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 24 * 60) return `${Math.floor(minutes / 60)}h`;
+  if (minutes < 7 * 24 * 60) return `${Math.floor(minutes / 1440)}d`;
+  return new Date(iso).toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+  });
 }

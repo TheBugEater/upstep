@@ -17,13 +17,11 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  Switch,
   Text,
   TextInput,
   View,
   useColorScheme,
 } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
 import * as Crypto from "expo-crypto";
@@ -43,28 +41,41 @@ import {
 } from "./api";
 import { theme, type Theme } from "./theme";
 import {
-  ArrowLeft,
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import {
   ArrowRight,
+  ArrowUp,
   Bell,
   Check,
-  CheckCheck,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Clock3,
   Globe,
   Inbox as InboxIcon,
+  Lock,
   LogOut,
-  MessageCircle,
   MoreHorizontal,
   NotebookPen,
-  Send,
-  Settings2,
-  ShieldCheck,
+  RotateCw,
+  ScrollText,
   Sparkles,
-  Users,
+  UserRound,
   X,
 } from "lucide-react-native";
-import { Avatar, Badge, Brand, Button, IconButton, SettingsRow } from "./ui";
+import {
+  Avatar,
+  Button,
+  Chip,
+  IconButton,
+  SectionLabel,
+  SettingsRow,
+  Toggle,
+  since,
+} from "./ui";
 import { Welcome } from "./Welcome";
 import { NotificationSetup, AlertBanner } from "./NotificationSetup";
 import { useAlertSetup, type AlertSetupController } from "./use-alert-setup";
@@ -225,10 +236,19 @@ export default function App() {
     }
   };
   const project = me?.projects.find((p) => p.id === projectId);
+  const availability = alerts.checking
+    ? null
+    : alerts.ready && !alerts.paused
+      ? alerts.preference?.onCall
+        ? "On call"
+        : "Assigned only"
+      : alerts.paused
+        ? "Alerts paused"
+        : "Alerts off";
   return (
     <SafeAreaProvider>
       <SafeAreaView style={t.styles.screen}>
-        <StatusBar style="auto" />
+        <StatusBar style={dark ? "light" : "dark"} />
         <View style={t.styles.page}>
           {!ready ? (
             <View style={t.styles.center}>
@@ -263,139 +283,160 @@ export default function App() {
             />
           ) : project && alerts.checking && !alerts.loaded ? (
             <View style={t.styles.center}>
-              <ActivityIndicator color={t.colors.forest} />
+              <ActivityIndicator color={t.colors.text} />
               <Text style={t.styles.small}>Preparing your workspace…</Text>
             </View>
+          ) : settings ? (
+            <Settings
+              key={projectId}
+              t={t}
+              me={me}
+              projectId={projectId}
+              onClose={() => {
+                setSettings(false);
+                setError("");
+              }}
+              onProject={(id) => {
+                setProjectId(id);
+                setTarget(null);
+              }}
+              onRefresh={loadMe}
+              onChangeServer={openServer}
+              alerts={alerts}
+            />
+          ) : project && target ? (
+            <Chat
+              key={`${target.projectId}:${target.conversationId}`}
+              target={target}
+              userId={me.user.id}
+              t={t}
+              active={active}
+              onBack={() => setTarget(null)}
+              draft={
+                (drafts.current[`${me.user.id}:${target.conversationId}`] ||= {
+                  text: "",
+                  note: false,
+                  pending: null,
+                })
+              }
+            />
           ) : (
             <>
               <View
                 style={[
-                  t.styles.header,
-                  target && !settings && { paddingBottom: 10 },
+                  t.styles.row,
+                  { paddingLeft: 20, paddingRight: 12, paddingTop: 6 },
                 ]}
               >
-                <View style={t.styles.row}>
-                  <Brand t={t} />
-                  <View style={t.styles.inline}>
-                    <IconButton
-                      label="Customer alert setup"
-                      icon={Bell}
-                      onPress={alerts.open}
-                      disabled={!project}
-                      t={t}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Workspace: ${project?.name || "none"}. Switch workspace`}
+                  onPress={() => setShowProjects(true)}
+                  style={({ pressed }) => [
+                    t.styles.inline,
+                    { gap: 8, minHeight: 44, flexShrink: 1 },
+                    pressed && t.styles.pressed,
+                  ]}
+                >
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      backgroundColor: t.colors.primary,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: t.colors.onPrimary,
+                        fontSize: 13,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {(project?.name || "?").trim()[0]?.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text
+                    numberOfLines={1}
+                    style={[t.styles.label, { flexShrink: 1 }]}
+                  >
+                    {project?.name || "Choose a workspace"}
+                  </Text>
+                  <ChevronDown size={16} color={t.colors.faint} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Your account and settings${availability ? `. ${availability}` : ""}`}
+                  onPress={() => setSettings(true)}
+                  style={({ pressed }) => [
+                    {
+                      width: 44,
+                      height: 44,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    },
+                    pressed && t.styles.pressed,
+                  ]}
+                >
+                  <Avatar
+                    name={me.user.name || me.user.email}
+                    size={34}
+                    round
+                    t={t}
+                  />
+                  {project && alerts.loaded && !alerts.checking && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        right: 4,
+                        bottom: 5,
+                        width: 12,
+                        height: 12,
+                        borderRadius: 6,
+                        borderWidth: 2,
+                        borderColor: t.colors.bg,
+                        backgroundColor:
+                          alerts.ready && !alerts.paused
+                            ? t.colors.success
+                            : alerts.paused
+                              ? t.colors.noteIcon
+                              : t.colors.line,
+                      }}
                     />
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Your account and settings"
-                      onPress={() => setSettings(true)}
-                    >
-                      <Avatar
-                        name={me.user.name || me.user.email}
-                        size={40}
-                        t={t}
-                      />
-                    </Pressable>
-                  </View>
-                </View>
-                {(!target || settings) && (
-                  <View style={t.styles.row}>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Choose support workspace"
-                      onPress={() => setShowProjects(true)}
-                      style={{ gap: 5, flexShrink: 1 }}
-                    >
-                      <Text style={t.styles.eyebrow}>WORKSPACE</Text>
-                      <View style={t.styles.inline}>
-                        <Text
-                          numberOfLines={1}
-                          style={[
-                            t.styles.label,
-                            { fontSize: 17, flexShrink: 1 },
-                          ]}
-                        >
-                          {project?.name || "Choose a project"}
-                        </Text>
-                        <ChevronDown size={15} color={t.colors.muted} />
-                      </View>
-                    </Pressable>
-                    {project && (
-                      <Badge
-                        title={
-                          alerts.checking
-                            ? "Checking alerts"
-                            : !alerts.ready
-                              ? "Alerts off"
-                              : alerts.paused
-                                ? "Paused"
-                                : alerts.preference?.onCall
-                                  ? "On call"
-                                  : "Assigned only"
-                        }
-                        kind={
-                          (!alerts.ready && !alerts.checking) || alerts.paused
-                            ? "human"
-                            : "neutral"
-                        }
-                        t={t}
-                      />
-                    )}
-                  </View>
-                )}
+                  )}
+                </Pressable>
               </View>
               {!!error && (
                 <Text accessibilityRole="alert" style={t.styles.error}>
                   {error}
                 </Text>
               )}
-              {settings ? (
-                <Settings
-                  key={projectId}
-                  t={t}
-                  me={me}
-                  projectId={projectId}
-                  onProject={(id) => {
-                    setProjectId(id);
-                    setTarget(null);
-                  }}
-                  onRefresh={loadMe}
-                  onChangeServer={openServer}
-                  alerts={alerts}
-                />
-              ) : !project ? (
+              {!project ? (
                 <View style={t.styles.center}>
-                  <Text style={t.styles.title}>No support projects yet</Text>
-                  <Text style={t.styles.text}>
+                  <Text style={[t.styles.title, { textAlign: "center" }]}>
+                    No support workspaces yet
+                  </Text>
+                  <Text style={[t.styles.body, { textAlign: "center" }]}>
                     Customer support is available on Pro and Business projects.
-                    Set up a project in the web dashboard, then refresh.
+                    Set one up on the web, then refresh.
                   </Text>
                   <Button
-                    title="Refresh projects"
+                    title="Refresh workspaces"
                     onPress={() =>
                       void loadMe().catch((e) => setError(describe(e)))
                     }
                     t={t}
                   />
                 </View>
-              ) : target ? (
-                <Chat
-                  key={`${target.projectId}:${target.conversationId}`}
-                  target={target}
-                  userId={me.user.id}
-                  t={t}
-                  active={active}
-                  onBack={() => setTarget(null)}
-                  draft={
-                    (drafts.current[
-                      `${me.user.id}:${target.conversationId}`
-                    ] ||= { text: "", note: false, pending: null })
-                  }
-                />
               ) : (
                 <InboxScreen
                   key={projectId}
                   alerts={alerts}
                   projectId={project.id}
+                  userId={me.user.id}
+                  availability={availability}
                   enabled={!!project.supportConfig?.enabled}
                   onOpen={(cid) =>
                     setTarget({ projectId: project.id, conversationId: cid })
@@ -403,47 +444,6 @@ export default function App() {
                   t={t}
                   active={active}
                 />
-              )}
-              {(!target || settings) && (
-                <View style={t.styles.bottomBar}>
-                  {[
-                    [false, "Inbox", InboxIcon],
-                    [true, "Settings", Settings2],
-                  ].map(([isSettings, label, Icon]) => {
-                    const selected = settings === isSettings;
-                    const TabIcon = Icon as typeof InboxIcon;
-                    return (
-                      <Pressable
-                        key={String(label)}
-                        accessibilityRole="tab"
-                        accessibilityLabel={String(label)}
-                        accessibilityState={{ selected }}
-                        onPress={() => {
-                          setSettings(!!isSettings);
-                          setError("");
-                        }}
-                        style={[
-                          t.styles.navItem,
-                          selected && { backgroundColor: t.colors.soft },
-                        ]}
-                      >
-                        <TabIcon
-                          size={21}
-                          strokeWidth={selected ? 2 : 1.6}
-                          color={selected ? t.colors.forest : t.colors.muted}
-                        />
-                        <Text
-                          style={[
-                            t.styles.navLabel,
-                            selected && { color: t.colors.forest },
-                          ]}
-                        >
-                          {String(label)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
               )}
             </>
           )}
@@ -455,49 +455,45 @@ export default function App() {
           onRequestClose={() => setShowProjects(false)}
         >
           <SafeAreaView style={t.styles.screen}>
-            <ScrollView contentContainerStyle={{ padding: 24, gap: 20 }}>
+            <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
               <View style={t.styles.row}>
-                <Text style={t.styles.title}>Your workspaces</Text>
+                <Text style={t.styles.title}>Workspaces</Text>
                 <IconButton
                   label="Close workspaces"
                   icon={X}
+                  filled
                   onPress={() => setShowProjects(false)}
                   t={t}
                 />
               </View>
-              <Text style={t.styles.body}>
-                Choose the team you’re here to help.
-              </Text>
-              {me?.projects.map((p) => (
-                <Pressable
-                  key={p.id}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setProjectId(p.id);
-                    setTarget(null);
-                    setShowProjects(false);
-                  }}
-                  style={t.styles.card}
-                >
-                  <SettingsRow
-                    title={p.name}
-                    subtitle={
-                      p.supportConfig?.enabled
-                        ? "Customer support enabled"
-                        : "Customer support paused"
-                    }
-                    icon={Users}
-                    end={
-                      p.id === projectId ? (
-                        <Check size={21} color={t.colors.forest} />
-                      ) : (
-                        <ChevronRight size={18} color={t.colors.muted} />
-                      )
-                    }
-                    t={t}
-                  />
-                </Pressable>
-              ))}
+              <View style={t.styles.group}>
+                {me?.projects.map((p, index) => (
+                  <React.Fragment key={p.id}>
+                    {index > 0 && <View style={t.styles.divider} />}
+                    <SettingsRow
+                      title={p.name}
+                      subtitle={
+                        p.supportConfig?.enabled
+                          ? "Customer support on"
+                          : "Customer support paused"
+                      }
+                      onPress={() => {
+                        setProjectId(p.id);
+                        setTarget(null);
+                        setShowProjects(false);
+                      }}
+                      end={
+                        p.id === projectId ? (
+                          <Check size={20} color={t.colors.text} />
+                        ) : (
+                          <ChevronRight size={18} color={t.colors.faint} />
+                        )
+                      }
+                      t={t}
+                    />
+                  </React.Fragment>
+                ))}
+              </View>
             </ScrollView>
           </SafeAreaView>
         </Modal>
@@ -596,12 +592,16 @@ export default function App() {
 
 const filters = [
   ["needs_human", "Needs you"],
-  ["mine", "Assigned"],
-  ["ai", "AI handling"],
+  ["mine", "Mine"],
+  ["ai", "AI"],
   ["resolved", "Resolved"],
 ] as const;
+// A customer waiting this long gets the clay "overdue" treatment.
+const LONG_WAIT_MINUTES = 10;
 function InboxScreen({
   projectId,
+  userId,
+  availability,
   enabled,
   onOpen,
   t,
@@ -609,6 +609,8 @@ function InboxScreen({
   alerts,
 }: {
   projectId: string;
+  userId: string;
+  availability: string | null;
   enabled: boolean;
   onOpen(id: string): void;
   t: Theme;
@@ -677,27 +679,57 @@ function InboxScreen({
       clearInterval(timer);
     };
   }, [filter, active]);
+  const count = `${data.conversations.length}${data.nextCursor ? "+" : ""}`;
+  const waitingSince = (c: Conversation) =>
+    c.messages[0]?.createdAt || c.updatedAt;
+  const oldest =
+    filter === "needs_human"
+      ? data.conversations.reduce<string | null>(
+          (min, c) =>
+            !min || Date.parse(waitingSince(c)) < Date.parse(min)
+              ? waitingSince(c)
+              : min,
+          null,
+        )
+      : null;
+  const ready = !loading || data.conversations.length > 0;
+  const heading = !ready
+    ? filters.find(([value]) => value === filter)?.[1]
+    : filter === "needs_human"
+      ? data.conversations.length
+        ? `${count} waiting on you`
+        : "No one’s waiting"
+      : filter === "mine"
+        ? `${count} assigned to you`
+        : filter === "ai"
+          ? `AI is handling ${count}`
+          : `${count} resolved`;
+  const live = active && !error;
   return (
     <View style={{ flex: 1 }}>
-      <View
-        style={[
-          t.styles.section,
-          t.styles.row,
-          { alignItems: "flex-end", paddingTop: 0, paddingBottom: 20 },
-        ]}
-      >
-        <View style={{ gap: 5 }}>
-          <Text style={[t.styles.title, { fontSize: 34, lineHeight: 40 }]}>
-            Your inbox
-          </Text>
-          <Text style={t.styles.small}>
-            A human touch makes all the difference.
-          </Text>
-        </View>
-        <View style={[t.styles.inline, { gap: 5, paddingBottom: 4 }]}>
-          <View style={t.styles.statusDot} />
-          <Text style={t.styles.eyebrow}>
-            {active && !error ? "LIVE" : error ? "RETRY" : "PAUSED"}
+      <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16, gap: 6 }}>
+        <Text accessibilityRole="header" style={t.styles.largeTitle}>
+          {heading}
+        </Text>
+        <View style={[t.styles.inline, { gap: 6 }]}>
+          <View
+            style={[
+              t.styles.dot,
+              {
+                width: 6,
+                height: 6,
+                backgroundColor: live ? t.colors.success : t.colors.faint,
+              },
+            ]}
+          />
+          <Text style={[t.styles.small, { color: t.colors.muted, flexShrink: 1 }]}>
+            {[
+              live ? "Live" : error ? "Reconnecting" : "Paused",
+              oldest ? `longest wait ${since(oldest)}` : null,
+              availability,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </Text>
         </View>
       </View>
@@ -706,36 +738,38 @@ function InboxScreen({
         horizontal
         showsHorizontalScrollIndicator={false}
         style={{ flexGrow: 0, flexShrink: 0 }}
-        contentContainerStyle={t.styles.tabs}
+        contentContainerStyle={{ gap: 8, paddingHorizontal: 20, paddingBottom: 10 }}
       >
-        {filters.map(([value, label]) => (
-          <Pressable
-            key={value}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: value === filter }}
-            onPress={() => setFilter(value)}
-            style={({ pressed }) => [
-              t.styles.tab,
-              value === filter && t.styles.primary,
-              pressed && t.styles.pressed,
-            ]}
-          >
-            <Text
-              style={[
-                t.styles.small,
-                { fontWeight: "600" },
-                value === filter && t.styles.primaryText,
+        {filters.map(([value, label]) => {
+          const selected = value === filter;
+          return (
+            <Pressable
+              key={value}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
+              onPress={() => setFilter(value)}
+              style={({ pressed }) => [
+                t.styles.pill,
+                selected && { backgroundColor: t.colors.primary },
+                pressed && t.styles.pressed,
               ]}
             >
-              {label}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={[
+                  t.styles.pillText,
+                  selected && { color: t.colors.onPrimary, fontWeight: "600" },
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
       {!enabled && (
-        <Text style={t.styles.error}>
-          Support is paused for this workspace. Existing conversations are still
-          available.
+        <Text style={[t.styles.small, { paddingHorizontal: 20, paddingBottom: 6 }]}>
+          Support is paused for this workspace. Existing conversations are
+          still here.
         </Text>
       )}
       {!!error && (
@@ -745,207 +779,216 @@ function InboxScreen({
       )}
       <FlatList
         data={data.conversations}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
         keyExtractor={(c) => c.id}
+        ItemSeparatorComponent={() => (
+          <View style={[t.styles.divider, { marginLeft: 72 }]} />
+        )}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
+            refreshing={loading && data.conversations.length > 0}
             onRefresh={() => {
               setLoading(true);
               void load();
             }}
-            tintColor={t.colors.forest}
+            tintColor={t.colors.text}
           />
         }
         ListEmptyComponent={
           loading ? (
-            <View
-              accessibilityLabel="Loading conversations"
-              style={{ paddingTop: 6 }}
-            >
+            <View accessibilityLabel="Loading conversations">
               {[0, 1, 2].map((i) => (
-                <View key={i} style={[t.styles.item, { gap: 15 }]}>
-                  <View style={t.styles.inline}>
-                    <View style={t.styles.avatar} />
-                    <View
-                      style={{
-                        height: 12,
-                        width: "40%",
-                        borderRadius: 5,
-                        backgroundColor: t.colors.soft,
-                      }}
-                    />
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: "row",
+                    gap: 12,
+                    paddingHorizontal: 20,
+                    paddingVertical: 14,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 12,
+                      backgroundColor: t.colors.soft,
+                    }}
+                  />
+                  <View style={{ flex: 1, gap: 9, paddingTop: 4 }}>
+                    {["45%", "90%", "60%"].map((width) => (
+                      <View
+                        key={width}
+                        style={{
+                          height: 10,
+                          width: width as `${number}%`,
+                          borderRadius: 5,
+                          backgroundColor: t.colors.soft,
+                        }}
+                      />
+                    ))}
                   </View>
-                  <View
-                    style={{
-                      height: 10,
-                      width: "90%",
-                      borderRadius: 5,
-                      backgroundColor: t.colors.soft,
-                    }}
-                  />
-                  <View
-                    style={{
-                      height: 10,
-                      width: "60%",
-                      borderRadius: 5,
-                      backgroundColor: t.colors.soft,
-                    }}
-                  />
                 </View>
               ))}
             </View>
           ) : (
-            <View
-              style={[t.styles.center, { minHeight: 290, paddingBottom: 50 }]}
-            >
+            <View style={[t.styles.center, { minHeight: 280, paddingBottom: 60 }]}>
               <View
                 style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: 30,
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
                   backgroundColor: t.colors.soft,
                   alignItems: "center",
                   justifyContent: "center",
-                  marginBottom: 7,
                 }}
               >
-                <InboxIcon
-                  size={35}
-                  strokeWidth={1.3}
-                  color={t.colors.forest}
-                />
-                <View
-                  style={{
-                    position: "absolute",
-                    right: -4,
-                    bottom: 0,
-                    backgroundColor: t.colors.accent,
-                    borderRadius: 12,
-                    padding: 5,
-                    borderWidth: 3,
-                    borderColor: t.colors.bg,
-                  }}
-                >
-                  <Check size={14} color={t.colors.ink} />
-                </View>
+                {error ? (
+                  <RotateCw size={26} strokeWidth={1.7} color={t.colors.text} />
+                ) : filter === "needs_human" ? (
+                  <Check size={28} strokeWidth={2} color={t.colors.text} />
+                ) : (
+                  <InboxIcon size={26} strokeWidth={1.7} color={t.colors.text} />
+                )}
               </View>
-              <Text style={[t.styles.title, { fontSize: 23 }]}>
+              <Text style={[t.styles.title, { textAlign: "center" }]}>
                 {error
-                  ? "Let’s reconnect"
-                  : filter === "resolved"
-                    ? "Good endings start here"
-                    : filter === "ai"
-                      ? "No AI conversations yet"
-                      : "All clear for now."}
+                  ? "Can’t reach your inbox"
+                  : filter === "needs_human"
+                    ? "All clear"
+                    : filter === "mine"
+                      ? "Nothing assigned to you"
+                      : filter === "ai"
+                        ? "AI isn’t handling anything"
+                        : "Nothing resolved yet"}
               </Text>
               <Text
-                style={[
-                  t.styles.body,
-                  { textAlign: "center", fontSize: 14, maxWidth: 270 },
-                ]}
+                style={[t.styles.small, { textAlign: "center", maxWidth: 270, fontSize: 14, lineHeight: 20 }]}
               >
                 {error
-                  ? "Pull down to try loading your conversations again."
+                  ? "Pull down to try again."
                   : filter === "needs_human"
                     ? alerts.ready
-                      ? "When someone needs a person, you’ll find their conversation here."
-                      : "Human requests will appear here. Turn on alerts to hear when you’re needed."
+                      ? "When a customer needs a person, they’ll show up here and you’ll get a tap."
+                      : "When a customer needs a person, they’ll show up here. Turn on alerts to get a tap."
                     : filter === "mine"
-                      ? "Conversations you take over or get assigned will appear here."
+                      ? "Conversations you take over or are given land here."
                       : filter === "ai"
-                        ? "Conversations your AI assistant is handling will appear here."
-                        : "Resolved conversations will be saved here."}
+                        ? "Conversations AI is answering on its own show up here."
+                        : "Resolved conversations are kept here."}
               </Text>
             </View>
           )
         }
         renderItem={({ item }) => {
           const name = item.customer.name || "Visitor";
-          const kind =
-            item.state === "RESOLVED"
-              ? "resolved"
-              : item.state === "AI" && !item.humanRequested
-                ? "ai"
-                : "human";
-          const time = new Date(item.updatedAt);
-          const sameDay = time.toDateString() === new Date().toDateString();
+          const preview =
+            item.messages[0]?.content || "New support conversation";
+          const waiting =
+            filter === "needs_human" || (filter === "mine" && item.unread);
+          const at = waiting ? waitingSince(item) : item.updatedAt;
+          const overdue =
+            filter === "needs_human" &&
+            Date.now() - Date.parse(at) >= LONG_WAIT_MINUTES * 60_000;
+          const chips: { title: string; tone?: "clay"; icon?: typeof Check }[] =
+            [];
+          if (item.state === "RESOLVED")
+            chips.push({ title: "Resolved", icon: Check });
+          else if (item.state === "HUMAN")
+            chips.push({
+              title:
+                item.assignedToId === userId
+                  ? "Assigned to you"
+                  : `With ${item.assignee?.name || "a teammate"}`,
+            });
+          else if (item.humanRequested)
+            chips.push({ title: "Asked for a person", tone: "clay" });
+          else if (item.state === "WAITING")
+            chips.push({ title: "Needs a person", tone: "clay" });
+          else chips.push({ title: "AI is replying", icon: Sparkles });
+          if (
+            item.state !== "HUMAN" &&
+            item.state !== "RESOLVED" &&
+            filter === "needs_human"
+          )
+            chips.push({
+              title: item.assignee?.name
+                ? item.assignedToId === userId
+                  ? "Assigned to you"
+                  : `For ${item.assignee.name}`
+                : "Unassigned",
+            });
           return (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`${name}${item.unread ? ", unread" : ""}. ${item.messages[0]?.content || "New support conversation"}`}
+              accessibilityLabel={`${name}${item.unread ? ", unread" : ""}${waiting ? `, waiting ${since(at)}` : ""}. ${preview}`}
               onPress={() => onOpen(item.id)}
               style={({ pressed }) => [
-                t.styles.item,
-                item.unread && { borderColor: t.dark ? "#426c4d" : "#c6d9b7" },
-                pressed && t.styles.pressed,
+                {
+                  flexDirection: "row",
+                  gap: 12,
+                  paddingHorizontal: 20,
+                  paddingVertical: 13,
+                },
+                pressed && { backgroundColor: t.colors.surface },
               ]}
             >
-              <View style={[t.styles.inline, { alignItems: "flex-start" }]}>
-                <Avatar name={name} t={t} />
-                <View style={{ flex: 1, gap: 7 }}>
-                  <View
+              <Avatar name={name} t={t} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <View style={[t.styles.inline, { gap: 8 }]}>
+                  <Text
+                    numberOfLines={1}
                     style={[
-                      t.styles.inline,
-                      { justifyContent: "space-between", gap: 8 },
+                      t.styles.label,
+                      { flex: 1, fontWeight: item.unread ? "700" : "500" },
                     ]}
                   >
+                    {name}
+                  </Text>
+                  {item.unread && (
+                    <View
+                      style={[t.styles.dot, { backgroundColor: t.colors.clay }]}
+                    />
+                  )}
+                  <View style={[t.styles.inline, { gap: 4 }]}>
+                    {overdue && (
+                      <Clock3 size={13} strokeWidth={2.4} color={t.colors.clay} />
+                    )}
                     <Text
-                      numberOfLines={1}
                       style={[
-                        t.styles.label,
-                        { flex: 1, fontWeight: item.unread ? "700" : "600" },
+                        t.styles.small,
+                        overdue
+                          ? { color: t.colors.clay, fontWeight: "600" }
+                          : item.unread && { color: t.colors.body, fontWeight: "600" },
                       ]}
                     >
-                      {name}
+                      {since(at)}
                     </Text>
-                    <Text style={[t.styles.small, { fontSize: 10 }]}>
-                      {sameDay
-                        ? time.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : time.toLocaleDateString([], {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                    </Text>
-                    {item.unread && <View style={t.styles.statusDot} />}
                   </View>
-                  <Text
-                    numberOfLines={2}
-                    style={[
-                      t.styles.text,
-                      {
-                        color: item.unread ? t.colors.text : t.colors.muted,
-                        fontSize: 14,
-                        lineHeight: 21,
-                      },
-                    ]}
-                  >
-                    {item.messages[0]?.content || "New support conversation"}
-                  </Text>
                 </View>
-              </View>
-              <View style={t.styles.row}>
-                <Badge
-                  title={
-                    kind === "ai"
-                      ? "AI is helping"
-                      : kind === "resolved"
-                        ? "Resolved"
-                        : item.state === "HUMAN"
-                          ? "With your team"
-                          : "Needs a human"
-                  }
-                  kind={kind}
-                  t={t}
-                />
-                <View style={[t.styles.inline, { gap: 5 }]}>
-                  <Users size={11} color={t.colors.muted} />
-                  <Text style={[t.styles.small, { fontSize: 10 }]}>
-                    {item.assignee?.name || "Unassigned"}
-                  </Text>
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    t.styles.text,
+                    {
+                      fontSize: 14,
+                      lineHeight: 20,
+                      color: item.unread ? t.colors.body : t.colors.faint,
+                    },
+                  ]}
+                >
+                  {preview}
+                </Text>
+                <View style={[t.styles.inline, { gap: 6, paddingTop: 3, flexWrap: "wrap" }]}>
+                  {chips.map((chip) => (
+                    <Chip
+                      key={chip.title}
+                      title={chip.title}
+                      tone={chip.tone}
+                      icon={chip.icon}
+                      t={t}
+                    />
+                  ))}
                 </View>
               </View>
             </Pressable>
@@ -955,7 +998,7 @@ function InboxScreen({
           data.nextCursor ? (
             <View style={{ padding: 20 }}>
               <Button
-                title="Load more conversations"
+                title="Load more"
                 onPress={() => void load(true)}
                 t={t}
               />
@@ -1005,7 +1048,6 @@ function Chat({
   const [summary, setSummary] = useState<Assistance | null>(null);
   const [suggestion, setSuggestion] = useState<Assistance | null>(null);
   const [teammates, setTeammates] = useState<ProjectDetails["teammates"]>([]);
-  const [assigning, setAssigning] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -1153,470 +1195,711 @@ function Chat({
   const mine =
     conversation?.state === "HUMAN" && conversation.assignedToId === userId;
   const stale = !!suggestion && suggestion.revision !== conversation?.revision;
+  const needsPerson =
+    conversation?.state !== "HUMAN" &&
+    conversation?.state !== "RESOLVED" &&
+    (conversation?.humanRequested || conversation?.state === "WAITING");
   const label =
     conversation?.state === "HUMAN"
       ? mine
         ? "You’re replying · AI paused"
-        : "Another teammate is replying"
+        : `${conversation.assignee?.name || "A teammate"} is replying`
       : conversation?.state === "RESOLVED"
         ? "Resolved"
-        : conversation?.humanRequested || conversation?.state === "WAITING"
-          ? "Needs a human"
-          : "AI is helping";
+        : needsPerson
+          ? "Needs a person"
+          : "AI is replying";
+  const statusColor = mine
+    ? t.colors.success
+    : needsPerson
+      ? t.colors.clay
+      : t.colors.faint;
+  const name = conversation?.customer.name || "Visitor";
+  const close = () => setShowActions(false);
+  const canSend = !!text.trim() && !busy;
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View
-        style={{
-          paddingHorizontal: 20,
-          paddingTop: 8,
-          paddingBottom: 15,
-          gap: 13,
-          borderBottomWidth: 1,
-          borderColor: t.colors.line,
-        }}
+        style={[
+          t.styles.inline,
+          {
+            gap: 4,
+            paddingHorizontal: 6,
+            paddingTop: 2,
+            paddingBottom: 8,
+            borderBottomWidth: 1,
+            borderColor: t.colors.hairline,
+          },
+        ]}
       >
-        <View style={[t.styles.inline, { gap: 12 }]}>
-          <IconButton
-            label="Back to inbox"
-            icon={ArrowLeft}
-            onPress={onBack}
-            t={t}
-          />
-          <Avatar
-            name={conversation?.customer.name || "Visitor"}
-            size={42}
-            t={t}
-          />
-          <View style={{ flex: 1, gap: 3 }}>
-            <Text numberOfLines={1} style={[t.styles.label, { fontSize: 17 }]}>
-              {conversation?.customer.name || "Visitor"}
-            </Text>
-            <Text style={t.styles.small}>
-              {conversation?.ticketReference || "Customer conversation"}
-            </Text>
-          </View>
-          <IconButton
-            label="Conversation actions"
-            icon={MoreHorizontal}
-            onPress={() => setShowActions(true)}
-            t={t}
-            disabled={!conversation}
-          />
+        <IconButton
+          label="Back to inbox"
+          icon={ChevronLeft}
+          onPress={onBack}
+          t={t}
+        />
+        <Avatar name={name} size={36} t={t} />
+        <View style={{ flex: 1, gap: 1, paddingLeft: 6 }}>
+          <Text numberOfLines={1} style={[t.styles.label, { fontSize: 16 }]}>
+            {name}
+          </Text>
+          <Text numberOfLines={1} style={[t.styles.small, { fontSize: 12 }]}>
+            {[conversation?.ticketReference, conversation?.customer.email]
+              .filter(Boolean)
+              .join(" · ") || "Customer conversation"}
+          </Text>
         </View>
-        <View style={t.styles.row}>
-          <Badge
-            title={label}
-            kind={
-              conversation?.state === "RESOLVED"
-                ? "resolved"
-                : mine ||
-                    conversation?.humanRequested ||
-                    conversation?.state === "WAITING"
-                  ? "human"
-                  : "ai"
-            }
-            t={t}
+        <IconButton
+          label="Conversation actions"
+          icon={MoreHorizontal}
+          onPress={() => setShowActions(true)}
+          t={t}
+          disabled={!conversation}
+        />
+      </View>
+      {conversation && (
+        <View
+          style={[
+            t.styles.inline,
+            {
+              gap: 8,
+              paddingLeft: 20,
+              paddingRight: 12,
+              minHeight: 40,
+              backgroundColor: t.colors.surface,
+              borderBottomWidth: 1,
+              borderColor: t.colors.hairline,
+            },
+          ]}
+        >
+          <View
+            style={[t.styles.dot, { width: 7, height: 7, backgroundColor: statusColor }]}
           />
-          <Pressable
-            accessibilityRole="button"
-            disabled={busy || !conversation}
-            onPress={() => void assist("summary")}
-            style={[t.styles.inline, { minHeight: 32, gap: 5 }]}
-          >
-            <Sparkles size={13} color={t.colors.forest} />
-            <Text
-              style={[
-                t.styles.small,
-                { color: t.colors.forest, fontWeight: "600" },
+          <Text style={[t.styles.small, { flex: 1, color: t.colors.body }]}>
+            {label}
+          </Text>
+          {!summary && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Get an AI summary of this conversation"
+              disabled={busy}
+              onPress={() => void assist("summary")}
+              style={({ pressed }) => [
+                t.styles.inline,
+                { gap: 5, minHeight: 40, paddingHorizontal: 8 },
+                (pressed || busy) && t.styles.pressed,
               ]}
             >
-              AI summary
-            </Text>
-          </Pressable>
+              <Sparkles size={14} color={t.colors.text} strokeWidth={2} />
+              <Text style={[t.styles.small, { color: t.colors.text, fontWeight: "600" }]}>
+                Summarize
+              </Text>
+            </Pressable>
+          )}
         </View>
-      </View>
+      )}
       {!!error && (
         <Text accessibilityRole="alert" style={t.styles.error}>
           {error}
         </Text>
       )}
       <ScrollView
-        contentContainerStyle={{ padding: 20, gap: 16 }}
+        contentContainerStyle={{ padding: 16, gap: 12 }}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={false}
             onRefresh={() => void refresh()}
-            tintColor={t.colors.forest}
+            tintColor={t.colors.text}
           />
         }
       >
-        {!conversation && <ActivityIndicator color={t.colors.forest} />}
-        {conversation && (
-          <View style={{ alignItems: "center", paddingVertical: 3 }}>
-            <Text style={t.styles.eyebrow}>THE CONVERSATION SO FAR</Text>
-          </View>
+        {!conversation && (
+          <ActivityIndicator color={t.colors.text} style={{ marginTop: 40 }} />
         )}
         {summary && (
-          <View style={[t.styles.card, { backgroundColor: t.colors.soft }]}>
-            <View style={t.styles.inline}>
-              <Sparkles size={17} color={t.colors.forest} />
-              <Text style={t.styles.label}>
-                AI handoff summary
+          <View style={[t.styles.card, { gap: 6, paddingVertical: 12 }]}>
+            <View style={[t.styles.inline, { gap: 6 }]}>
+              <Sparkles size={14} color={t.colors.text} strokeWidth={2} />
+              <Text style={[t.styles.label, { fontSize: 12, flex: 1 }]}>
+                What happened so far
                 {summary.revision !== conversation?.revision
-                  ? " · Older version"
+                  ? " · older version"
                   : ""}
               </Text>
+              <Text style={[t.styles.small, { fontSize: 11 }]}>
+                Only your team sees this
+              </Text>
             </View>
-            <Text style={t.styles.text}>{summary.text}</Text>
-            <Text style={t.styles.small}>Only visible to your team</Text>
+            <Text selectable style={[t.styles.text, { fontSize: 14, lineHeight: 20 }]}>
+              {summary.text}
+            </Text>
           </View>
         )}
-        {conversation?.messages.map((message) =>
-          message.role === "SYSTEM" ? (
-            <Text
-              key={message.id}
-              style={[
-                t.styles.small,
-                { textAlign: "center", fontSize: 10, paddingVertical: 5 },
-              ]}
-            >
-              {message.content}
-            </Text>
-          ) : (
-            <View
-              key={message.id}
-              style={[
-                t.styles.message,
-                message.role === "AGENT" && t.styles.outgoing,
-                message.role === "NOTE" && t.styles.note,
-              ]}
-            >
-              <View style={[t.styles.inline, { gap: 5 }]}>
-                {message.role === "NOTE" ? (
-                  <NotebookPen size={11} color={t.colors.amber} />
-                ) : message.role === "ASSISTANT" ? (
-                  <Sparkles size={11} color={t.colors.forest} />
-                ) : null}
+        {conversation?.messages.map((message) => {
+          const time = new Date(message.createdAt).toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+          });
+          if (message.role === "SYSTEM")
+            return (
+              <View
+                key={message.id}
+                style={[t.styles.inline, { gap: 10, paddingVertical: 4 }]}
+              >
+                <View style={[t.styles.divider, { flex: 1 }]} />
                 <Text
                   style={[
                     t.styles.small,
-                    { fontWeight: "600", fontSize: 10 },
-                    message.role === "AGENT" && { color: t.colors.ink },
+                    { fontSize: 11, fontWeight: "500", flexShrink: 1, textAlign: "center" },
                   ]}
                 >
-                  {message.role === "NOTE" ? "Private note · " : ""}
-                  {message.authorName}
+                  {message.content} · {time}
                 </Text>
+                <View style={[t.styles.divider, { flex: 1 }]} />
               </View>
-              <Text
-                selectable
-                style={[
-                  t.styles.text,
-                  message.role === "AGENT" && { color: t.colors.ink },
-                ]}
+            );
+          if (message.role === "NOTE")
+            return (
+              <View
+                key={message.id}
+                style={{
+                  backgroundColor: t.colors.note,
+                  borderRadius: 12,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  flexDirection: "row",
+                  gap: 8,
+                }}
               >
-                {message.content}
-              </Text>
-              <Text
-                style={[
-                  t.styles.small,
-                  { alignSelf: "flex-end", fontSize: 9 },
-                  message.role === "AGENT" && { color: t.colors.ink },
-                ]}
-              >
-                {new Date(message.createdAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
-            </View>
-          ),
-        )}
-      </ScrollView>
-      {conversation && conversation.state !== "RESOLVED" && (
-        <View style={t.styles.composer}>
-          {!mine && conversation.state !== "HUMAN" && !note && (
-            <>
-              <Button
-                title={busy ? "Taking over…" : "Take over & reply"}
-                icon={MessageCircle}
-                primary
-                onPress={() => void mutate("takeover")}
-                disabled={busy}
-                t={t}
-              />
-              <Text
-                style={[t.styles.small, { textAlign: "center", fontSize: 10 }]}
-              >
-                You’re in control. Customer-facing AI pauses when you take over.
-              </Text>
-            </>
-          )}
-          {(mine || note) && (
-            <>
-              <View style={t.styles.row}>
-                <View style={t.styles.inline}>
-                  {note ? (
-                    <NotebookPen size={14} color={t.colors.amber} />
-                  ) : (
-                    <MessageCircle size={14} color={t.colors.forest} />
-                  )}
-                  <Text style={[t.styles.label, { fontSize: 12 }]}>
-                    {note ? "Private team note" : "Reply to customer"}
+                <Lock size={14} color={t.colors.noteIcon} strokeWidth={2} style={{ marginTop: 3 }} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text selectable style={{ color: t.colors.noteText, fontSize: 14, lineHeight: 20 }}>
+                    <Text style={{ fontWeight: "600" }}>{message.authorName}: </Text>
+                    {message.content}
+                  </Text>
+                  <Text style={{ color: t.colors.noteIcon, fontSize: 11 }}>
+                    Private note · {time}
                   </Text>
                 </View>
-                <Pressable
-                  accessibilityRole="switch"
-                  accessibilityLabel="Private note"
-                  accessibilityState={{
-                    checked: note,
-                    disabled: busy || !!pending,
-                  }}
-                  disabled={busy || !!pending}
-                  onPress={() => changeMode(!note)}
+              </View>
+            );
+          const outgoing = message.role === "AGENT" || message.role === "ASSISTANT";
+          const ai = message.role === "ASSISTANT";
+          return (
+            <View
+              key={message.id}
+              style={{
+                alignSelf: outgoing ? "flex-end" : "flex-start",
+                maxWidth: "84%",
+                alignItems: outgoing ? "flex-end" : "flex-start",
+                gap: 4,
+              }}
+            >
+              {outgoing && (
+                <View style={[t.styles.inline, { gap: 4 }]}>
+                  {ai && <Sparkles size={11} color={t.colors.faint} />}
+                  <Text style={[t.styles.small, { fontSize: 11 }]}>
+                    {message.authorName}
+                  </Text>
+                </View>
+              )}
+              <View
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  borderRadius: 18,
+                  ...(outgoing
+                    ? { borderBottomRightRadius: 6 }
+                    : { borderBottomLeftRadius: 6 }),
+                  backgroundColor:
+                    message.role === "AGENT"
+                      ? t.colors.primary
+                      : ai
+                        ? t.colors.bg
+                        : t.colors.soft,
+                  borderWidth: ai ? 1 : 0,
+                  borderColor: t.colors.line,
+                }}
+              >
+                <Text
+                  selectable
                   style={{
-                    minHeight: 36,
-                    justifyContent: "center",
-                    paddingHorizontal: 8,
+                    fontSize: 15,
+                    lineHeight: 21,
+                    color:
+                      message.role === "AGENT"
+                        ? t.colors.onPrimary
+                        : ai
+                          ? t.colors.body
+                          : t.colors.text,
                   }}
                 >
+                  {message.content}
+                </Text>
+              </View>
+              <Text style={[t.styles.small, { fontSize: 11 }]}>{time}</Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+      {conversation && conversation.state !== "RESOLVED" && (
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderColor: t.colors.hairline,
+            backgroundColor: t.colors.bg,
+            paddingHorizontal: 16,
+            paddingTop: 12,
+            paddingBottom: 8,
+            gap: 10,
+          }}
+        >
+          {!mine && !note ? (
+            <>
+              {conversation.state !== "HUMAN" && (
+                <Button
+                  title={busy ? "Taking over…" : "Take over and reply"}
+                  primary
+                  onPress={() => void mutate("takeover")}
+                  disabled={busy}
+                  t={t}
+                  style={{ minHeight: 52 }}
+                />
+              )}
+              <View style={[t.styles.row, { justifyContent: "center", gap: 16 }]}>
+                {conversation.state !== "HUMAN" && (
+                  <Text style={[t.styles.small, { flexShrink: 1 }]}>
+                    AI pauses while you reply.
+                  </Text>
+                )}
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={busy || !!pending}
+                  onPress={() => changeMode(true)}
+                  style={({ pressed }) => [
+                    t.styles.inline,
+                    { gap: 5, minHeight: 36 },
+                    pressed && t.styles.pressed,
+                  ]}
+                >
+                  <Lock size={13} color={t.colors.text} strokeWidth={2} />
+                  <Text style={[t.styles.small, { color: t.colors.text, fontWeight: "600" }]}>
+                    Add a private note
+                  </Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <>
+              {suggestion && !note ? (
+                <View style={[t.styles.inline, { gap: 6 }]}>
+                  <Sparkles
+                    size={14}
+                    color={stale ? t.colors.error : t.colors.clay}
+                    strokeWidth={2}
+                  />
                   <Text
                     style={[
                       t.styles.small,
                       {
+                        flex: 1,
                         fontWeight: "600",
-                        color: note ? t.colors.amber : t.colors.forest,
+                        color: stale ? t.colors.error : t.colors.clay,
                       },
                     ]}
                   >
-                    {note ? "Switch to reply" : "Add a note"}
+                    {stale
+                      ? "New activity since this draft — review it"
+                      : "AI draft · review before sending"}
                   </Text>
-                </Pressable>
-              </View>
-              <TextInput
-                accessibilityLabel={note ? "Private note" : "Reply to customer"}
-                multiline
-                value={text}
-                editable={!busy && !pending}
-                maxLength={4000}
-                onChangeText={(value) => {
-                  setText(value);
-                  draft.text = value;
-                }}
-                placeholder={
-                  note
-                    ? "Just between your team…"
-                    : "A thoughtful reply goes a long way…"
-                }
-                placeholderTextColor={t.colors.muted}
-                style={[
-                  t.styles.input,
-                  {
-                    minHeight: 74,
-                    maxHeight: 135,
-                    backgroundColor: note ? t.colors.note : t.colors.bg,
-                  },
-                ]}
-              />
-              {suggestion && (
-                <Text
-                  style={[
-                    t.styles.small,
-                    { fontSize: 10 },
-                    stale && { color: t.colors.error },
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Discard AI draft"
+                    disabled={busy || !!pending}
+                    onPress={() => {
+                      setSuggestion(null);
+                      setText("");
+                      draft.text = "";
+                    }}
+                    style={{ minHeight: 32, justifyContent: "center", paddingHorizontal: 4 }}
+                  >
+                    <Text style={[t.styles.small, { fontWeight: "500" }]}>Discard</Text>
+                  </Pressable>
+                </View>
+              ) : note ? (
+                <View style={[t.styles.inline, { gap: 6 }]}>
+                  <Lock size={13} color={t.colors.noteIcon} strokeWidth={2} />
+                  <Text style={[t.styles.small, { flex: 1, color: t.colors.noteIcon, fontWeight: "600" }]}>
+                    Private note · only your team sees this
+                  </Text>
+                </View>
+              ) : (
+                !text.trim() && (
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={busy || !!pending}
+                    onPress={() => void assist("draft")}
+                    style={({ pressed }) => [
+                      t.styles.inline,
+                      {
+                        alignSelf: "flex-start",
+                        gap: 6,
+                        height: 34,
+                        paddingHorizontal: 12,
+                        borderRadius: 17,
+                        borderWidth: 1,
+                        borderColor: t.colors.line,
+                      },
+                      (pressed || busy) && t.styles.pressed,
+                    ]}
+                  >
+                    <Sparkles size={14} color={t.colors.clay} strokeWidth={2} />
+                    <Text style={[t.styles.small, { color: t.colors.text, fontWeight: "600" }]}>
+                      {busy ? "Drafting…" : "Draft a reply with AI"}
+                    </Text>
+                  </Pressable>
+                )
+              )}
+              <View style={[t.styles.inline, { alignItems: "flex-end", gap: 8 }]}>
+                <Pressable
+                  accessibilityRole="switch"
+                  accessibilityLabel="Private note"
+                  accessibilityState={{ checked: note, disabled: busy || !!pending }}
+                  disabled={busy || !!pending}
+                  onPress={() => changeMode(!note)}
+                  style={({ pressed }) => [
+                    t.styles.roundButton,
+                    note && { backgroundColor: t.colors.note },
+                    pressed && t.styles.pressed,
                   ]}
                 >
-                  {stale
-                    ? "New activity since this AI draft. Review before sending."
-                    : "AI draft · Yours to review, edit, and send"}
-                </Text>
-              )}
-              <View style={[t.styles.inline, { gap: 9 }]}>
-                {!note && (
-                  <Button
-                    title="AI draft"
-                    icon={Sparkles}
-                    onPress={() => void assist("draft")}
-                    disabled={busy || !!pending || !!text.trim()}
-                    t={t}
-                  />
-                )}
-                <Button
-                  title={
-                    busy
-                      ? "Working…"
-                      : pending
-                        ? "Retry sending"
-                        : note
-                          ? "Save note"
-                          : "Send reply"
-                  }
-                  icon={note ? NotebookPen : Send}
-                  primary
-                  onPress={() => void send()}
-                  disabled={busy || !text.trim()}
-                  t={t}
-                  style={{ flex: 1 }}
+                  {note && !mine ? (
+                    <X size={19} color={t.colors.noteIcon} strokeWidth={2} />
+                  ) : (
+                    <Lock
+                      size={18}
+                      color={note ? t.colors.noteIcon : t.colors.body}
+                      strokeWidth={1.9}
+                    />
+                  )}
+                </Pressable>
+                <TextInput
+                  accessibilityLabel={note ? "Private note" : `Reply to ${name}`}
+                  multiline
+                  value={text}
+                  editable={!busy && !pending}
+                  maxLength={4000}
+                  onChangeText={(value) => {
+                    setText(value);
+                    draft.text = value;
+                  }}
+                  placeholder={note ? "Note for your team…" : `Reply to ${name.split(" ")[0]}…`}
+                  placeholderTextColor={t.colors.faint}
+                  style={{
+                    flex: 1,
+                    minHeight: 44,
+                    maxHeight: 140,
+                    borderRadius: 22,
+                    borderWidth: 1,
+                    borderColor: note ? t.colors.note : t.colors.line,
+                    backgroundColor: note ? t.colors.note : t.colors.bg,
+                    color: note ? t.colors.noteText : t.colors.text,
+                    fontSize: 16,
+                    lineHeight: 21,
+                    paddingHorizontal: 16,
+                    paddingTop: 11,
+                    paddingBottom: 11,
+                  }}
                 />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    pending ? "Retry sending" : note ? "Save note" : "Send reply"
+                  }
+                  accessibilityState={{ disabled: !canSend, busy }}
+                  disabled={!canSend}
+                  onPress={() => void send()}
+                  style={({ pressed }) => [
+                    t.styles.roundButton,
+                    { backgroundColor: note ? t.colors.primary : t.colors.clay },
+                    !canSend && !busy && t.styles.disabled,
+                    pressed && t.styles.pressed,
+                  ]}
+                >
+                  {busy ? (
+                    <ActivityIndicator color={note ? t.colors.onPrimary : t.colors.onClay} />
+                  ) : pending ? (
+                    <RotateCw size={19} color={note ? t.colors.onPrimary : t.colors.onClay} strokeWidth={2.2} />
+                  ) : note ? (
+                    <Check size={20} color={t.colors.onPrimary} strokeWidth={2.4} />
+                  ) : (
+                    <ArrowUp size={20} color={t.colors.onClay} strokeWidth={2.4} />
+                  )}
+                </Pressable>
               </View>
             </>
           )}
-          {!mine && (
-            <Pressable
-              accessibilityRole="button"
-              disabled={busy || !!pending}
-              onPress={() => changeMode(!note)}
-              style={{
-                minHeight: 36,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Text style={[t.styles.small, { fontWeight: "600" }]}>
-                {note ? "Close private note" : "Add a private team note"}
-              </Text>
-            </Pressable>
-          )}
         </View>
       )}
-      <Modal
-        visible={showActions || assigning}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => {
-          setShowActions(false);
-          setAssigning(false);
-        }}
+      <ActionSheet
+        visible={showActions}
+        onClose={close}
+        t={t}
+        title={name}
+        subtitle={label}
       >
-        <SafeAreaView style={t.styles.screen}>
-          {assigning ? (
-            <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
-              <View style={t.styles.row}>
-                <Text style={t.styles.title}>Find the right person</Text>
-                <IconButton
-                  label="Close assignment"
-                  icon={X}
-                  onPress={() => setAssigning(false)}
-                  t={t}
-                />
-              </View>
-              {teammates.map((member) => (
-                <Button
-                  key={member.id}
-                  title={`${member.id === userId ? "You" : member.name || "Teammate"}${member.id === conversation?.assignedToId ? " · Current assignee" : ""}`}
-                  icon={Users}
-                  onPress={() => {
-                    setAssigning(false);
-                    void mutate("assign", { assigneeId: member.id });
-                  }}
-                  t={t}
-                />
-              ))}
-              <Button
-                title="Return to unassigned queue"
+        {mine && (
+          <Button
+            title="Mark resolved"
+            icon={Check}
+            primary
+            onPress={() => {
+              close();
+              void mutate("resolve");
+            }}
+            disabled={busy || !!pending}
+            t={t}
+            style={{ minHeight: 52 }}
+          />
+        )}
+        {conversation?.state !== "RESOLVED" && teammates.length > 0 && (
+          <View style={{ gap: 10 }}>
+            <View style={{ paddingHorizontal: 4 }}>
+              <SectionLabel title="Assign to" t={t} />
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingHorizontal: 4, paddingVertical: 4 }}
+            >
+              {[...teammates]
+                .sort((a, b) => Number(b.id === userId) - Number(a.id === userId))
+                .map((member) => {
+                  const current = member.id === conversation?.assignedToId;
+                  const who =
+                    member.id === userId
+                      ? "You"
+                      : (member.name || "Teammate").split(" ")[0];
+                  return (
+                    <Pressable
+                      key={member.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Assign to ${member.id === userId ? "yourself" : member.name || "teammate"}`}
+                      accessibilityState={{ selected: current, disabled: busy }}
+                      disabled={busy}
+                      onPress={() => {
+                        close();
+                        void mutate("assign", { assigneeId: member.id });
+                      }}
+                      style={({ pressed }) => [
+                        { width: 60, alignItems: "center", gap: 6 },
+                        pressed && t.styles.pressed,
+                      ]}
+                    >
+                      <View
+                        style={{
+                          padding: 2,
+                          borderRadius: 28,
+                          borderWidth: 2,
+                          borderColor: current ? t.colors.primary : "transparent",
+                        }}
+                      >
+                        <Avatar name={member.name || "Teammate"} size={46} round t={t} />
+                      </View>
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          t.styles.small,
+                          { fontSize: 12, color: current ? t.colors.text : t.colors.body },
+                          current && { fontWeight: "600" },
+                        ]}
+                      >
+                        {who}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Return to the unassigned queue"
+                disabled={busy}
                 onPress={() => {
-                  setAssigning(false);
+                  close();
                   void mutate("assign", { assigneeId: null });
                 }}
-                t={t}
-              />
-            </ScrollView>
-          ) : (
-            <ScrollView contentContainerStyle={{ padding: 24, gap: 20 }}>
-              <View style={t.styles.row}>
-                <Text style={t.styles.title}>Conversation</Text>
-                <IconButton
-                  label="Close conversation actions"
-                  icon={X}
-                  onPress={() => setShowActions(false)}
-                  t={t}
-                />
-              </View>
-              <Text style={t.styles.body}>
-                The right next step, with a little help.
-              </Text>
-              <Button
-                title="Get an AI summary"
-                icon={Sparkles}
-                onPress={() => {
-                  setShowActions(false);
-                  void assist("summary");
-                }}
-                disabled={busy}
-                t={t}
-              />
-              {conversation?.state !== "RESOLVED" && (
-                <Button
-                  title="Reassign conversation"
-                  icon={Users}
-                  onPress={() => {
-                    setShowActions(false);
-                    setAssigning(true);
+                style={({ pressed }) => [
+                  { width: 60, alignItems: "center", gap: 6 },
+                  pressed && t.styles.pressed,
+                ]}
+              >
+                <View
+                  style={{
+                    margin: 4,
+                    width: 46,
+                    height: 46,
+                    borderRadius: 23,
+                    borderWidth: 1.5,
+                    borderStyle: "dashed",
+                    borderColor: t.colors.faint,
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
-                  disabled={busy}
-                  t={t}
-                />
-              )}
-              {mine && (
-                <>
-                  <Button
-                    title="Mark as resolved"
-                    icon={CheckCheck}
-                    onPress={() => {
-                      setShowActions(false);
-                      void mutate("resolve");
-                    }}
-                    disabled={busy || !!pending}
-                    primary
-                    t={t}
-                  />
-                  <Button
-                    title="Return to AI"
-                    icon={Sparkles}
-                    onPress={() => {
-                      Alert.alert(
-                        "Return to AI?",
-                        "The AI assistant will handle the next customer message.",
-                        [
-                          { text: "Cancel", style: "cancel" },
-                          {
-                            text: "Return to AI",
-                            onPress: () => {
-                              setShowActions(false);
-                              void mutate("ai");
-                            },
-                          },
-                        ],
-                      );
-                    }}
-                    disabled={busy || !!pending}
-                    t={t}
-                  />
-                  <Button
-                    title="Create a task from this conversation"
-                    icon={NotebookPen}
-                    onPress={() => {
-                      setShowActions(false);
-                      void mutate("ticket");
-                    }}
-                    disabled={busy}
-                    t={t}
-                  />
-                </>
-              )}
-              <Text style={t.styles.small}>
-                AI assistance uses your project’s shared AI allowance. Drafts
-                are never sent automatically.
-              </Text>
+                >
+                  <InboxIcon size={19} color={t.colors.muted} strokeWidth={1.9} />
+                </View>
+                <Text style={[t.styles.small, { fontSize: 12, color: t.colors.body }]}>
+                  Queue
+                </Text>
+              </Pressable>
             </ScrollView>
+          </View>
+        )}
+        <View style={t.styles.group}>
+          {mine && (
+            <>
+              <SettingsRow
+                title="Hand back to AI"
+                subtitle="AI answers the next customer message"
+                icon={Sparkles}
+                disabled={busy || !!pending}
+                onPress={() =>
+                  Alert.alert(
+                    "Hand back to AI?",
+                    "The AI assistant will handle the next customer message.",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Hand back",
+                        onPress: () => {
+                          close();
+                          void mutate("ai");
+                        },
+                      },
+                    ],
+                  )
+                }
+                end={<View />}
+                t={t}
+              />
+              <View style={t.styles.divider} />
+              <SettingsRow
+                title="Create a task"
+                subtitle="Adds this conversation to your project board"
+                icon={NotebookPen}
+                disabled={busy}
+                onPress={() => {
+                  close();
+                  void mutate("ticket");
+                }}
+                end={<View />}
+                t={t}
+              />
+              <View style={t.styles.divider} />
+            </>
           )}
-        </SafeAreaView>
-      </Modal>
+          <SettingsRow
+            title={summary ? "Refresh summary" : "Summarize with AI"}
+            subtitle="Private to your team"
+            icon={ScrollText}
+            disabled={busy}
+            onPress={() => {
+              close();
+              void assist("summary");
+            }}
+            end={<View />}
+            t={t}
+          />
+        </View>
+        <Text style={[t.styles.small, { textAlign: "center", fontSize: 12 }]}>
+          AI help uses your project’s AI allowance. Nothing is sent without you.
+        </Text>
+      </ActionSheet>
     </KeyboardAvoidingView>
+  );
+}
+
+function ActionSheet({
+  visible,
+  onClose,
+  title,
+  subtitle,
+  t,
+  children,
+}: {
+  visible: boolean;
+  onClose(): void;
+  title: string;
+  subtitle: string;
+  t: Theme;
+  children: React.ReactNode;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close actions"
+          onPress={onClose}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: t.colors.scrim,
+          }}
+        />
+        <View
+          accessibilityViewIsModal
+          style={{
+            width: "100%",
+            maxWidth: 720,
+            alignSelf: "center",
+            backgroundColor: t.colors.bg,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 16,
+            paddingTop: 8,
+            paddingBottom: Math.max(insets.bottom, 16) + 4,
+            gap: 16,
+          }}
+        >
+          <View
+            style={{
+              alignSelf: "center",
+              width: 36,
+              height: 5,
+              borderRadius: 3,
+              backgroundColor: t.colors.line,
+            }}
+          />
+          <View style={[t.styles.inline, { gap: 12, paddingLeft: 4 }]}>
+            <Avatar name={title} t={t} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text numberOfLines={1} style={[t.styles.label, { fontSize: 17 }]}>
+                {title}
+              </Text>
+              <Text numberOfLines={1} style={t.styles.small}>
+                {subtitle}
+              </Text>
+            </View>
+            <IconButton label="Close" icon={X} filled onPress={onClose} t={t} />
+          </View>
+          {children}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -1624,6 +1907,7 @@ function Settings({
   t,
   me,
   projectId,
+  onClose,
   onProject,
   onRefresh,
   onChangeServer,
@@ -1632,6 +1916,7 @@ function Settings({
   t: Theme;
   me: Me;
   projectId: string | null;
+  onClose(): void;
   onProject(id: string): void;
   onRefresh(): Promise<Me>;
   onChangeServer(): void;
@@ -1677,223 +1962,214 @@ function Settings({
   const paused =
     !!preference.quietUntil && Date.parse(preference.quietUntil) > Date.now();
   return (
-    <ScrollView
-      contentContainerStyle={{
-        paddingHorizontal: 20,
-        paddingBottom: 28,
-        gap: 22,
-      }}
-    >
-      <View style={{ gap: 5, paddingHorizontal: 4 }}>
-        <Text style={[t.styles.title, { fontSize: 34, lineHeight: 40 }]}>
+    <View style={{ flex: 1 }}>
+      <View style={[t.styles.inline, { paddingHorizontal: 6, paddingTop: 2 }]}>
+        <IconButton
+          label="Back to inbox"
+          icon={ChevronLeft}
+          onPress={onClose}
+          t={t}
+        />
+      </View>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: 28,
+          gap: 24,
+        }}
+      >
+        <Text accessibilityRole="header" style={t.styles.largeTitle}>
           Settings
         </Text>
-        <Text style={t.styles.small}>Your workspace. Your availability.</Text>
-      </View>
-      <View style={t.styles.card}>
-        <View style={t.styles.inline}>
-          <Avatar name={me.user.name || me.user.email} size={50} t={t} />
-          <View style={{ flex: 1, gap: 4 }}>
+        <View style={[t.styles.inline, { gap: 14 }]}>
+          <Avatar name={me.user.name || me.user.email} size={52} round t={t} />
+          <View style={{ flex: 1, gap: 2 }}>
             <Text style={[t.styles.label, { fontSize: 17 }]}>
               {me.user.name || "Your account"}
             </Text>
             <Text style={t.styles.small}>{me.user.email}</Text>
           </View>
         </View>
-      </View>
-      {!!error && (
-        <Text accessibilityRole="alert" style={t.styles.error}>
-          {error}
-        </Text>
-      )}
-      <View style={{ gap: 10 }}>
-        <Text style={[t.styles.eyebrow, { paddingLeft: 4 }]}>
-          STAY IN THE LOOP
-        </Text>
-        <View style={t.styles.card}>
-          <SettingsRow
-            title="Customer alerts"
-            subtitle={
-              alerts.ready
-                ? "This phone is connected to your team."
-                : "Get notified when you’re needed."
-            }
-            icon={Bell}
-            t={t}
-            end={
-              <Switch
-                accessibilityLabel="Mobile notifications"
-                value={preference.enabled && alerts.ready}
-                disabled={busy || !details}
-                onValueChange={(enabled) =>
-                  enabled
-                    ? alerts.open()
-                    : void update({ ...preference, enabled: false })
-                }
-                trackColor={{ true: t.colors.forest }}
-                thumbColor={t.colors.card}
-              />
-            }
-          />
-          {!details ? (
-            <Button
-              title="Reload alert settings"
-              onPress={() => void loadDetails()}
+        {!!error && (
+          <Text
+            accessibilityRole="alert"
+            style={[t.styles.error, { paddingHorizontal: 0 }]}
+          >
+            {error}
+          </Text>
+        )}
+        <View style={{ gap: 10 }}>
+          <SectionLabel title="Availability" t={t} />
+          <View style={t.styles.group}>
+            <SettingsRow
+              title="Customer alerts"
+              subtitle={
+                alerts.ready
+                  ? "This phone is connected."
+                  : "Get a tap when you’re needed."
+              }
+              icon={Bell}
               t={t}
-            />
-          ) : (
-            <>
-              {!alerts.ready && (
-                <Button
-                  title="Set up customer alerts"
-                  icon={ArrowRight}
-                  primary
-                  onPress={alerts.open}
+              end={
+                <Toggle
+                  label="Mobile notifications"
+                  value={preference.enabled && alerts.ready}
+                  disabled={busy || !details}
+                  onValueChange={(enabled) =>
+                    enabled
+                      ? alerts.open()
+                      : void update({ ...preference, enabled: false })
+                  }
                   t={t}
                 />
-              )}
-              <View style={t.styles.divider} />
-              <SettingsRow
-                title="On call for new requests"
-                subtitle="Help customers who haven’t been assigned yet."
-                icon={Users}
-                t={t}
-                end={
-                  <Switch
-                    accessibilityLabel="On call for unassigned requests"
-                    value={preference.onCall}
-                    disabled={busy || !preference.enabled || !alerts.ready}
-                    onValueChange={(onCall) =>
-                      void update({ ...preference, onCall })
-                    }
-                    trackColor={{ true: t.colors.forest }}
-                    thumbColor={t.colors.card}
-                  />
-                }
-              />
-              <View style={t.styles.divider} />
-              <SettingsRow
-                title={
-                  paused ? "Resume customer alerts" : "Take a little break"
-                }
-                subtitle={
-                  paused
-                    ? "Alerts are paused for this workspace."
-                    : "Pause alerts for one hour."
-                }
-                icon={Clock3}
-                onPress={
-                  preference.enabled && !busy
-                    ? () =>
-                        void update({
-                          ...preference,
-                          quietUntil: paused
-                            ? null
-                            : new Date(Date.now() + 3600_000).toISOString(),
-                        })
-                    : undefined
-                }
-                t={t}
-              />
-            </>
-          )}
-          <View
-            style={[
-              t.styles.inline,
-              {
-                backgroundColor: t.colors.soft,
-                borderRadius: 12,
-                padding: 12,
-                alignItems: "flex-start",
-              },
-            ]}
-          >
-            <ShieldCheck size={14} color={t.colors.forest} />
-            <Text style={[t.styles.small, { flex: 1, fontSize: 10 }]}>
+              }
+            />
+            {!details ? (
+              <>
+                <View style={t.styles.divider} />
+                <SettingsRow
+                  title="Reload alert settings"
+                  icon={RotateCw}
+                  onPress={() => void loadDetails()}
+                  t={t}
+                />
+              </>
+            ) : (
+              <>
+                {!alerts.ready && (
+                  <>
+                    <View style={t.styles.divider} />
+                    <SettingsRow
+                      title="Set up customer alerts"
+                      icon={ArrowRight}
+                      onPress={alerts.open}
+                      t={t}
+                    />
+                  </>
+                )}
+                <View style={t.styles.divider} />
+                <SettingsRow
+                  title="On call for new requests"
+                  subtitle="Also hear about unassigned customers."
+                  icon={UserRound}
+                  t={t}
+                  end={
+                    <Toggle
+                      label="On call for unassigned requests"
+                      value={preference.onCall}
+                      disabled={busy || !preference.enabled || !alerts.ready}
+                      onValueChange={(onCall) =>
+                        void update({ ...preference, onCall })
+                      }
+                      t={t}
+                    />
+                  }
+                />
+                <View style={t.styles.divider} />
+                <SettingsRow
+                  title={paused ? "Resume alerts" : "Pause for an hour"}
+                  subtitle={
+                    paused
+                      ? "Alerts are paused for this workspace."
+                      : "Take a break without turning alerts off."
+                  }
+                  icon={Clock3}
+                  disabled={!preference.enabled || busy}
+                  onPress={() =>
+                    void update({
+                      ...preference,
+                      quietUntil: paused
+                        ? null
+                        : new Date(Date.now() + 3600_000).toISOString(),
+                    })
+                  }
+                  t={t}
+                />
+              </>
+            )}
+            <View style={t.styles.divider} />
+            <SettingsRow
+              title="Phone notification settings"
+              icon={ArrowRight}
+              onPress={() =>
+                void Linking.openSettings().catch((e) => setError(describe(e)))
+              }
+              t={t}
+            />
+          </View>
+          <View style={[t.styles.inline, { alignItems: "flex-start", gap: 8, paddingHorizontal: 4 }]}>
+            <Lock size={14} color={t.colors.faint} strokeWidth={2} style={{ marginTop: 2 }} />
+            <Text style={[t.styles.small, { flex: 1, fontSize: 12 }]}>
               Customer messages stay hidden on your lock screen. Being on call
               doesn’t show you as online.
             </Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              void Linking.openSettings().catch((e) => setError(describe(e)))
-            }
-            style={{
-              minHeight: 36,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={[
-                t.styles.small,
-                { color: t.colors.forest, fontWeight: "600" },
-              ]}
-            >
-              Phone notification settings
-            </Text>
-          </Pressable>
         </View>
-      </View>
-      <View style={{ gap: 10 }}>
-        <Text style={[t.styles.eyebrow, { paddingLeft: 4 }]}>
-          YOUR WORKSPACES
-        </Text>
-        <View style={t.styles.card}>
-          {me.projects.map((project, index) => (
-            <React.Fragment key={project.id}>
-              {index > 0 && <View style={t.styles.divider} />}
-              <SettingsRow
-                title={project.name}
-                icon={Users}
-                onPress={() => onProject(project.id)}
-                end={
-                  project.id === projectId ? (
-                    <Check size={18} color={t.colors.forest} />
-                  ) : (
-                    <ChevronRight size={16} color={t.colors.muted} />
-                  )
-                }
-                t={t}
-              />
-            </React.Fragment>
-          ))}
-          <Button
-            title="Refresh workspaces"
-            onPress={() => void onRefresh().catch((e) => setError(describe(e)))}
-            t={t}
-          />
+        <View style={{ gap: 10 }}>
+          <SectionLabel title="Workspaces" t={t} />
+          <View style={t.styles.group}>
+            {me.projects.map((project, index) => (
+              <React.Fragment key={project.id}>
+                {index > 0 && <View style={t.styles.divider} />}
+                <SettingsRow
+                  title={project.name}
+                  onPress={() => onProject(project.id)}
+                  end={
+                    project.id === projectId ? (
+                      <Check size={20} color={t.colors.text} />
+                    ) : (
+                      <ChevronRight size={18} color={t.colors.faint} />
+                    )
+                  }
+                  t={t}
+                />
+              </React.Fragment>
+            ))}
+            <View style={t.styles.divider} />
+            <SettingsRow
+              title="Refresh workspaces"
+              icon={RotateCw}
+              onPress={() => void onRefresh().catch((e) => setError(describe(e)))}
+              end={<View />}
+              t={t}
+            />
+          </View>
         </View>
-      </View>
-      <View style={{ gap: 10 }}>
-        <Text style={[t.styles.eyebrow, { paddingLeft: 4 }]}>CONNECTED TO</Text>
-        <View style={t.styles.card}>
-          <SettingsRow
-            title={api.baseUrl.replace(/^https?:\/\//, "")}
-            subtitle="Your Upstep server"
-            icon={Globe}
-            onPress={onChangeServer}
-            t={t}
-          />
+        <View style={{ gap: 10 }}>
+          <SectionLabel title="Server" t={t} />
+          <View style={t.styles.group}>
+            <SettingsRow
+              title={api.baseUrl.replace(/^https?:\/\//, "")}
+              subtitle="Your Upstep server"
+              icon={Globe}
+              onPress={onChangeServer}
+              t={t}
+            />
+          </View>
         </View>
-      </View>
-      <Button
-        title={busy ? "Signing out…" : "Sign out on this phone"}
-        icon={LogOut}
-        onPress={() => {
-          setBusy(true);
-          void api.signOut().catch((e) => {
-            setError(`Could not revoke this phone’s session. ${describe(e)}`);
-            setBusy(false);
-          });
-        }}
-        disabled={busy}
-        t={t}
-      />
-      <Text style={[t.styles.small, { textAlign: "center", fontSize: 10 }]}>
-        Signing out stops customer alerts on this phone.
-      </Text>
-    </ScrollView>
+        <View style={{ gap: 8 }}>
+          <View style={t.styles.group}>
+            <SettingsRow
+              title={busy ? "Signing out…" : "Sign out on this phone"}
+              icon={LogOut}
+              destructive
+              disabled={busy}
+              onPress={() => {
+                setBusy(true);
+                void api.signOut().catch((e) => {
+                  setError(`Could not revoke this phone’s session. ${describe(e)}`);
+                  setBusy(false);
+                });
+              }}
+              end={<View />}
+              t={t}
+            />
+          </View>
+          <Text style={[t.styles.small, { textAlign: "center", fontSize: 12 }]}>
+            Signing out stops customer alerts on this phone.
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }

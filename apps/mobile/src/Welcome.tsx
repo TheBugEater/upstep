@@ -1,11 +1,6 @@
 import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import {
-  ArrowRight,
-  ChevronDown,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react-native";
+import { ArrowRight } from "lucide-react-native";
 import { Brand, Button, NotificationArt } from "./ui";
 import type { Theme } from "./theme";
 
@@ -28,20 +23,14 @@ export function Welcome({
 }) {
   return (
     <View style={{ flex: 1 }}>
-      <View
-        style={[
-          t.styles.row,
-          { paddingHorizontal: 26, paddingTop: 20, paddingBottom: 10 },
-        ]}
-      >
+      <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
         <Brand t={t} />
-        <Text style={t.styles.eyebrow}>SUPPORT, ON THE GO</Text>
       </View>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingHorizontal: 26,
+          paddingHorizontal: 24,
           paddingVertical: 20,
           gap: 24,
         }}
@@ -52,36 +41,28 @@ export function Welcome({
             flexGrow: 1,
             flexShrink: 0,
             justifyContent: "center",
-            gap: 28,
-            paddingVertical: 16,
+            gap: 36,
+            paddingVertical: 12,
           }}
         >
           <NotificationArt t={t} />
-          <View style={{ gap: 14 }}>
+          <View style={{ gap: 12 }}>
             <Text style={t.styles.heroTitle}>
-              Be there.{"\n"}From anywhere.
+              Step in when the AI steps back.
             </Text>
             <Text style={t.styles.body}>
-              A human touch, just a tap away. Get the heads-up, pick up where AI
-              left off, and make someone’s day.
-            </Text>
-          </View>
-          <View style={t.styles.inline}>
-            <View
-              style={[
-                t.styles.avatar,
-                { width: 34, height: 34, borderRadius: 11 },
-              ]}
-            >
-              <Sparkles size={16} color={t.colors.forest} />
-            </View>
-            <Text style={[t.styles.small, { flex: 1 }]}>
-              AI handles the everyday. You handle the moments that matter.
+              Get a tap when a customer needs a person. Reply, hand back to AI
+              or resolve, wherever you are.
             </Text>
           </View>
         </View>
         {!!error && (
-          <View style={[t.styles.card, { borderColor: t.colors.error }]}>
+          <View
+            style={[
+              t.styles.card,
+              { backgroundColor: t.colors.errorTint, borderWidth: 0 },
+            ]}
+          >
             <Text
               accessibilityRole="alert"
               style={[t.styles.text, { color: t.colors.error }]}
@@ -92,47 +73,42 @@ export function Welcome({
           </View>
         )}
       </ScrollView>
-      <View
-        style={{
-          gap: 12,
-          paddingHorizontal: 26,
-          paddingTop: 12,
-          paddingBottom: 4,
-        }}
-      >
+      <View style={{ gap: 6, paddingHorizontal: 24, paddingBottom: 4 }}>
         <Button
-          title={busy ? "Opening sign-in…" : "Get started"}
-          icon={ArrowRight}
+          title={busy ? "Opening sign-in…" : "Sign in to Upstep"}
+          icon={busy ? undefined : ArrowRight}
           onPress={onLogin}
           disabled={busy}
           primary
           t={t}
-          style={{ minHeight: 56, borderRadius: 17 }}
+          style={{ minHeight: 54 }}
         />
-        <View style={[t.styles.inline, { justifyContent: "center", gap: 5 }]}>
-          <ShieldCheck size={13} color={t.colors.muted} />
-          <Text style={t.styles.small}>
-            Sign in with your existing Upstep account
-          </Text>
-        </View>
+        <Text style={[t.styles.small, { textAlign: "center", paddingTop: 4 }]}>
+          Use the Google or GitHub account you use on the web.
+        </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Change Upstep server"
+          accessibilityLabel={`Upstep server: ${server.replace(/^https?:\/\//, "")}. Change server`}
           onPress={onServer}
           disabled={busy}
-          style={{
-            alignSelf: "center",
-            minHeight: 44,
-            flexDirection: "row",
-            gap: 6,
-            alignItems: "center",
-          }}
+          style={({ pressed }) => [
+            {
+              alignSelf: "center",
+              minHeight: 44,
+              flexDirection: "row",
+              gap: 6,
+              alignItems: "center",
+            },
+            pressed && t.styles.pressed,
+          ]}
         >
-          <View style={[t.styles.statusDot, { width: 5, height: 5 }]} />
-          <Text style={t.styles.small}>
+          <Text style={t.styles.small}>Server</Text>
+          <Text style={[t.styles.small, { color: t.colors.body, fontWeight: "600" }]}>
             {server.replace(/^https?:\/\//, "")}
           </Text>
-          <ChevronDown size={12} color={t.colors.muted} />
+          <Text style={[t.styles.small, { color: t.colors.clay, fontWeight: "600" }]}>
+            Change
+          </Text>
         </Pressable>
       </View>
     </View>

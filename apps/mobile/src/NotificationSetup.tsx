@@ -4,7 +4,6 @@ import {
   Linking,
   Pressable,
   ScrollView,
-  Switch,
   Text,
   View,
 } from "react-native";
@@ -12,15 +11,15 @@ import {
   ArrowRight,
   Bell,
   Check,
-  CheckCheck,
   ChevronDown,
+  Hand,
+  Lock,
   MessageCircle,
-  ShieldCheck,
-  Users,
+  UserRound,
 } from "lucide-react-native";
 import { alertPermissionAction } from "./alert-setup";
 import type { AlertSetupController } from "./use-alert-setup";
-import { Brand, Button, NotificationArt, SettingsRow } from "./ui";
+import { Brand, Button, Chip, SettingsRow, Toggle } from "./ui";
 import type { Theme } from "./theme";
 
 export function NotificationSetup({
@@ -51,7 +50,7 @@ export function NotificationSetup({
       <View style={{ flex: 1 }}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1, padding: 28, gap: 24 }}
+          contentContainerStyle={{ flexGrow: 1, padding: 24, gap: 24 }}
         >
           <Brand t={t} />
           <View
@@ -59,55 +58,34 @@ export function NotificationSetup({
               flexGrow: 1,
               flexShrink: 0,
               justifyContent: "center",
-              gap: 24,
-              paddingVertical: 30,
+              gap: 20,
+              paddingVertical: 24,
             }}
           >
             <View
               style={{
-                width: 110,
-                height: 110,
-                borderRadius: 38,
-                alignSelf: "center",
+                width: 72,
+                height: 72,
+                borderRadius: 36,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: t.colors.accent,
-                marginBottom: 12,
+                backgroundColor: t.colors.primary,
               }}
             >
-              <Bell size={44} strokeWidth={1.4} color={t.colors.ink} />
-              <View
-                style={{
-                  position: "absolute",
-                  right: -5,
-                  bottom: 1,
-                  padding: 7,
-                  borderRadius: 20,
-                  backgroundColor: t.colors.forest,
-                  borderWidth: 4,
-                  borderColor: t.colors.bg,
-                }}
-              >
-                <Check size={18} color={t.colors.onForest} />
-              </View>
+              <Check size={34} strokeWidth={2.4} color={t.colors.onPrimary} />
             </View>
-            <Text
-              style={[
-                t.styles.heroTitle,
-                { textAlign: "center", fontSize: 37, lineHeight: 43 },
-              ]}
-            >
-              You’re in the loop.
-            </Text>
-            <Text style={[t.styles.body, { textAlign: "center" }]}>
-              Customer alerts are enabled for {projectName}. You can change your
-              availability any time.
-            </Text>
-            <View style={t.styles.card}>
+            <View style={{ gap: 10 }}>
+              <Text style={t.styles.heroTitle}>You’re in the loop.</Text>
+              <Text style={t.styles.body}>
+                Customer alerts are on for {projectName}. Change your
+                availability any time from your profile.
+              </Text>
+            </View>
+            <View style={t.styles.group}>
               <SettingsRow
                 title="This phone is connected"
-                subtitle="Assignments and customer replies can reach you."
-                icon={CheckCheck}
+                subtitle="Handoffs, assignments and replies can reach you."
+                icon={Bell}
                 t={t}
               />
               <View style={t.styles.divider} />
@@ -119,33 +97,26 @@ export function NotificationSetup({
                 }
                 subtitle={
                   alerts.preference?.onCall
-                    ? "Your team can reach you when a customer needs a person."
+                    ? "You’ll also hear about unassigned requests."
                     : "You’ll hear about conversations assigned to you."
                 }
-                icon={Users}
+                icon={UserRound}
                 t={t}
               />
             </View>
           </View>
         </ScrollView>
-        <View
-          style={{
-            paddingHorizontal: 28,
-            paddingTop: 12,
-            paddingBottom: 8,
-            gap: 12,
-          }}
-        >
+        <View style={{ paddingHorizontal: 24, paddingTop: 12, gap: 10 }}>
           <Button
             title="Open my inbox"
             icon={ArrowRight}
             primary
             onPress={onComplete || alerts.finish}
             t={t}
-            style={{ minHeight: 56 }}
+            style={{ minHeight: 54 }}
           />
           <Text style={[t.styles.small, { textAlign: "center" }]}>
-            Focus mode and your phone’s settings can silence alerts.
+            Focus modes and your phone’s settings can still silence alerts.
           </Text>
         </View>
       </View>
@@ -157,117 +128,107 @@ export function NotificationSetup({
     <View style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 26, paddingBottom: 16, gap: 22 }}
+        contentContainerStyle={{ padding: 24, paddingBottom: 16, gap: 22 }}
       >
         <View style={t.styles.row}>
           <Brand t={t} />
-          <View style={t.styles.inline}>
-            <Check size={13} color={t.colors.forest} />
-            <Text style={t.styles.eyebrow}>SIGNED IN</Text>
-          </View>
+          <Chip title="Signed in" icon={Check} t={t} />
         </View>
-        {onChooseProject && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Choose workspace for customer alerts"
-            disabled={alerts.busy}
-            onPress={onChooseProject}
-            style={[
-              t.styles.inline,
-              {
-                alignSelf: "flex-start",
-                backgroundColor: t.colors.soft,
-                borderRadius: 12,
-                paddingHorizontal: 12,
-                minHeight: 40,
-              },
-            ]}
-          >
-            <Users size={14} color={t.colors.forest} />
-            <Text
-              style={[
-                t.styles.small,
-                { color: t.colors.forest, fontWeight: "600", flexShrink: 1 },
+        <View style={{ gap: 10, paddingTop: 8 }}>
+          {onChooseProject ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Workspace: ${projectName}. Choose workspace for customer alerts`}
+              disabled={alerts.busy}
+              onPress={onChooseProject}
+              style={({ pressed }) => [
+                t.styles.inline,
+                { gap: 4, alignSelf: "flex-start", minHeight: 32 },
+                pressed && t.styles.pressed,
               ]}
             >
+              <Text style={[t.styles.small, { fontWeight: "500" }]}>
+                {projectName}
+              </Text>
+              <ChevronDown size={14} color={t.colors.faint} />
+            </Pressable>
+          ) : (
+            <Text style={[t.styles.small, { fontWeight: "500" }]}>
               {projectName}
             </Text>
-            <ChevronDown size={13} color={t.colors.forest} />
-          </Pressable>
-        )}
-        <View style={{ gap: 12, paddingTop: 8 }}>
-          <Text style={t.styles.eyebrow}>ONE LAST THING</Text>
-          <Text style={[t.styles.heroTitle, { fontSize: 37, lineHeight: 42 }]}>
-            Be there when{"\n"}you’re needed.
-          </Text>
-          <Text style={t.styles.body}>
-            Turn on customer alerts so you can step in, even when Upstep isn’t
-            open.
+          )}
+          <Text style={t.styles.heroTitle}>
+            Know the moment someone’s waiting.
           </Text>
         </View>
-        <NotificationArt t={t} />
-        <View style={{ gap: 18 }}>
-          <SettingsRow
-            title="Know when you’re needed"
-            subtitle="Human handoffs, assignments, and customer replies."
-            icon={MessageCircle}
-            t={t}
-          />
-          <SettingsRow
-            title="Customer details stay private"
-            subtitle="Message content is hidden on the lock screen."
-            icon={ShieldCheck}
-            t={t}
-          />
+        <View style={{ gap: 10 }}>
+          <Text style={t.styles.sectionLabel}>You’ll get a tap when</Text>
+          <View style={t.styles.group}>
+            <SettingsRow
+              title="AI hands off to a person"
+              subtitle="The customer needs help AI can’t give."
+              icon={Hand}
+              t={t}
+            />
+            <View style={t.styles.divider} />
+            <SettingsRow
+              title="A conversation is assigned to you"
+              icon={UserRound}
+              t={t}
+            />
+            <View style={t.styles.divider} />
+            <SettingsRow
+              title="A customer replies to you"
+              icon={MessageCircle}
+              t={t}
+            />
+            <View style={t.styles.divider} />
+            <SettingsRow
+              title="I’m on call"
+              subtitle="Also alert me for unassigned requests."
+              t={t}
+              end={
+                <Toggle
+                  label="On call for new customer requests"
+                  value={onCall}
+                  disabled={alerts.busy}
+                  onValueChange={setOnCall}
+                  t={t}
+                />
+              }
+            />
+          </View>
+        </View>
+        <View style={[t.styles.inline, { alignItems: "flex-start", gap: 12 }]}>
+          <Lock size={18} color={t.colors.muted} strokeWidth={1.9} />
+          <Text style={[t.styles.small, { flex: 1, color: t.colors.muted }]}>
+            Your lock screen only says a customer needs you — never their name
+            or what they wrote.
+          </Text>
         </View>
       </ScrollView>
-      <View
-        style={{
-          gap: 8,
-          paddingHorizontal: 26,
-          paddingTop: 12,
-          paddingBottom: 4,
-          borderTopWidth: 1,
-          borderColor: t.colors.line,
-        }}
-      >
-        <View style={{ paddingBottom: 4 }}>
-          <SettingsRow
-            title="On call for new requests"
-            subtitle="Include unassigned requests."
-            t={t}
-            end={
-              <Switch
-                accessibilityLabel="On call for new customer requests"
-                value={onCall}
-                disabled={alerts.busy}
-                onValueChange={setOnCall}
-                trackColor={{ true: t.colors.forest }}
-                thumbColor={t.colors.card}
-              />
-            }
-          />
-        </View>
+      <View style={{ gap: 6, paddingHorizontal: 24, paddingTop: 12 }}>
         {(!!alerts.problem || !!settingsError) && (
           <View
             style={{
               padding: 14,
-              backgroundColor: t.colors.amberBg,
+              marginBottom: 6,
+              backgroundColor: t.colors.note,
               borderRadius: 14,
             }}
           >
             <Text
               accessibilityRole="alert"
-              style={[t.styles.text, { color: t.colors.amber }]}
+              style={[t.styles.text, { color: t.colors.noteText }]}
             >
               {settingsError ||
                 (needsSettings
-                  ? "Notifications are off in your phone’s settings. Allow them there, then return to finish setup."
+                  ? "Notifications are off in your phone’s settings. Allow them there, then come back to finish."
                   : alerts.problem)}
             </Text>
           </View>
         )}
-        {alerts.checking && <ActivityIndicator color={t.colors.forest} />}
+        {alerts.checking && <ActivityIndicator color={t.colors.text} />}
         <Button
           title={
             alerts.busy
@@ -276,9 +237,8 @@ export function NotificationSetup({
                 ? "Retry connection"
                 : needsSettings
                   ? "Open phone settings"
-                  : "Enable customer alerts"
+                  : "Turn on alerts"
           }
-          icon={Bell}
           primary
           disabled={alerts.busy || alerts.checking}
           onPress={() =>
@@ -289,20 +249,19 @@ export function NotificationSetup({
                 : void alerts.enable(onCall)
           }
           t={t}
-          style={{ minHeight: 56, borderRadius: 17 }}
+          style={{ minHeight: 54 }}
         />
         <Pressable
           accessibilityRole="button"
           disabled={alerts.busy}
           onPress={() => void alerts.later()}
-          style={{
-            minHeight: 44,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          style={({ pressed }) => [
+            { minHeight: 44, alignItems: "center", justifyContent: "center" },
+            pressed && t.styles.pressed,
+          ]}
         >
-          <Text style={[t.styles.small, { fontWeight: "600" }]}>
-            Not now — I’ll check the inbox myself
+          <Text style={[t.styles.label, { fontWeight: "500", color: t.colors.muted }]}>
+            Not now
           </Text>
         </Pressable>
       </View>
@@ -328,10 +287,13 @@ export function AlertBanner({
       style={({ pressed }) => [
         {
           marginHorizontal: 20,
-          marginBottom: 18,
-          backgroundColor: t.colors.soft,
-          borderRadius: 17,
-          padding: 15,
+          marginBottom: 12,
+          backgroundColor: t.colors.surface,
+          borderWidth: 1,
+          borderColor: t.colors.line,
+          borderRadius: 16,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
           flexDirection: "row",
           alignItems: "center",
           gap: 12,
@@ -339,27 +301,18 @@ export function AlertBanner({
         pressed && t.styles.pressed,
       ]}
     >
-      <View
-        style={[
-          t.styles.iconButton,
-          { width: 38, height: 38, borderRadius: 12 },
-        ]}
-      >
-        <Bell size={18} color={t.colors.forest} />
-      </View>
-      <View style={{ flex: 1, gap: 3 }}>
-        <Text style={[t.styles.label, { fontSize: 13 }]}>
-          {alerts.paused
-            ? "Your customer alerts are paused"
-            : "Your customer alerts aren’t ready"}
+      <Bell size={18} color={t.colors.text} strokeWidth={1.9} />
+      <View style={{ flex: 1, gap: 1 }}>
+        <Text style={[t.styles.label, { fontSize: 14 }]}>
+          {alerts.paused ? "Alerts are paused" : "Alerts are off"}
         </Text>
         <Text style={t.styles.small}>
           {alerts.paused
             ? "Tap to get back in the loop."
-            : "Get a heads-up when a customer needs you."}
+            : "Get a tap when a customer needs you."}
         </Text>
       </View>
-      <ArrowRight size={17} color={t.colors.forest} />
+      <ArrowRight size={17} color={t.colors.faint} />
     </Pressable>
   );
 }
