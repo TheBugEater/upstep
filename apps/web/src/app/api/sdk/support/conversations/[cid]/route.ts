@@ -6,6 +6,7 @@ import {
   supportResponseError,
   customerConversation,
   publicMessageSelect,
+  publicMessage,
 } from "@/lib/support/http";
 import {
   customerMessage,
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest, { params }: Context) {
         escalationSummary: interaction.escalationSummary,
         activeWidgetMessageId: interaction.activeWidgetMessageId,
         humanRequested: c.humanRequested,
-        messages,
+        messages: messages.map(publicMessage),
         customer: {
           name: session!.customer.name,
           email: session!.customer.email,

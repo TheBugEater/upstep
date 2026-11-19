@@ -38,14 +38,15 @@ export async function GET(req: NextRequest, { params }: Context) {
         { headers: { "Cache-Control": "no-store" } },
       );
     const config = project.supportConfig;
-    const [conversations, online, presence, pages, usage] = await Promise.all([
+    const [conversations, online, presence, pages, usage, gaps, connectors] = await Promise.all([
       db.supportConversation.findMany({
         where: { projectId: id },
         include: {
           customer: true,
           assignee: { select: { id: true, name: true } },
           messages: {
-            where: { role: { not: "NOTE" } },
+            // The list preview shows the latest real message, not notes or system lines.
+            where: { role: { in: ["CUSTOMER", "ASSISTANT", "AGENT"] } },
             orderBy: { createdAt: "desc" },
             take: 1,
           },
@@ -65,6 +66,23 @@ export async function GET(req: NextRequest, { params }: Context) {
           })
         : [],
       supportUsage(project.ownerId, project.owner.plan),
+      // Questions the AI understood but couldn't resolve from knowledge: the
+      // clearest signal of what to add next.
+      db.supportMessage.findMany({
+        where: {
+          role: "ASSISTANT",
+          createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60_000) },
+          conversation: { projectId: id },
+          metadata: { path: ["escalationReason"], equals: "unresolved" },
+        },
+        select: { id: true, conversationId: true, metadata: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+      }),
+      db.supportConnector.findMany({
+        where: { projectId: id },
+        select: { name: true, enabled: true },
+      }),
     ]);
     return NextResponse.json(
       {
@@ -99,6 +117,15 @@ export async function GET(req: NextRequest, { params }: Context) {
         available: presence?.available ?? false,
         pages,
         usage,
+        gaps: gaps.flatMap((m) => {
+          const meta = m.metadata as { issueSummary?: unknown } | null;
+          const summary =
+            typeof meta?.issueSummary === "string" ? meta.issueSummary.trim() : "";
+          return summary
+            ? [{ id: m.id, conversationId: m.conversationId, summary, createdAt: m.createdAt }]
+            : [];
+        }),
+        connectors,
         ai: supportAIConfiguration(),
         canManage: access.canManage,
       },

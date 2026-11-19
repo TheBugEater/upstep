@@ -14,6 +14,12 @@ import { processBusinessLearning } from "./learning";
 import { availableAgents, createSupportTicket } from "./service";
 import { SupportError } from "./policy";
 import { processCrawlPage } from "./crawler";
+import {
+  executeLookups,
+  lookupTools,
+  type ConnectorFetcher,
+  type LookupResult,
+} from "./connectors";
 import { supportLimits, usageMonth } from "./policy";
 import { queueSupportPush } from "../mobile/push";
 import { kickNotificationProcessor } from "../notification-queue";
@@ -90,6 +96,7 @@ export async function processAIConversation(
   client: PrismaClient = db,
   provider?: SupportAIProvider,
   projectId?: string,
+  fetcher?: ConnectorFetcher,
 ) {
   const stale = new Date(Date.now() - 2 * 60_000);
   const candidate = await client.supportConversation.findFirst({
@@ -202,7 +209,12 @@ export async function processAIConversation(
     };
     const ai = provider || getSupportAIProvider();
     const allowed = ai.checkScope ? await ai.checkScope(aiInput) : true;
-    const proposed = allowed ? await ai.reply(aiInput) : null;
+    const lookups = allowed
+      ? await connectorLookups(client, ai, aiInput, c.projectId, c.customerId, fetcher)
+      : [];
+    const proposed = allowed
+      ? await ai.reply(lookups.length ? { ...aiInput, lookups } : aiInput)
+      : null;
     const result: SupportReply =
       proposed?.inScope === true
         ? assessEscalation(proposed, c.messages)
@@ -284,6 +296,18 @@ export async function processAIConversation(
             offerTicket: result.offerTicket,
             ticketTitle: result.ticketTitle,
             ticketType: result.ticketType,
+            // Team-only trace; stripped from customer-facing responses.
+            ...(lookups.length
+              ? {
+                  lookups: lookups.map((l) => ({
+                    connector: l.connector,
+                    action: l.action,
+                    ok: l.ok,
+                    status: l.status,
+                    ms: l.ms,
+                  })),
+                }
+              : {}),
           } as Prisma.InputJsonValue,
         },
         update: {},
@@ -350,6 +374,46 @@ export async function processAIConversation(
   }
   await processPendingSupportTicket(client, c.id);
   return true;
+}
+// Ask the model which read-only connector lookups the latest message needs and
+// run them for the verified customer. Lookups are best-effort: a planning or
+// network failure never blocks the reply itself.
+async function connectorLookups(
+  client: PrismaClient,
+  ai: SupportAIProvider,
+  input: SupportAIInput,
+  projectId: string,
+  customerId: string,
+  fetcher?: ConnectorFetcher,
+): Promise<LookupResult[]> {
+  if (!ai.planLookups) return [];
+  const [connectors, customer] = await Promise.all([
+    client.supportConnector.findMany({ where: { projectId, enabled: true } }),
+    client.supportCustomer.findUnique({
+      where: { id: customerId },
+      select: { externalId: true, email: true, verified: true },
+    }),
+  ]);
+  if (!connectors.length || !customer) return [];
+  const tools = lookupTools(connectors, customer);
+  if (!tools.length) return [];
+  try {
+    const plan = await ai.planLookups(
+      input,
+      tools.map((t) => ({
+        key: t.key,
+        connector: t.connector.name,
+        action: t.action.name,
+        description: t.action.description,
+        inputs: t.action.inputs,
+      })),
+    );
+    return plan.calls.length
+      ? await executeLookups(plan.calls, tools, customer, fetcher)
+      : [];
+  } catch {
+    return [];
+  }
 }
 let running = false;
 export async function processSupportJobs(budgetMs = 25_000) {

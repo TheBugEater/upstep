@@ -4,16 +4,17 @@ Native teammate inbox for iPhone and Android, built with Expo SDK 58. This is
 separate from `packages/sdk-react-native`, which embeds customer-facing chat in
 someone else's product.
 
-Android internal preview: [download APK, version 0.1.0 (2)](https://expo.dev/artifacts/eas/d4BBNDlIL01-F5uOa0qRLdsS44JMLPd-i5GVMNsVkoU.apk)
-or [view the Expo build](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/b8b29581-d499-450f-b736-b189966b6e20).
+Android internal preview: [download APK, version 0.1.0 (6)](https://expo.dev/artifacts/eas/oI5yqGgbiPAfuhciZV4sX4bY6_D9E35WynUdVp2hA64.apk)
+or [view the Expo build](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/48ffae2f-7e08-43ac-8ed9-ca578dd232de).
+This build includes native Firebase configuration. Its FCM v1 credential is
+configured in Expo and passed Google's validation-only send check.
 
-iPhone internal preview: [install on the registered test iPhone](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/a3e8ed9e-7bbd-4d25-ae88-9b6b505da35a).
+iPhone internal preview: [install version 0.1.0 (4) on the registered test iPhone](https://expo.dev/accounts/dilhangeeth/projects/upstep-support/builds/2d9a21c2-2250-4abc-873c-b9ad15ee5835).
 Apple signing and the APNs push key are configured for this build.
 
-Both previews include runtime server selection. Deploy the mobile-compatible
-backend before signing in. Android still needs its Firebase/FCM configuration and
-a new build before push notifications can work. Physical-device push delivery
-has not yet been verified.
+Both previews include runtime server selection. The mobile-compatible backend is
+deployed on `https://upstep.dev`; self-hosted servers need the backend update
+before signing in. Physical-device push delivery has not yet been verified.
 
 ## Included
 
@@ -31,6 +32,20 @@ has not yet been verified.
   notes are excluded. Assistance uses the existing owner-level AI allowance.
 - Opt-in project notification preferences, on-call routing, one-hour snooze,
   active-chat suppression and generic lock-screen messages.
+
+## Notification onboarding
+
+After sign-in, choose a workspace and complete the customer-alert setup. The app
+explains human handoffs, assignments, customer replies and lock-screen privacy
+before requesting the phone's notification permission. On-call coverage for new
+unassigned requests is offered in the same step.
+
+Setup confirms completion only after permission, phone registration and the
+workspace preference have succeeded. If permission is blocked, it opens the
+phone's notification settings and checks again when the app becomes active.
+Choosing **Not now** is remembered on this phone for the selected account,
+server and workspace; an inbox banner provides a way back to setup. Existing
+users with alerts already working can go straight to the inbox.
 
 ## Configure the backend first
 
@@ -116,8 +131,9 @@ in development builds. Credentials stored for one origin never move to another.
    eas build --profile development --platform android
    ```
 
-4. Install the development builds. Sign in, select a project, then turn on
-   **Mobile notifications** and **On call for new requests** in Settings.
+4. Install the development builds. Sign in, choose a workspace, then select
+   **Enable customer alerts** during onboarding and allow the system prompt.
+   Keep **On call for new requests** enabled to receive unassigned human requests.
 5. Start a customer chat, ask for a person, lock/background the phone and confirm
    receipt, deep-link navigation, takeover and a real reply on both platforms.
 

@@ -2,8 +2,9 @@
 
 Design and implementation plan, 16 November 2026. Target: iPhone and Android.
 The first implementation now lives in `apps/mobile`, with native-session and
-push support in the web backend. Account-specific provisioning, deployment and
-physical-device push verification remain release steps. See
+push support deployed on `https://upstep.dev`. Apple/APNs and Android/FCM
+credentials are configured in Expo; physical-device push verification remains a
+release step. See
 [mobile setup and current boundaries](../apps/mobile/README.md).
 
 ## Product
