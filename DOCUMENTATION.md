@@ -135,6 +135,7 @@ Defined in [apps/web/.env.example](apps/web/.env.example). All live in
 | `SENDPANDA_FROM_EMAIL`                     | Optional | Sender on a domain verified in SendPanda           |
 | `SENDPANDA_FEEDBACK_TEMPLATE_ID`            | Optional | Published feedback notification template          |
 | `SENDPANDA_INVITATION_TEMPLATE_ID`          | Optional | Published project invitation template             |
+| `SENDPANDA_ACTIVITY_TEMPLATE_ID`            | Optional | Published task activity template                  |
 | `SENDPANDA_TEST_TEMPLATE_ID`                | Optional | Published email setup test template               |
 | `NEXT_PUBLIC_ONRAMP_API_KEY`                | Optional | Enables hosted-service analytics                  |
 
@@ -153,9 +154,16 @@ when the key is blank; direct calls to `sendEmail` throw if it is missing.
 Invitations never silently complete without a key: they remain retryable and
 eventually record a failure if sending stays misconfigured.
 
+The mail helper rejects reserved test domains (`.test`, `.invalid`, `.example`,
+`.localhost`, `.local`, and `example.com/net/org`, including subdomains) before
+contacting SendPanda. The queue records these as permanent failures without
+retrying, including jobs left by older test runs. The web test runner also removes
+inherited SendPanda credentials and disables unmocked `fetch` requests. Tests that
+exercise provider delivery must install an explicit fetch mock and a dummy key.
+
 Keep the real send-only key in `apps/web/.env` (ignored by Git), or your deployment's
 environment settings. Set `SENDPANDA_FROM_EMAIL` to a sender on a verified domain.
-The sender name is **UpStep Team**, e.g. `UpStep Team <hello@upstep.dev>`.
+The sender name is **Upstep Team**, e.g. `Upstep Team <hello@upstep.dev>`.
 The example address `hello@your-verified-domain.example` is a placeholder: verify
 your sending domain in SendPanda and replace it before sending. Old Resend
 environment variables are no longer used.
@@ -195,7 +203,7 @@ It never sends email. Test recipients are fixed in `scripts/send-test-email.ts`.
 
 For Dokploy, `docker-compose.production.yml` maps `API_SENDPANDA_API_KEY`,
 `API_SENDPANDA_FROM_EMAIL`, `API_SENDPANDA_FEEDBACK_TEMPLATE_ID`,
-`API_SENDPANDA_INVITATION_TEMPLATE_ID`, and
+`API_SENDPANDA_INVITATION_TEMPLATE_ID`, `API_SENDPANDA_ACTIVITY_TEMPLATE_ID`, and
 `API_SENDPANDA_TEST_TEMPLATE_ID` from the service environment to the app's
 corresponding `SENDPANDA_*` variables. Setting the key enables feedback emails;
 redeploy to apply runtime environment changes. Keep these values in Dokploy's
