@@ -2,11 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { supportResponseError, teamRequest } from "@/lib/support/http";
 import { SupportError } from "@/lib/support/policy";
-import {
-  connectorData,
-  connectorView,
-  parseConnectorInput,
-} from "@/lib/support/connectors";
+import { parseConnectorInput } from "@/lib/support/connectors";
+import { saveSupportConnector } from "@/lib/support/connector-management";
 
 type Context = { params: Promise<{ id: string; cid: string }> };
 
@@ -15,16 +12,9 @@ export async function PUT(req: NextRequest, { params }: Context) {
     const { id, cid } = await params;
     await teamRequest(req, id, true);
     const input = parseConnectorInput(await req.json().catch(() => null));
-    const existing = await db.supportConnector.findFirst({
-      where: { id: cid, projectId: id },
-    });
-    if (!existing) throw new SupportError("Connector not found.", 404);
-    const updated = await db.supportConnector.update({
-      where: { id: existing.id },
-      data: connectorData(id, input, existing),
-    });
+    const { connector } = await saveSupportConnector(id, input, { id: cid });
     return NextResponse.json(
-      { connector: connectorView(updated) },
+      { connector },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (e) {

@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { supportResponseError, teamRequest } from "@/lib/support/http";
-import { SupportError } from "@/lib/support/policy";
-import {
-  CONNECTOR_LIMITS,
-  connectorData,
-  connectorView,
-  parseConnectorInput,
-} from "@/lib/support/connectors";
+import { CONNECTOR_LIMITS, parseConnectorInput } from "@/lib/support/connectors";
+import { listSupportConnectors, saveSupportConnector } from "@/lib/support/connector-management";
 
 type Context = { params: Promise<{ id: string }> };
 const noStore = { "Cache-Control": "no-store" };
@@ -17,10 +12,7 @@ export async function GET(req: NextRequest, { params }: Context) {
     const { id } = await params;
     await teamRequest(req, id, true);
     const [connectors, customers] = await Promise.all([
-      db.supportConnector.findMany({
-        where: { projectId: id },
-        orderBy: { createdAt: "asc" },
-      }),
+      listSupportConnectors(id),
       // Signed-in customers a manager can test customer lookups as.
       db.supportCustomer.findMany({
         where: { projectId: id, verified: true, externalId: { not: null } },
@@ -31,7 +23,7 @@ export async function GET(req: NextRequest, { params }: Context) {
     ]);
     return NextResponse.json(
       {
-        connectors: connectors.map(connectorView),
+        connectors,
         customers,
         limits: CONNECTOR_LIMITS,
       },
@@ -47,16 +39,9 @@ export async function POST(req: NextRequest, { params }: Context) {
     const { id } = await params;
     await teamRequest(req, id, true);
     const input = parseConnectorInput(await req.json().catch(() => null));
-    const count = await db.supportConnector.count({ where: { projectId: id } });
-    if (count >= CONNECTOR_LIMITS.connectors)
-      throw new SupportError(
-        `A project can have up to ${CONNECTOR_LIMITS.connectors} connectors.`,
-      );
-    const created = await db.supportConnector.create({
-      data: { projectId: id, ...connectorData(id, input) },
-    });
+    const { connector } = await saveSupportConnector(id, input);
     return NextResponse.json(
-      { connector: connectorView(created) },
+      { connector },
       { status: 201, headers: noStore },
     );
   } catch (e) {

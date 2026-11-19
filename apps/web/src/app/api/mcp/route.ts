@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { enforceProjectAndClientLimits, rateLimitResponse } from "@/lib/rate-limit";
@@ -9,6 +9,9 @@ import { assertProjectAssignee } from "@/lib/task-assignment";
 import { CollaborationError, collaborationTransaction } from "@/lib/project-collaboration";
 import { feedbackLifecycle, type TaskLifecycle } from "@/lib/feedback-lifecycle";
 import { MCP_TASK_WORKFLOW, mcpInstructions } from "@/lib/mcp-workflow";
+import { supportMcpToolDefinitions, supportMcpTools } from "@/lib/mcp-support";
+import { SupportError } from "@/lib/support/policy";
+import { processSupportJobs } from "@/lib/support/worker";
 
 /**
  * Upstep MCP server - Streamable HTTP transport (JSON responses).
@@ -21,8 +24,7 @@ import { MCP_TASK_WORKFLOW, mcpInstructions } from "@/lib/mcp-workflow";
  *   codex mcp add upstep --url https://upstep.dev/api/mcp \
  *     --bearer-token-env-var UPSTEP_MCP_KEY
  *
- * The secret MCP key scopes every tool to a single project, so an agent can browse,
- * triage, create, and comment on feedback - nothing else.
+ * The secret MCP key scopes every tool to a single project.
  */
 
 const PROTOCOL_VERSION = "2025-06-18";
@@ -827,24 +829,40 @@ export async function POST(req: NextRequest) {
           title: `Upstep | ${project.name}`,
           version: "1.2.0",
         },
-        instructions: mcpInstructions(project.name, project.actor),
+        instructions: mcpInstructions(project.name, project.actor) + (canManageSupport(project)
+          ? " For support setup on a paid project, start with get_support_knowledge and list_support_connectors. Verify website findings against the project's own sources before saving."
+          : ""),
       });
 
     case "ping":
       return rpcResult(msg.id, {});
 
     case "tools/list":
-      return rpcResult(msg.id, { tools: project.canManage ? TOOLS : TOOLS.filter((tool) => tool.name !== "create_board") });
+      return rpcResult(msg.id, { tools: [
+        ...(project.canManage ? TOOLS : TOOLS.filter((tool) => tool.name !== "create_board")),
+        ...(canManageSupport(project) ? supportMcpToolDefinitions : []),
+      ] });
 
     case "tools/call": {
       const name = (msg.params?.name as string) ?? "";
       const args = (msg.params?.arguments as Record<string, unknown>) ?? {};
+      const supportTool = supportMcpTools.get(name);
       try {
+        if (supportTool) {
+          if (!canManageSupport(project))
+            return rpcResult(msg.id, toolError("Support tools require a personal MCP key for a project owner or admin."));
+          const result = await supportTool(project.id, args, () => {
+            after(() => processSupportJobs().then(() => {}));
+          });
+          return rpcResult(msg.id, toolText(result));
+        }
         const result = await callTool(project, name, args);
         return rpcResult(msg.id, result);
       } catch (err) {
-        if (err instanceof CollaborationError) return rpcResult(msg.id, toolError(err.message));
-        console.error("[mcp] tool call failed:", err);
+        if (err instanceof CollaborationError || err instanceof SupportError)
+          return rpcResult(msg.id, toolError(err.message));
+        if (supportTool) console.error("[mcp] support tool failed:", name, err instanceof Error ? err.name : "Unknown error");
+        else console.error("[mcp] tool call failed:", err);
         return rpcResult(msg.id, toolError("Internal error while running the tool."));
       }
     }
@@ -852,6 +870,10 @@ export async function POST(req: NextRequest) {
     default:
       return rpcError(msg.id, -32601, `Method not found: ${msg.method}`);
   }
+}
+
+function canManageSupport(project: Project) {
+  return project.canManage && project.actor !== null;
 }
 
 // Streamable HTTP allows servers to skip the SSE channel entirely; clients

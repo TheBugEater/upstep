@@ -76,6 +76,9 @@ codex mcp add upstep --url https://upstep.dev/api/mcp \
   --bearer-token-env-var UPSTEP_MCP_KEY
 ```
 
+Agents with a personal owner or admin key can also set up support knowledge and
+read-only connectors on paid projects. See [Support setup through MCP](docs/mcp-personal-access.md#support-setup-through-mcp).
+
 ## Add the widget
 
 ```bash

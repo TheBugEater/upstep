@@ -13,9 +13,9 @@ import {
 } from "@/lib/support/policy";
 import {
   availableAgents,
-  supportProject,
   supportUsage,
 } from "@/lib/support/service";
+import { queueKnowledgeRefresh } from "@/lib/support/knowledge-management";
 import { processSupportJobs } from "@/lib/support/worker";
 import { supportAIConfiguration } from "@/lib/support/ai";
 
@@ -246,31 +246,7 @@ export async function POST(req: NextRequest, { params }: Context) {
         { headers: { "Cache-Control": "no-store" } },
       );
     }
-    const project = await supportProject(id);
-    const config = project.supportConfig;
-    if (!config?.enabled)
-      throw new SupportError("Enable support before indexing.");
-    if (["CRAWLING", "QUEUED"].includes(config.crawlState)) {
-      after(() => processSupportJobs().then(() => {}));
-      return NextResponse.json({ queued: true });
-    }
-    if (
-      config.crawledAt &&
-      Date.now() - config.crawledAt.getTime() < 5 * 60_000
-    )
-      throw new SupportError("Wait five minutes before refreshing again.", 429);
-    await db.supportConfig.updateMany({
-      where: { projectId: id, crawlGeneration: config.crawlGeneration },
-      data: {
-        crawlState: "QUEUED",
-        crawlQueue: [],
-        crawlVisited: [],
-        crawlError: null,
-        crawlGeneration: { increment: 1 },
-        crawlLock: null,
-        crawlLockedAt: null,
-      },
-    });
+    await queueKnowledgeRefresh(id);
     after(() => processSupportJobs().then(() => {}));
     return NextResponse.json({ queued: true });
   } catch (e) {

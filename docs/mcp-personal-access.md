@@ -33,6 +33,35 @@ project, so configuring another project does not replace the previous
 connection's credentials. Keep keys in a secret store or local environment,
 outside source control.
 
+## Support setup through MCP
+
+On Pro and Business projects, a personal MCP key belonging to an owner or admin
+can configure customer support without the dashboard. Reconnect the MCP client if
+it has a cached tool list. The tools act on the project tied to the key.
+
+1. Call `get_support_knowledge` to inspect existing settings and indexed pages.
+   For a new website, call `learn_support_website` with its public domain. Poll
+   `get_support_knowledge` until learning reaches `REVIEW` or `FAILED`.
+2. Verify the findings against your product docs and policies. Call
+   `save_support_knowledge` with the current `generation`, the business name,
+   support email, summary, instructions, welcome message, facts, and answers
+   keyed by the question IDs in `findings`. If automated learning fails, the
+   agent can supply those details from sources you provide. Set `enabled` to
+   `true` to go live or `false` to save a draft. Use `refresh_support_knowledge`
+   to reindex an enabled website without replacing confirmed facts and answers.
+3. Call `list_support_connectors`, then `save_support_connector` with the complete
+   connector configuration. Supply the connector `id` to edit or rename it. With
+   no `id`, saving again matches the existing name case-insensitively. A saved
+   credential can be reused by omitting `secret` when the URL and auth settings
+   stay the same. For new credentials, use a secret source the agent is authorized
+   to access and keep the value out of chat and source control. The tool returns
+   `hasSecret` without exposing the value.
+
+Connector actions use HTTPS GET. A `CUSTOMER` action must include
+`{customer_id}` or `{customer_email}` in its path, populated from the verified
+customer. A `PUBLIC` action should serve only public data. Use a narrowly scoped
+read-only API token when a connector needs authentication.
+
 ## Existing shared keys
 
 The additive migration leaves the existing project key active to preserve
