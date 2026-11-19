@@ -1,5 +1,5 @@
 import type { SupportReply } from "./ai";
-type Turn = { role: string; metadata: unknown };
+type Turn = { role: string; metadata?: unknown };
 /** Automatic escalation needs a help attempt; a direct human request is always allowed. */
 export function hasTriedToHelp(history: Turn[], reason: string) {
   // Customers can request a person without exhausting automatic troubleshooting.

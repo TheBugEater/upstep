@@ -7,6 +7,7 @@ import { SupportIcon } from "./SupportIcons";
 import { useSupportUnread } from "./useSupportUnread";
 import { playChime } from "@/lib/support/chime";
 import { preview } from "@/lib/support/unread";
+import { hasTriedToHelp } from "@/lib/support/escalation";
 import {
   supportThemeVars,
   type SupportAppearance,
@@ -18,6 +19,8 @@ type Message = {
   content: string;
   createdAt?: string;
   metadata?: {
+    inScope?: boolean;
+    resolution?: string;
     citations?: { url: string; title: string }[];
     offerTicket?: boolean;
     ticketReference?: string;
@@ -445,6 +448,11 @@ export function SupportChat({
         ]
       : [];
   const business = config?.businessName || "Support";
+  const canAskForPerson =
+    chat?.state === "AI" &&
+    !chat.aiPending &&
+    !chat.humanRequested &&
+    hasTriedToHelp(chat.messages, "unresolved");
   const isHuman = chat?.state === "HUMAN";
   const subtitle = isHuman
     ? `${chat.messages.filter((m) => m.role === "AGENT").at(-1)?.authorName || "The team"} is here to help`
@@ -460,7 +468,7 @@ export function SupportChat({
   const suggestions = [
     "What can you help me with?",
     `I need help using ${business}`,
-    "How can I reach your team?",
+    "How do I get started?",
   ];
   function suggest(text: string) {
     setMessage(text);
@@ -634,14 +642,14 @@ export function SupportChat({
                   "Ask a question about the business. We're here to help."}
               </p>
               <div className="mt-7 space-y-2">
-                {suggestions.map((text, i) => (
+                {suggestions.map((text) => (
                   <button
                     key={text}
                     onClick={() => suggest(text)}
                     className="group flex min-h-11 w-full items-center gap-3 rounded-[var(--sx-r12)] border border-[var(--sx-border)] bg-[var(--sx-bg)] px-3.5 py-3 text-left text-sm transition hover:border-[var(--sx-hover-border)] hover:bg-[var(--sx-subtle)]"
                   >
                     <SupportIcon
-                      name={i === 2 ? "person" : "message"}
+                      name="message"
                       className="h-3.5 w-3.5 shrink-0 text-[var(--sx-faint)]"
                     />
                     <span className="flex-1">{text}</span>
@@ -788,7 +796,7 @@ export function SupportChat({
         )}
       </div>
       <footer className="shrink-0 bg-[var(--sx-bg)] px-3 pb-3 pt-1.5 sm:px-4">
-        {chat && !chat.humanRequested && !["HUMAN", "RESOLVED"].includes(chat.state) && chat.messages.some(m => m.role === "CUSTOMER") && (
+        {canAskForPerson && (
           <button type="button" disabled={busy} onClick={() => void act("human")}
             className="mb-2 rounded-full border border-[var(--sx-border)] px-3 py-2 text-xs font-medium text-[var(--sx-ink)] disabled:opacity-50">
             Ask for a person

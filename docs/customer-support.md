@@ -72,6 +72,11 @@ return the conversation to AI. Customers and teammates can create follow-up tick
 Private notes stay out of customer responses and model context. Human
 replies/takeover increment a revision so in-flight AI replies cannot land afterward.
 
+The chat starts with product-help suggestions. The "Ask for a person" button
+appears after an in-scope AI answer or troubleshooting step, once AI has finished
+replying. Greetings, clarification alone and off-topic responses do not reveal it.
+An explicit request for a person in the customer's message still enters the team queue.
+
 The public integration guide lives at `/guides/customer-support`.
 
 ## Mobile teammate inbox
