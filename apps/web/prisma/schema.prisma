@@ -66,6 +66,8 @@ enum AvatarSource {
 model User {
   id            String    @id @default(cuid())
   name          String?
+  // Customer-facing name for support replies; separate from OAuth/account identity.
+  supportDisplayName String?
   email         String    @unique
   emailVerified DateTime?
   // Effective avatar URL, resolved from avatarSource and the linked accounts'

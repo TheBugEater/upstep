@@ -6,6 +6,7 @@ import { sdkRequest, supportResponseError } from "@/lib/support/http";
 import { availableAgents, createSupportSession } from "@/lib/support/service";
 import { SupportError, supportCors } from "@/lib/support/policy";
 import { checkRateLimit, requestIdentifier } from "@/lib/rate-limit";
+import { supportAuthorName } from "@/lib/support/profile";
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: supportCors });
 }
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
         logoUrl: businessLogo(config.businessProfile),
         welcomeMessage: config.welcomeMessage,
         mode: config.mode,
-        online: online.map((a) => ({ name: a.user.name || "Teammate" })),
+        online: online.map((a) => ({ name: supportAuthorName(a.user) })),
       },
       { headers: supportCors },
     );

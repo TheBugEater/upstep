@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { db } from "../db";
+import { supportAuthorName } from "./profile";
 import { getProjectAccess } from "../project-auth";
 import { assertProjectAssignee } from "../task-assignment";
 import { collaborationTransaction } from "../project-collaboration";
@@ -59,7 +60,7 @@ export async function availableAgents(
         ],
       },
     },
-    select: { userId: true, user: { select: { name: true } } },
+    select: { userId: true, user: { select: { name: true, supportDisplayName: true } } },
     take: 20,
   });
 }
@@ -548,11 +549,9 @@ export async function teamConversationAction(
       throw new SupportError("This conversation is resolved.", 409);
     const author = await tx.user.findUniqueOrThrow({
       where: { id: input.actorId },
-      select: { name: true, email: true },
+      select: { name: true, email: true, supportDisplayName: true },
     });
-    const name =
-      author.name?.trim() ||
-      `${c.project.supportConfig?.businessName || c.project.name} Team`;
+    const name = supportAuthorName(author, `${c.project.supportConfig?.businessName || c.project.name} Team`);
     if (input.action === "reply" || input.action === "note") {
       if (!input.content?.trim() || !input.clientMessageId)
         throw new SupportError("Enter a message.");

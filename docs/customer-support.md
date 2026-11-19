@@ -77,6 +77,15 @@ appears after an in-scope AI answer or troubleshooting step, once AI has finishe
 replying. Greetings, clarification alone and off-topic responses do not reveal it.
 An explicit request for a person in the customer's message still enters the team queue.
 
+Welcome suggestions and AI quick replies send their text when clicked. The chat
+follows new messages and layout changes while the customer is at the bottom;
+scrolling up pauses following until they return to the bottom or send a message.
+
+Each teammate can set **Support → Settings → Your support profile → Support
+display name**. This applies to new support replies across their projects,
+including replies sent from the mobile inbox. It leaves their sign-in identity
+and earlier message names intact. Leaving it blank uses their account name.
+
 The public integration guide lives at `/guides/customer-support`.
 
 ## Mobile teammate inbox

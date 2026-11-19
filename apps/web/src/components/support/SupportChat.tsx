@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BusinessAvatar } from "./BusinessAvatar";
 import { SupportWidgets } from "./SupportWidgets";
 import type { SupportWidget } from "@upstep/types";
@@ -95,6 +95,18 @@ export function SupportChat({
   const activeConversation = useRef<string | null>(null);
   const pendingMessage = useRef<{ id: string; content: string } | null>(null);
   const list = useRef<HTMLDivElement>(null);
+  const listContent = useRef<HTMLDivElement>(null);
+  const followingBottom = useRef(true);
+  const previousScrollTop = useRef(0);
+  const viewedConversation = useRef<string | null>(null);
+  const scrollToBottom = useCallback(() => {
+    const element = list.current;
+    if (!element) return;
+    followingBottom.current = true;
+    element.scrollTo({ top: element.scrollHeight });
+    previousScrollTop.current = element.scrollTop;
+    setAtBottom(true);
+  }, []);
   const storageKey = `upstep-support:${apiKey}`;
   const soundKey = `upstep-support-sound:${apiKey}`;
   // The host page tells us when the chat is on screen. A page with no host counts as visible.
@@ -349,21 +361,31 @@ export function SupportChat({
     }, 2500);
     return () => clearInterval(timer);
   }, [chat?.id, refresh]);
-  const lastRole = chat?.messages.at(-1)?.role;
-  useEffect(() => {
-    if (!chat?.messages.length) return;
-    // Do not yank the thread away from someone reading older messages.
-    if (!atBottom && lastRole !== "CUSTOMER") return;
-    list.current?.scrollTo({
-      top: list.current.scrollHeight,
-      behavior: "smooth",
+  const lastMessageId = chat?.messages.at(-1)?.id;
+  useLayoutEffect(() => {
+    if (viewedConversation.current !== (chat?.id ?? null)) {
+      viewedConversation.current = chat?.id ?? null;
+      followingBottom.current = true;
+    }
+    if (followingBottom.current) scrollToBottom();
+  }, [chat?.id, lastMessageId, chat?.aiPending, scrollToBottom]);
+  useLayoutEffect(() => {
+    const element = list.current;
+    const content = listContent.current;
+    if (!element || !content) return;
+    // Replies, images and footer suggestions can resize after the message
+    // arrives. Keep following those changes unless the customer scrolled up.
+    const observer = new ResizeObserver(() => {
+      if (followingBottom.current) scrollToBottom();
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chat?.messages.length, chat?.aiPending]);
+    observer.observe(element);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [scrollToBottom]);
   useEffect(() => {
     // Reopening the chat lands on the latest message.
-    if (shown) list.current?.scrollTo({ top: list.current.scrollHeight });
-  }, [shown]);
+    if (shown) scrollToBottom();
+  }, [shown, scrollToBottom]);
   async function act(action: string, extra = {}) {
     if (!chat) return;
     setBusy(true);
@@ -398,6 +420,7 @@ export function SupportChat({
   async function send(quickText?: string) {
     const outgoing = quickText ?? message;
     if (!outgoing.trim() || busy) return false;
+    followingBottom.current = true;
     setBusy(true);
     setError("");
     const content = outgoing.trim();
@@ -470,10 +493,6 @@ export function SupportChat({
     `I need help using ${business}`,
     "How do I get started?",
   ];
-  function suggest(text: string) {
-    setMessage(text);
-    input.current?.focus();
-  }
   const ink = "bg-[var(--sx-ink)] text-[var(--sx-on-ink)]";
   const soft = "bg-[var(--sx-surface)] text-[var(--sx-soft-text)]";
   // Team replies carry the business accent so they read apart from AI answers.
@@ -622,10 +641,17 @@ export function SupportChat({
           aria-live="polite"
           onScroll={(e) => {
             const el = e.currentTarget;
-            setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 48);
+            const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+            // A growing reply or a taller footer can move the bottom without
+            // the visitor scrolling. Only upward movement pauses following.
+            if (bottom) followingBottom.current = true;
+            else if (el.scrollTop < previousScrollTop.current - 1) followingBottom.current = false;
+            previousScrollTop.current = el.scrollTop;
+            setAtBottom(bottom);
           }}
-          className="h-full space-y-1 overflow-y-auto px-3 py-4 [scrollbar-width:thin] sm:px-4 sm:py-5"
+          className="h-full overflow-y-auto px-3 py-4 [scrollbar-width:thin] sm:px-4 sm:py-5"
         >
+          <div ref={listContent} className="space-y-1">
           {!chat && (
             <div className="mx-auto max-w-sm pt-3">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--sx-border)] px-2.5 py-1 text-xs font-medium text-[var(--sx-muted)]">
@@ -645,8 +671,10 @@ export function SupportChat({
                 {suggestions.map((text) => (
                   <button
                     key={text}
-                    onClick={() => suggest(text)}
-                    className="group flex min-h-11 w-full items-center gap-3 rounded-[var(--sx-r12)] border border-[var(--sx-border)] bg-[var(--sx-bg)] px-3.5 py-3 text-left text-sm transition hover:border-[var(--sx-hover-border)] hover:bg-[var(--sx-subtle)]"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void send(text)}
+                    className="group flex min-h-11 w-full items-center gap-3 rounded-[var(--sx-r12)] border border-[var(--sx-border)] bg-[var(--sx-bg)] px-3.5 py-3 text-left text-sm transition hover:border-[var(--sx-hover-border)] hover:bg-[var(--sx-subtle)] disabled:opacity-50"
                   >
                     <SupportIcon
                       name="message"
@@ -779,15 +807,13 @@ export function SupportChat({
               ))}
             </div>
           )}
+          </div>
         </div>
         {!atBottom && count > 0 && shown && (
           <button
             type="button"
             onClick={() => {
-              list.current?.scrollTo({
-                top: list.current.scrollHeight,
-                behavior: "smooth",
-              });
+              scrollToBottom();
             }}
             className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--sx-ink)] px-4 py-2 text-xs font-bold text-[var(--sx-on-ink)] shadow-lg"
           >

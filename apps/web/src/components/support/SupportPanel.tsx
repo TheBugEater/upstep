@@ -7,6 +7,7 @@ import { SupportConnectors } from "./SupportConnectors";
 import { SupportInbox, type InboxConversation } from "./SupportInbox";
 import { SupportKnowledge } from "./SupportKnowledge";
 import { SupportIcon } from "./SupportIcons";
+import { SupportProfile } from "./SupportProfile";
 import type { TeamMember } from "../workspace/ProjectWorkspace";
 
 type Config = SupportSetupConfig & {
@@ -140,9 +141,9 @@ export function SupportPanel({
     ...(data.canManage
       ? ([
           { id: "connectors", label: "Connectors" },
-          { id: "settings", label: "Settings" },
         ] as const)
       : []),
+    { id: "settings", label: "Settings" },
   ];
   const usagePct = Math.min(100, Math.round((data.usage.used / Math.max(1, data.usage.limit)) * 100));
 
@@ -261,7 +262,9 @@ export function SupportPanel({
         />
       )}
       {view === "connectors" && data.canManage && <SupportConnectors projectId={projectId} />}
-      {view === "settings" && data.canManage && (
+      {view === "settings" && <div className="space-y-6">
+        <SupportProfile />
+        {data.canManage && (
         <SupportSetup
           projectId={projectId}
           apiKey={apiKey}
@@ -271,7 +274,8 @@ export function SupportPanel({
           isOwner={isOwner}
           onSaved={refresh}
         />
-      )}
+        )}
+      </div>}
       {view === "inbox" && !data.conversations.length && (
         <p className="mt-3 flex items-center gap-2 text-xs text-muted">
           <SupportIcon name="message" className="h-3.5 w-3.5" />
