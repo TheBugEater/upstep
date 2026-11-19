@@ -118,3 +118,39 @@ system does not create a ticket as an error fallback. New providers should imple
 The polished existing widget frame is published in `@upstep/js@0.6.1`; shared types
 remain `@upstep/types@0.6.0`. Both vanilla and React widgets use one compact navigation
 bar and the same hosted support experience, including the white/black themes.
+
+## Upstep's own account and billing connectors
+
+Upstep's dashboard widget requests `/api/support/identity` using the current
+signed-in session. The server signs a ten-minute customer identity for the
+same-instance project configured by `NEXT_PUBLIC_UPSTEP_API_KEY` and
+`NEXT_PUBLIC_UPSTEP_BASE_URL`. The widget renews it while signed in and clears
+it when the user changes. A typed email or the widget's public `userId` alone
+does not verify a customer.
+
+Set a dedicated random `SUPPORT_ACCOUNT_CONNECTOR_KEY` of at least 32 characters
+at runtime (Dokploy Compose uses `API_SUPPORT_ACCOUNT_CONNECTOR_KEY`). Store
+the same value as a Bearer secret in the self-support project's connectors.
+Use the app's public HTTPS origin as the base URL and these GET actions:
+
+| Path | Data returned |
+| --- | --- |
+| `/api/support/account/{customer_id}/billing` | Current app plan, Stripe subscription status, billing periods, scheduled cancellation and recurring amounts |
+| `/api/support/account/{customer_id}/invoices` | Five most recent invoices, payment status, amounts, dates and next payment attempt |
+| `/api/support/account/{customer_id}/usage` | Owned-project and feedback counts, monthly AI and learning usage, and plan limits |
+| `/api/support/account/{customer_id}/projects` | Up to ten owned projects, feedback counts, moderation and support/indexing status |
+
+Every action must use `CUSTOMER` scope, with no customer input fields. The
+connector fills `{customer_id}` from the verified identity. The endpoint
+independently checks that this ID is a verified customer in Upstep's own
+same-instance support project before looking up the account. Joined projects
+and other owners' billing or usage are excluded. Missing accounts return 404;
+unavailable billing services return an error rather than an invented payment
+status. Unlimited limits are JSON `null`; amounts use the smallest currency unit.
+
+Responses contain selected fields only: no card data, addresses, invoice
+download/payment links, provider metadata, SDK keys or account credentials.
+These connectors cannot change a plan, cancel a subscription, issue a refund,
+or take payment. Customers manage billing from the signed-in billing page;
+disputes and unresolved billing issues go to the team. Anonymous chat has no
+account lookup actions.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { UpstepProvider, FeedbackWidget, useUpstep } from "@upstep/js/react";
 
 const apiKey = process.env.NEXT_PUBLIC_UPSTEP_API_KEY;
@@ -28,6 +28,32 @@ function OpenListener() {
 /** The floating launcher sat over the dashboard's own send buttons, so the
  *  dashboard opens the widget from the sidebar instead. */
 export function UpstepWidget({ userId }: { userId?: string }) {
+  const [identity, setIdentity] = useState<{ userId: string; token: string }>();
+  useEffect(() => {
+    if (!feedbackWidgetEnabled || !userId) { setIdentity(undefined); return; }
+    const controller = new AbortController();
+    let refreshAfter = 0;
+    let refreshing = false;
+    const refresh = async () => {
+      if (refreshing || Date.now() < refreshAfter) return;
+      refreshing = true;
+      try {
+        const response = await fetch("/api/support/identity", { cache: "no-store", signal: controller.signal });
+        if (!response.ok) { if (!controller.signal.aborted) setIdentity(undefined); return; }
+        const data = await response.json();
+        if (!controller.signal.aborted && typeof data.token === "string") {
+          setIdentity({ userId, token: data.token });
+          refreshAfter = Date.now() + 8 * 60_000;
+        }
+      } catch { if (!controller.signal.aborted) setIdentity(undefined); }
+      finally { refreshing = false; }
+    };
+    void refresh();
+    const interval = setInterval(() => void refresh(), 60_000);
+    const visible = () => { if (!document.hidden) void refresh(); };
+    document.addEventListener("visibilitychange", visible);
+    return () => { controller.abort(); clearInterval(interval); document.removeEventListener("visibilitychange", visible); };
+  }, [userId]);
   if (!feedbackWidgetEnabled) return null;
   return (
     <UpstepProvider
@@ -35,6 +61,7 @@ export function UpstepWidget({ userId }: { userId?: string }) {
       baseUrl={baseUrl!}
       accentColor="rgb(var(--c-clay))"
       {...(userId ? { userId } : {})}
+      {...(identity?.userId === userId && identity ? { supportIdentityToken: identity.token } : {})}
     >
       <OpenListener />
       <FeedbackWidget hideLauncher />
