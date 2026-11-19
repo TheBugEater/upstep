@@ -115,3 +115,13 @@ export const publicMessageSelect = {
   metadata: true,
   createdAt: true,
 } as const;
+
+// Customer-facing message view: drops team-only metadata such as the AI's
+// connector lookup trace.
+export function publicMessage<T extends { metadata: unknown }>(message: T): T {
+  const meta = message.metadata;
+  if (!meta || typeof meta !== "object" || Array.isArray(meta) || !("lookups" in meta))
+    return message;
+  const { lookups: _lookups, ...rest } = meta as Record<string, unknown>;
+  return { ...message, metadata: rest };
+}

@@ -17,7 +17,14 @@ export function SupportIcon({
     | "bell"
     | "mute"
     | "more"
-    | "reply";
+    | "reply"
+    | "plug"
+    | "lock"
+    | "chevron"
+    | "database"
+    | "plus"
+    | "trash"
+    | "shield";
   className?: string;
   style?: CSSProperties;
 }) {
@@ -78,6 +85,39 @@ export function SupportIcon({
       <>
         <path d="M9 14 4 9l5-5" />
         <path d="M4 9h10a6 6 0 0 1 6 6v3" />
+      </>
+    ),
+    plug: (
+      <>
+        <path d="M9 2v6M15 2v6" />
+        <path d="M6 8h12v4a6 6 0 0 1-12 0V8ZM12 18v4" />
+      </>
+    ),
+    lock: (
+      <>
+        <rect x="5" y="11" width="14" height="10" rx="2" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      </>
+    ),
+    chevron: <path d="m6 9 6 6 6-6" />,
+    database: (
+      <>
+        <ellipse cx="12" cy="5" rx="8" ry="3" />
+        <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+        <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+      </>
+    ),
+    plus: <path d="M12 5v14M5 12h14" />,
+    trash: (
+      <>
+        <path d="M4 7h16M10 11v6M14 11v6" />
+        <path d="M6 7l1 13h10l1-13M9 7V4h6v3" />
+      </>
+    ),
+    shield: (
+      <>
+        <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z" />
+        <path d="m9 12 2 2 4-4" />
       </>
     ),
     message: (

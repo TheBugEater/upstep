@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SupportSetup, type SupportSetupConfig } from "./SupportSetup";
+import { SupportConnectors } from "./SupportConnectors";
 import { SupportIcon } from "./SupportIcons";
 import { useSearchParams } from "next/navigation";
 import type { TeamMember } from "../workspace/ProjectWorkspace";
@@ -13,7 +14,10 @@ type Message = {
   authorName: string;
   content: string;
   createdAt: string;
-  metadata?: { citations?: { url: string; title: string }[] };
+  metadata?: {
+    citations?: { url: string; title: string }[];
+    lookups?: { connector: string; action: string; ok: boolean; status: number | null; ms: number }[];
+  };
 };
 type Config = SupportSetupConfig;
 
@@ -262,7 +266,7 @@ export function SupportPanel({
         </button>
       </div>
       <div className="mb-5 flex gap-1 border-b border-line">
-        {["inbox", "knowledge", ...(data.canManage ? ["settings"] : [])].map(
+        {["inbox", "knowledge", ...(data.canManage ? ["connectors", "settings"] : [])].map(
           (v) => (
             <button
               key={v}
@@ -468,8 +472,28 @@ export function SupportPanel({
                     );
                   const agent = m.role === "AGENT";
                   const ai = m.role === "ASSISTANT";
+                  const lookups = ai ? m.metadata?.lookups || [] : [];
                   return (
                     <div key={m.id} className={`flex max-w-[80%] flex-col gap-1 ${agent ? "items-end self-end" : "items-start self-start"}`}>
+                      {lookups.length > 0 && (
+                        <details className="mb-1 rounded-xl border border-line bg-card px-3 py-2 text-xs">
+                          <summary className="flex cursor-pointer list-none items-center gap-1.5 font-semibold text-muted">
+                            <SupportIcon name="database" className="h-3.5 w-3.5" />
+                            AI made {lookups.length} read-only lookup{lookups.length === 1 ? "" : "s"}
+                          </summary>
+                          <ul className="mt-2 flex flex-col gap-1">
+                            {lookups.map((l, i) => (
+                              <li key={i} className="flex flex-wrap items-baseline gap-x-2">
+                                <span className="font-semibold text-ink">{l.connector}</span>
+                                <span className="font-mono text-[11px] text-muted">{l.action}</span>
+                                <span className={l.ok ? "text-success" : "text-danger"}>
+                                  {l.ok ? `→ ${l.status === 404 ? "no match" : "found"}` : "→ failed"} · {l.ms} ms
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
                       <div className="flex items-center gap-1.5 px-1 text-[11px] text-faint">
                         {agent && <Avatar name={m.authorName} src={teammateFor(m.authorName)?.image} size={18} decorative />}
                         <span className="font-semibold text-muted">{m.authorName}</span>
@@ -635,6 +659,9 @@ export function SupportPanel({
             )}
           </div>
         </div>
+      )}
+      {view === "connectors" && data.canManage && (
+        <SupportConnectors projectId={projectId} />
       )}
       {view === "settings" && data.canManage && (
         <SupportSetup
