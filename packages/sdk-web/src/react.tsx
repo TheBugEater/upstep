@@ -423,7 +423,7 @@ export function FeedbackWidget({
                 <div style={{ display: "flex", flex: 1, gap: 4 }}>
                   {[
                     ["support", "Support"],
-                    ["list", "Feedback"],
+                    ["list", "Ideas"],
                   ].map(([value, label]) => (
                     <button
                       key={value}
@@ -594,7 +594,7 @@ export function FeedbackWidget({
                       <span
                         style={{ fontSize: 14, fontWeight: 600, color: p.text }}
                       >
-                        Feedback & ideas
+                        Ideas
                       </span>
                       <button
                         onClick={() => setScreen("create")}
@@ -608,7 +608,7 @@ export function FeedbackWidget({
                           cursor: "pointer",
                         }}
                       >
-                        + New
+                        + Suggest an idea
                       </button>
                     </>
                   ) : (
@@ -623,7 +623,7 @@ export function FeedbackWidget({
                         cursor: "pointer",
                       }}
                     >
-                      ← Back to feedback
+                      ← Back to ideas
                     </button>
                   )}
                 </div>
@@ -644,6 +644,7 @@ export function FeedbackWidget({
                   accent={accent}
                   p={p}
                   font={font}
+                  ideasOnly={!!(hasSupport && chat && ctx.chat)}
                   onDone={() => setScreen("list")}
                 />
               )}
@@ -1066,16 +1067,21 @@ function CreateForm({
   p,
   font,
   onDone,
+  ideasOnly = false,
 }: {
   accent: string;
   p: Palette;
   font: string;
   onDone: () => void;
+  /** With support chat on, bugs and questions go to chat; this form suggests ideas. */
+  ideasOnly?: boolean;
 }) {
   const { submit } = useUpstep();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<FeedbackType>("GENERAL");
+  const [type, setType] = useState<FeedbackType>(
+    ideasOnly ? "FEATURE" : "GENERAL",
+  );
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -1109,7 +1115,9 @@ function CreateForm({
           Submitted
         </div>
         <div style={{ fontSize: 14, color: p.textFaint }}>
-          Feedback received. Thank you.
+          {ideasOnly
+            ? "Idea received. Thank you."
+            : "Feedback received. Thank you."}
         </div>
       </div>
     );
@@ -1131,45 +1139,49 @@ function CreateForm({
 
   return (
     <div>
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: ".08em",
-          color: p.textFaint,
-          marginBottom: 8,
-          textTransform: "uppercase",
-        }}
-      >
-        Type
-      </div>
-      <div style={{ display: "flex", gap: 7, marginBottom: 16 }}>
-        {(["BUG", "FEATURE", "GENERAL"] as FeedbackType[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setType(t)}
+      {!ideasOnly && (
+        <>
+          <div
             style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 5,
-              padding: "8px 10px",
-              borderRadius: scaleRadius(9, p.radius),
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-              background: type === t ? accent : p.bg,
-              color: type === t ? p.accentText : p.textSoft,
-              border: `1px solid ${type === t ? accent : p.border}`,
-              fontFamily: font,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: ".08em",
+              color: p.textFaint,
+              marginBottom: 8,
+              textTransform: "uppercase",
             }}
           >
-            {TYPE_META[t].icon}
-            {TYPE_META[t].label}
-          </button>
-        ))}
-      </div>
+            Type
+          </div>
+          <div style={{ display: "flex", gap: 7, marginBottom: 16 }}>
+            {(["BUG", "FEATURE", "GENERAL"] as FeedbackType[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setType(t)}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 5,
+                  padding: "8px 10px",
+                  borderRadius: scaleRadius(9, p.radius),
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: type === t ? accent : p.bg,
+                  color: type === t ? p.accentText : p.textSoft,
+                  border: `1px solid ${type === t ? accent : p.border}`,
+                  fontFamily: font,
+                }}
+              >
+                {TYPE_META[t].icon}
+                {TYPE_META[t].label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       <div
         style={{
@@ -1186,7 +1198,11 @@ function CreateForm({
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Short summary of the issue or idea"
+        placeholder={
+          ideasOnly
+            ? "What would you like us to build?"
+            : "Short summary of the issue or idea"
+        }
         maxLength={200}
         style={{ ...inputStyle, marginBottom: 16, display: "block" }}
       />
@@ -1211,7 +1227,11 @@ function CreateForm({
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Steps to reproduce, expected behaviour, or more context"
+        placeholder={
+          ideasOnly
+            ? "Why would it help? (optional)"
+            : "Steps to reproduce, expected behaviour, or more context"
+        }
         maxLength={2000}
         rows={4}
         style={{ ...inputStyle, resize: "vertical", marginBottom: 16 }}
@@ -1240,7 +1260,11 @@ function CreateForm({
           fontFamily: font,
         }}
       >
-        {loading ? "Submitting…" : "Submit feedback"}
+        {loading
+          ? "Submitting…"
+          : ideasOnly
+            ? "Suggest idea"
+            : "Submit feedback"}
       </button>
     </div>
   );

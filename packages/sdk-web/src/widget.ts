@@ -73,6 +73,11 @@ function buildStyles(p: WidgetPalette, font: string): string {
 .upstep-submit{width:100%;padding:12px;background:${accent};color:${on};border:none;border-radius:${r(11)};font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;transition:filter .15s}
 .upstep-submit:hover{filter:brightness(.94)}
 .upstep-submit:disabled{opacity:.5;cursor:not-allowed}
+.upstep-suggest{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;margin-bottom:12px;background:${p.bg};color:${p.text};border:1px dashed ${p.border};border-radius:${r(11)};font-size:14px;font-weight:600;cursor:pointer;transition:border-color .15s}
+.upstep-suggest:hover{border-color:${accent}}
+.upstep-back{background:none;border:none;padding:0;margin-bottom:10px;color:${p.textSoft};font-size:13px;font-weight:600;cursor:pointer}
+.upstep-hint{font-size:13px;color:${p.textFaint};margin:10px 0 0;text-align:center}
+.upstep-hint button{background:none;border:none;padding:0;color:${accent};font:inherit;font-weight:600;cursor:pointer}
 #upstep-form-msg{font-size:14px;text-align:center;margin-top:12px;color:${accent};font-weight:500}
 .upstep-feedback-item{display:flex;gap:12px;padding:14px;border:1px solid ${p.border};border-radius:${r(14)};margin-bottom:10px;background:${p.bg};transition:border-color .15s}
 .upstep-feedback-item:hover{border-color:${p.textFaint}}
@@ -430,7 +435,7 @@ export class UpstepWidget {
 
     backdrop.innerHTML = `
       <div id="upstep-modal" style="max-width:${this.hasSupport ? "460px" : "440px"}">
-        ${this.hasSupport ? `<div class="upstep-mode" style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid ${this.palette.border}"><div id="upstep-tabs" style="margin:0;padding:0;background:transparent;flex:1"><button class="upstep-tab ${this.tab === "support" ? "active" : ""}" data-tab="support">Support</button><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Ideas</button></div><button id="upstep-close" aria-label="Close" style="flex-shrink:0;background:transparent">✕</button></div>` : `<div id="upstep-header"><div><h2>Share your feedback</h2><p>Tell us what to build next, or vote on ideas.</p></div><button id="upstep-close" aria-label="Close">✕</button></div><div id="upstep-tabs"><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Give feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Vote on ideas</button></div>`}
+        ${this.hasSupport ? `<div class="upstep-mode" style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid ${this.palette.border}"><div id="upstep-tabs" style="margin:0;padding:0;background:transparent;flex:1"><button class="upstep-tab ${this.tab === "support" ? "active" : ""}" data-tab="support">Support</button><button class="upstep-tab ${this.tab !== "support" ? "active" : ""}" data-tab="feed">Ideas</button></div><button id="upstep-close" aria-label="Close" style="flex-shrink:0;background:transparent">✕</button></div>` : `<div id="upstep-header"><div><h2>Share your feedback</h2><p>Tell us what to build next, or vote on ideas.</p></div><button id="upstep-close" aria-label="Close">✕</button></div><div id="upstep-tabs"><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Give feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Vote on ideas</button></div>`}
         <div id="upstep-body" style="${this.tab === "support" ? "padding:0;overflow:hidden" : ""}">
           ${this.tab === "support" ? `<iframe id="upstep-support-frame" title="Customer support" src="${escapeHtml(this.supportFrameSrc())}" style="width:100%;height:min(560px,calc(100dvh - 168px));min-height:300px;border:0;display:block"></iframe>` : this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
         </div>
@@ -463,7 +468,7 @@ export class UpstepWidget {
       });
     }
     this.bindSubmitForm();
-    this.bindVoteButtons();
+    this.bindFeed();
   }
 
   private renderSubmitForm(): string {
@@ -480,6 +485,17 @@ export class UpstepWidget {
       GENERAL:
         '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9a2 2 0 0 1-2 2H5L2 14V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5z"/></svg>',
     };
+    // With support on, bugs and questions go to chat; this form only suggests ideas.
+    if (this.hasSupport)
+      return `
+      <div class="upstep-form">
+        <button class="upstep-back" data-goto="feed">← Ideas</button>
+        <textarea id="upstep-textarea" placeholder="What would you like us to build?" maxlength="2000"></textarea>
+        <button class="upstep-submit" id="upstep-submit-btn">Suggest idea</button>
+        <div id="upstep-form-msg"></div>
+        <p class="upstep-hint">Something not working? <button data-goto="support">Ask support</button></p>
+      </div>
+    `;
     return `
       <div class="upstep-form">
         <textarea id="upstep-textarea" placeholder="What's on your mind?" maxlength="2000"></textarea>
@@ -493,12 +509,17 @@ export class UpstepWidget {
   }
 
   private renderFeed(): string {
+    const suggest = this.hasSupport
+      ? `<button class="upstep-suggest" data-goto="submit"><span aria-hidden="true">+</span> Suggest an idea</button>`
+      : "";
     if (!this.feedItems.length) {
-      return `<div class="upstep-empty"><strong>No ideas yet</strong>Be the first to share one.</div>`;
+      return `${suggest}<div class="upstep-empty"><strong>No ideas yet</strong>Be the first to share one.</div>`;
     }
-    return this.feedItems
-      .map(
-        (f) => `
+    return (
+      suggest +
+      this.feedItems
+        .map(
+          (f) => `
       <div class="upstep-feedback-item" data-id="${f.id}">
         <button class="upstep-vote${f.userVote === "UP" ? " voted" : ""}" data-vote="UP" data-feedback="${f.id}">
           <span class="upstep-vote-arrow">▲</span>
@@ -513,15 +534,16 @@ export class UpstepWidget {
           </div>
         </div>
       </div>`,
-      )
-      .join("");
+        )
+        .join("")
+    );
   }
 
   private renderFeedList() {
     const body = document.getElementById("upstep-body");
     if (!body || this.tab !== "feed") return;
     body.innerHTML = this.renderFeed();
-    this.bindVoteButtons();
+    this.bindFeed();
   }
 
   private bindSubmitForm() {
@@ -561,10 +583,13 @@ export class UpstepWidget {
         try {
           await this.client.submitFeedback({
             content,
-            type: this.selectedType,
+            type: this.hasSupport ? "FEATURE" : this.selectedType,
           });
           textarea.value = "";
-          if (msg) msg.textContent = "Feedback received. Thank you.";
+          if (msg)
+            msg.textContent = this.hasSupport
+              ? "Idea received. Thank you."
+              : "Feedback received. Thank you.";
           await this.fetchFeed();
         } catch {
           if (msg) msg.textContent = "Something went wrong. Please try again.";
@@ -572,9 +597,23 @@ export class UpstepWidget {
           this.loading = false;
           if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.textContent = "Send feedback";
+            submitBtn.textContent = this.hasSupport
+              ? "Suggest idea"
+              : "Send feedback";
           }
         }
+      });
+  }
+
+  private bindFeed() {
+    this.bindVoteButtons();
+    document
+      .querySelectorAll<HTMLElement>("#upstep-body [data-goto]")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => {
+          this.tab = btn.dataset["goto"] as Tab;
+          this.renderModal();
+        });
       });
   }
 

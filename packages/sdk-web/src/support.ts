@@ -1,4 +1,5 @@
 import type {
+  IdeaPrompt,
   SupportConfiguration,
   SupportConversation,
   UpstepConfig,
@@ -202,6 +203,30 @@ export class SupportClient {
       ...values,
       clientMessageId: values.clientMessageId || supportMessageId(),
     });
+  }
+  /** Answers an idea prompt: vote for one of its matches, or post a new idea. */
+  async idea(
+    id: string,
+    promptId: string,
+    answer: { feedbackId: string } | { title: string; details?: string },
+  ) {
+    await this.ensureSession();
+    await this.request(`/conversations/${encodeURIComponent(id)}`, {
+      action: "idea",
+      promptId,
+      ...answer,
+    });
+  }
+  /** The open idea prompt: on the latest AI reply and not yet answered. */
+  static activeIdeaPrompt(chat: SupportConversation): IdeaPrompt | null {
+    const prompt = chat.activeWidgetMessageId
+      ? chat.messages.find((m) => m.id === chat.activeWidgetMessageId)
+          ?.metadata?.ideaPrompt
+      : undefined;
+    if (!prompt) return null;
+    return chat.messages.some((m) => m.metadata?.ideaPromptId === prompt.id)
+      ? null
+      : prompt;
   }
   async handoff(id: string, name: string, email: string) {
     await this.ensureSession();

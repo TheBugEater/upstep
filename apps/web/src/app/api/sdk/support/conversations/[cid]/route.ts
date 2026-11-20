@@ -21,6 +21,7 @@ import {
 } from "@/lib/support/interactions";
 import { SupportError, supportCors } from "@/lib/support/policy";
 import { processSupportJobs } from "@/lib/support/worker";
+import { answerIdeaPrompt } from "@/lib/support/ideas";
 type Context = { params: Promise<{ cid: string }> };
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: supportCors });
@@ -85,6 +86,13 @@ const schema = z.discriminatedUnion("action", [
     reference: z.string().trim().max(100).optional(),
     clientMessageId: z.string().uuid(),
   }),
+  z.object({
+    action: z.literal("idea"),
+    promptId: z.string().max(140),
+    feedbackId: z.string().max(64).optional(),
+    title: z.string().trim().max(160).optional(),
+    details: z.string().trim().max(2000).optional(),
+  }),
   z.object({ action: z.literal("human") }),
   z.object({ action: z.literal("ticket") }),
   z.object({
@@ -110,6 +118,20 @@ export async function POST(req: NextRequest, { params }: Context) {
         content: action.content,
         clientMessageId: action.clientMessageId,
       });
+    if (action.action === "idea") {
+      if (!action.feedbackId && !action.title)
+        throw new SupportError("Choose an idea or give yours a title.");
+      await answerIdeaPrompt({
+        projectId: project.id,
+        customerId: session!.customerId,
+        conversationId: cid,
+        promptId: action.promptId,
+        choice: action.feedbackId
+          ? { kind: "vote", feedbackId: action.feedbackId }
+          : { kind: "suggest", title: action.title!, details: action.details },
+      });
+      return NextResponse.json({ saved: true }, { headers: supportCors });
+    }
     if (action.action === "human")
       await requestHuman(project.id, cid, session!.customerId);
     if (action.action === "handoff")

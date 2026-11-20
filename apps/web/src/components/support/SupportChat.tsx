@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BusinessAvatar } from "./BusinessAvatar";
 import { SupportWidgets } from "./SupportWidgets";
-import type { SupportWidget } from "@upstep/types";
+import type { IdeaPrompt, SupportWidget } from "@upstep/types";
+import { IdeaPromptCard, activeIdeaPrompt } from "./IdeaPromptCard";
 import { SupportIcon } from "./SupportIcons";
 import { useSupportUnread } from "./useSupportUnread";
 import { playChime } from "@/lib/support/chime";
@@ -25,6 +26,8 @@ type Message = {
     offerTicket?: boolean;
     ticketReference?: string;
     widgets?: SupportWidget[];
+    ideaPrompt?: IdeaPrompt;
+    ideaPromptId?: string;
   };
 };
 type Chat = {
@@ -470,6 +473,7 @@ export function SupportChat({
           },
         ]
       : [];
+  const ideaPrompt = chat ? activeIdeaPrompt(chat) : null;
   const business = config?.businessName || "Support";
   const canAskForPerson =
     chat?.state === "AI" &&
@@ -827,6 +831,23 @@ export function SupportChat({
             className="mb-2 rounded-full border border-[var(--sx-border)] px-3 py-2 text-xs font-medium text-[var(--sx-ink)] disabled:opacity-50">
             Ask for a person
           </button>
+        )}
+        {chat && ideaPrompt && (
+          <section
+            aria-label="Vote or suggest an idea"
+            className="mb-2 max-h-[42dvh] overflow-y-auto"
+          >
+            <IdeaPromptCard
+              key={ideaPrompt.id}
+              prompt={ideaPrompt}
+              busy={busy}
+              onAnswer={(answer) =>
+                act("idea", { promptId: ideaPrompt.id, ...answer }).then(
+                  Boolean,
+                )
+              }
+            />
+          </section>
         )}
         {chat && widgets.length > 0 && (
           <section

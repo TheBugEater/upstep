@@ -135,7 +135,7 @@ export function FeedbackSheet() {
                           color: p.text,
                         }}
                       >
-                        {screen === "support" ? "Support" : "Feedback"}
+                        {screen === "support" ? "Support" : "Ideas"}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -224,7 +224,7 @@ export function FeedbackSheet() {
                   ]}
                 >
                   <Text style={[styles.newBtnText, { color: p.accentText }]}>
-                    + New feedback
+                    + Suggest an idea
                   </Text>
                 </TouchableOpacity>
               )}
@@ -250,6 +250,7 @@ export function FeedbackSheet() {
                 <FeedCreateBody
                   p={p}
                   accent={accentColor}
+                  ideasOnly={!!supportConfig}
                   onDone={() => {
                     setNav({ screen: "list" });
                   }}
@@ -579,16 +580,21 @@ function FeedCreateBody({
   p,
   accent,
   onDone,
+  ideasOnly = false,
 }: {
   p: Palette;
   accent: string;
   onDone: () => void;
+  /** With support chat on, bugs and questions go to chat; this form suggests ideas. */
+  ideasOnly?: boolean;
 }) {
   const styles = useScaledStyles(baseStyles);
   const { submit } = useUpstep();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<FeedbackType>("GENERAL");
+  const [type, setType] = useState<FeedbackType>(
+    ideasOnly ? "FEATURE" : "GENERAL",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -613,7 +619,9 @@ function FeedCreateBody({
       <View style={[styles.centered, { paddingTop: 40 }]}>
         <Text style={[styles.successTitle, { color: p.text }]}>Submitted</Text>
         <Text style={[styles.successSub, { color: p.textFaint }]}>
-          Thanks — we received your feedback.
+          {ideasOnly
+            ? "Thanks, we received your idea."
+            : "Thanks, we received your feedback."}
         </Text>
       </View>
     );
@@ -621,41 +629,49 @@ function FeedCreateBody({
 
   return (
     <View style={styles.createPad}>
-      <Text style={[styles.fieldLabel, { color: p.textFaint }]}>TYPE</Text>
-      <View style={styles.typeRow}>
-        {TYPES.map((t) => {
-          const active = type === t;
-          return (
-            <TouchableOpacity
-              key={t}
-              onPress={() => setType(t)}
-              activeOpacity={0.8}
-              style={[
-                styles.typeBtn,
-                {
-                  borderColor: active ? accent : p.border,
-                  backgroundColor: active ? accent : p.bg,
-                },
-              ]}
-            >
-              <Text
+      {!ideasOnly && (
+        <Text style={[styles.fieldLabel, { color: p.textFaint }]}>TYPE</Text>
+      )}
+      {!ideasOnly && (
+        <View style={styles.typeRow}>
+          {TYPES.map((t) => {
+            const active = type === t;
+            return (
+              <TouchableOpacity
+                key={t}
+                onPress={() => setType(t)}
+                activeOpacity={0.8}
                 style={[
-                  styles.typeBtnText,
-                  { color: active ? p.accentText : p.textSoft },
+                  styles.typeBtn,
+                  {
+                    borderColor: active ? accent : p.border,
+                    backgroundColor: active ? accent : p.bg,
+                  },
                 ]}
               >
-                {TYPE_LABELS[t]}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                <Text
+                  style={[
+                    styles.typeBtnText,
+                    { color: active ? p.accentText : p.textSoft },
+                  ]}
+                >
+                  {TYPE_LABELS[t]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       <Text style={[styles.fieldLabel, { color: p.textFaint }]}>TITLE</Text>
       <TextInput
         value={title}
         onChangeText={setTitle}
-        placeholder="Short summary of the issue or idea"
+        placeholder={
+          ideasOnly
+            ? "What would you like us to build?"
+            : "Short summary of the issue or idea"
+        }
         placeholderTextColor={p.textFaint}
         maxLength={200}
         returnKeyType="next"
@@ -671,7 +687,11 @@ function FeedCreateBody({
       <TextInput
         value={description}
         onChangeText={setDescription}
-        placeholder="Steps to reproduce, expected behaviour, or more context (optional)"
+        placeholder={
+          ideasOnly
+            ? "Why would it help? (optional)"
+            : "Steps to reproduce, expected behaviour, or more context (optional)"
+        }
         placeholderTextColor={p.textFaint}
         multiline
         numberOfLines={5}
@@ -699,7 +719,7 @@ function FeedCreateBody({
           <ActivityIndicator color={p.accentText} />
         ) : (
           <Text style={[styles.submitBtnText, { color: p.accentText }]}>
-            Submit feedback
+            {ideasOnly ? "Suggest idea" : "Submit feedback"}
           </Text>
         )}
       </TouchableOpacity>

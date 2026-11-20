@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { SupportClient, supportMessageId } from "@upstep/js/support";
 import type {
+  IdeaPrompt,
   SupportConfiguration,
   SupportConversation,
   SupportWidget,
@@ -214,6 +215,7 @@ function SupportViewBody({
       contentOffset.y + layoutMeasurement.height >= contentSize.height - 48,
     );
   }
+  const ideaPrompt = chat ? SupportClient.activeIdeaPrompt(chat) : null;
   const widgets: SupportWidget[] = chat?.activeWidgetMessageId
     ? (
         chat.messages.find((m) => m.id === chat.activeWidgetMessageId)?.metadata
@@ -560,6 +562,27 @@ function SupportViewBody({
           </Pressable>
         )}
       </View>
+      {chat && ideaPrompt && (
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={{ maxHeight: height * 0.42, flexGrow: 0 }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 6 }}
+        >
+          <NativeIdeaCard
+            key={ideaPrompt.id}
+            prompt={ideaPrompt}
+            busy={busy}
+            color={colors}
+            accentColor={accentColor}
+            onAnswer={(answer) =>
+              perform(async () => {
+                await client.idea(chat.id, ideaPrompt.id, answer);
+                await refresh(chat.id);
+              })
+            }
+          />
+        </ScrollView>
+      )}
       {chat && widgets.length > 0 && (
         <ScrollView
           keyboardShouldPersistTaps="handled"
@@ -987,6 +1010,196 @@ function NativeSupportWidget({
     </View>
   );
 }
+/** A feature request from chat: vote for a matching public idea or post a new one. */
+function NativeIdeaCard({
+  prompt,
+  busy,
+  color,
+  accentColor,
+  onAnswer,
+}: {
+  prompt: IdeaPrompt;
+  busy: boolean;
+  color: Colors;
+  accentColor: string;
+  onAnswer: (
+    answer: { feedbackId: string } | { title: string; details?: string },
+  ) => Promise<boolean>;
+}) {
+  const styles = useScaledStyles(baseStyles);
+  const [suggesting, setSuggesting] = useState(!prompt.matches.length);
+  const [title, setTitle] = useState(prompt.suggestedTitle);
+  const [details, setDetails] = useState("");
+  const primary = (label: string, press: () => void, disabled = false) => (
+    <TouchableOpacity
+      accessibilityRole="button"
+      disabled={disabled || busy}
+      style={[
+        styles.send,
+        styles.wide,
+        { backgroundColor: accentColor, opacity: disabled || busy ? 0.5 : 1 },
+      ]}
+      onPress={press}
+    >
+      <Text style={[styles.sendText, { color: color.accentText }]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+  return (
+    <View
+      style={[
+        styles.card,
+        { borderColor: color.line, backgroundColor: color.bg },
+      ]}
+    >
+      <View
+        style={[
+          styles.cardHead,
+          { backgroundColor: color.tint, borderColor: color.tintLine },
+        ]}
+      >
+        <Text
+          numberOfLines={1}
+          style={[styles.cardTitle, { color: color.accentInk, flex: 1 }]}
+        >
+          {prompt.title}
+        </Text>
+      </View>
+      <View style={{ padding: 12, gap: 8 }}>
+        {prompt.matches.map((idea) => (
+          <View
+            key={idea.id}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+              borderWidth: 1,
+              borderColor: color.line,
+              borderRadius: 12,
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text
+                numberOfLines={2}
+                style={{ color: color.text, fontSize: 14, fontWeight: "600" }}
+              >
+                {idea.title}
+              </Text>
+              <Text style={[styles.status, { color: color.muted }]}>
+                {idea.upvotes} {idea.upvotes === 1 ? "vote" : "votes"}
+              </Text>
+            </View>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`Vote for ${idea.title}`}
+              disabled={busy}
+              onPress={() => void onAnswer({ feedbackId: idea.id })}
+              style={{
+                backgroundColor: accentColor,
+                borderRadius: 10,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                opacity: busy ? 0.5 : 1,
+              }}
+            >
+              <Text
+                style={{
+                  color: color.accentText,
+                  fontSize: 13,
+                  fontWeight: "700",
+                }}
+              >
+                Vote
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+        {!suggesting ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            disabled={busy}
+            onPress={() => setSuggesting(true)}
+            style={{
+              borderWidth: 1,
+              borderColor: color.line,
+              borderRadius: 12,
+              minHeight: 44,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text
+              style={{ color: color.text, fontSize: 14, fontWeight: "600" }}
+            >
+              + None of these, suggest a new idea
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            {!prompt.matches.length && (
+              <Text style={[styles.status, { color: color.muted }]}>
+                Share it publicly so others can vote for it too. Only what you
+                write here is posted.
+              </Text>
+            )}
+            <Text style={[styles.status, { color: color.muted }]}>Idea</Text>
+            <TextInput
+              accessibilityLabel="Idea"
+              value={title}
+              onChangeText={setTitle}
+              editable={!busy}
+              maxLength={160}
+              style={[
+                styles.formInput,
+                { color: color.text, borderColor: color.line },
+              ]}
+            />
+            <Text style={[styles.status, { color: color.muted }]}>
+              Why it would help (optional)
+            </Text>
+            <TextInput
+              accessibilityLabel="Why it would help"
+              value={details}
+              onChangeText={setDetails}
+              editable={!busy}
+              multiline
+              maxLength={2000}
+              style={[
+                styles.formInput,
+                { color: color.text, borderColor: color.line, minHeight: 64 },
+              ]}
+            />
+            {primary(
+              "Post to ideas",
+              () =>
+                void onAnswer({
+                  title: title.trim(),
+                  ...(details.trim() ? { details: details.trim() } : {}),
+                }),
+              title.trim().length < 3,
+            )}
+            {prompt.matches.length > 0 && (
+              <TouchableOpacity
+                accessibilityRole="button"
+                disabled={busy}
+                onPress={() => setSuggesting(false)}
+                style={{ alignItems: "center", paddingVertical: 4 }}
+              >
+                <Text style={[styles.status, { color: color.muted }]}>
+                  Back
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+      </View>
+    </View>
+  );
+}
+
 const baseStyles = StyleSheet.create({
   root: { flex: 1 },
   heading: {

@@ -139,9 +139,18 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
         (_chat?['customer'] as Map?)?.cast<String, dynamic>() ??
         <String, dynamic>{};
     final actions = <Map<String, dynamic>>[];
+    Map<String, dynamic>? ideaPrompt;
+    final answeredIdeas = <dynamic>{
+      for (final raw in (_chat?['messages'] as List? ?? []))
+        ((raw as Map)['metadata'] as Map?)?['ideaPromptId'],
+    };
     for (final raw in (_chat?['messages'] as List? ?? [])) {
       final message = raw as Map;
       if (message['id'] != _chat?['activeWidgetMessageId']) continue;
+      final prompt = (message['metadata'] as Map?)?['ideaPrompt'] as Map?;
+      if (prompt != null && !answeredIdeas.contains(prompt['id'])) {
+        ideaPrompt = prompt.cast<String, dynamic>();
+      }
       for (final entry
           in ((message['metadata'] as Map?)?['widgets'] as List? ?? [])) {
         if (entry['type'] != 'contact_form' || _chat?['canEscalate'] == true) {
@@ -353,6 +362,41 @@ class _SupportChatState extends State<SupportChat> with WidgetsBindingObserver {
                 ],
               ),
             ),
+            if (ideaPrompt != null)
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight:
+                      (MediaQuery.sizeOf(context).height -
+                          MediaQuery.viewInsetsOf(context).bottom) *
+                      .38,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  child: _IdeaCard(
+                    key: ValueKey(ideaPrompt['id']),
+                    prompt: ideaPrompt,
+                    busy: _busy,
+                    onAnswer:
+                        ({String? feedbackId, String? title, String? details}) {
+                          final promptId = ideaPrompt!['id'] as String;
+                          return _perform(() async {
+                            final id = _chat!['id'] as String;
+                            await widget.client.idea(
+                              id,
+                              promptId,
+                              feedbackId: feedbackId,
+                              title: title,
+                              details: details,
+                            );
+                            await _refresh(id);
+                          });
+                        },
+                  ),
+                ),
+              ),
             if (actions.isNotEmpty)
               ConstrainedBox(
                 constraints: BoxConstraints(
@@ -782,4 +826,180 @@ class _SupportActionsState extends State<_SupportActions> {
       widget.card(widget.actions[_selected]),
     ],
   );
+}
+
+typedef _IdeaAnswer =
+    Future<bool> Function({String? feedbackId, String? title, String? details});
+
+/// A feature request from chat: vote for a matching public idea or post a new one.
+class _IdeaCard extends StatefulWidget {
+  const _IdeaCard({
+    super.key,
+    required this.prompt,
+    required this.busy,
+    required this.onAnswer,
+  });
+  final Map<String, dynamic> prompt;
+  final bool busy;
+  final _IdeaAnswer onAnswer;
+
+  @override
+  State<_IdeaCard> createState() => _IdeaCardState();
+}
+
+class _IdeaCardState extends State<_IdeaCard> {
+  late final List<Map<String, dynamic>> _matches = [
+    for (final m in (widget.prompt['matches'] as List? ?? []))
+      (m as Map).cast<String, dynamic>(),
+  ];
+  late bool _suggesting = _matches.isEmpty;
+  late final _title = TextEditingController(
+    text: widget.prompt['suggestedTitle'] as String? ?? '',
+  );
+  final _details = TextEditingController();
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _details.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final look = UpstepThemeData.of(context);
+    final accent = Theme.of(context).colorScheme.primary;
+    final filled = FilledButton.styleFrom(
+      backgroundColor: accent,
+      foregroundColor: look.accentText,
+      minimumSize: const Size(44, 40),
+    );
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: look.cardFill,
+        borderRadius: look.corners(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.prompt['title'] as String? ?? 'Ideas',
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          for (final idea in _matches)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          idea['title'] as String? ?? '',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${idea['upvotes']} ${idea['upvotes'] == 1 ? 'vote' : 'votes'}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    style: filled,
+                    onPressed: widget.busy
+                        ? null
+                        : () =>
+                              widget.onAnswer(feedbackId: idea['id'] as String),
+                    child: const Text('Vote', style: TextStyle(fontSize: 13)),
+                  ),
+                ],
+              ),
+            ),
+          if (!_suggesting)
+            OutlinedButton(
+              onPressed: widget.busy
+                  ? null
+                  : () => setState(() => _suggesting = true),
+              child: const Text(
+                'None of these, suggest a new idea',
+                style: TextStyle(fontSize: 13),
+              ),
+            )
+          else ...[
+            if (_matches.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Share it publicly so others can vote for it too. '
+                  'Only what you write here is posted.',
+                  style: TextStyle(fontSize: 13),
+                ),
+              ),
+            TextField(
+              controller: _title,
+              maxLength: 160,
+              enabled: !widget.busy,
+              decoration: const InputDecoration(
+                labelText: 'Idea',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 4),
+            TextField(
+              controller: _details,
+              maxLength: 2000,
+              minLines: 2,
+              maxLines: 4,
+              enabled: !widget.busy,
+              decoration: const InputDecoration(
+                labelText: 'Why it would help (optional)',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                if (_matches.isNotEmpty)
+                  TextButton(
+                    onPressed: widget.busy
+                        ? null
+                        : () => setState(() => _suggesting = false),
+                    child: const Text('Back', style: TextStyle(fontSize: 13)),
+                  ),
+                Expanded(
+                  child: FilledButton(
+                    style: filled,
+                    onPressed: widget.busy || _title.text.trim().length < 3
+                        ? null
+                        : () => widget.onAnswer(
+                            title: _title.text.trim(),
+                            details: _details.text.trim(),
+                          ),
+                    child: const Text(
+                      'Post to ideas',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

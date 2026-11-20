@@ -211,4 +211,96 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     client.dispose();
   });
+
+  testWidgets('feature request card votes for a matching idea, then hides', (
+    tester,
+  ) async {
+    final posts = <Map<String, dynamic>>[];
+    final messages = <Map<String, dynamic>>[
+      {
+        'id': 'ask',
+        'role': 'CUSTOMER',
+        'authorName': 'Visitor',
+        'content': 'Can you add dark mode?',
+      },
+      {
+        'id': 'answer',
+        'role': 'ASSISTANT',
+        'authorName': 'Acme AI',
+        'content': 'Dark mode is not available yet. You can vote for it below.',
+        'metadata': {
+          'widgets': [],
+          'ideaPrompt': {
+            'id': 'idea:ask',
+            'title': 'Others asked for this too',
+            'suggestedTitle': 'Dark mode',
+            'matches': [
+              {
+                'id': 'f1',
+                'title': 'Dark mode for the dashboard',
+                'upvotes': 12,
+              },
+            ],
+          },
+        },
+      },
+    ];
+    final client = SupportClient(
+      const UpstepConfig(apiKey: 'public-key'),
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/support')) {
+          return http.Response('{"token":"session"}', 200);
+        }
+        if (request.url.path.endsWith('/conversations')) {
+          return http.Response(
+            '{"conversations":[{"id":"one","state":"AI"}]}',
+            200,
+          );
+        }
+        if (request.method == 'POST') {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          posts.add(body);
+          messages.add({
+            'id': 'done',
+            'role': 'SYSTEM',
+            'authorName': 'Ideas',
+            'content': 'Added your vote.',
+            'metadata': {'ideaPromptId': body['promptId']},
+          });
+          return http.Response('{}', 200);
+        }
+        return http.Response(
+          jsonEncode({
+            'id': 'one',
+            'state': 'AI',
+            'messages': messages,
+            'activeWidgetMessageId': 'answer',
+            'canEscalate': false,
+            'customer': {'name': null, 'email': null, 'verified': false},
+          }),
+          200,
+        );
+      }),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SupportChat(
+            client: client,
+            configuration: const {'businessName': 'Acme'},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Dark mode for the dashboard'), findsOneWidget);
+    await tester.tap(find.text('Vote'));
+    await tester.pumpAndSettle();
+    expect(posts.single, {
+      'action': 'idea',
+      'promptId': 'idea:ask',
+      'feedbackId': 'f1',
+    });
+    expect(find.text('Dark mode for the dashboard'), findsNothing);
+  });
 }

@@ -118,7 +118,7 @@ class _SheetScaffold extends StatelessWidget {
               height: MediaQuery.of(context).size.height * 0.88,
               child: DefaultTabController(
                 key: ValueKey(chat),
-                length: chat ? 3 : 2,
+                length: 2,
                 child: Column(
                   children: [
                     Padding(
@@ -142,24 +142,30 @@ class _SheetScaffold extends StatelessWidget {
                     TabBar(
                       indicatorColor: accent,
                       labelColor: accent,
-                      tabs: [
-                        if (chat) const Tab(text: 'Support'),
-                        const Tab(text: 'Top requests'),
-                        const Tab(text: 'Send feedback'),
-                      ],
+                      // With support chat on, bugs and questions go to chat
+                      // and the second tab is the ideas board.
+                      tabs: chat
+                          ? const [Tab(text: 'Support'), Tab(text: 'Ideas')]
+                          : const [
+                              Tab(text: 'Top requests'),
+                              Tab(text: 'Send feedback'),
+                            ],
                     ),
                     Expanded(
                       child: TabBarView(
-                        children: [
-                          if (chat)
-                            SupportChat(
-                              key: ValueKey(controller.supportRevision),
-                              client: controller.support,
-                              configuration: support,
-                            ),
-                          _FeedTab(controller: controller),
-                          _SubmitTab(controller: controller),
-                        ],
+                        children: chat
+                            ? [
+                                SupportChat(
+                                  key: ValueKey(controller.supportRevision),
+                                  client: controller.support,
+                                  configuration: support,
+                                ),
+                                _FeedTab(controller: controller, ideas: true),
+                              ]
+                            : [
+                                _FeedTab(controller: controller),
+                                _SubmitTab(controller: controller),
+                              ],
                       ),
                     ),
                   ],
@@ -174,12 +180,47 @@ class _SheetScaffold extends StatelessWidget {
 }
 
 class _FeedTab extends StatelessWidget {
-  const _FeedTab({required this.controller});
+  const _FeedTab({required this.controller, this.ideas = false});
 
   final UpstepController controller;
 
+  /// Shows a "Suggest an idea" button that opens the idea form.
+  final bool ideas;
+
   @override
   Widget build(BuildContext context) {
+    final feed = _feed(context);
+    if (!ideas) return feed;
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Suggest an idea'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => Theme(
+                    data: theme,
+                    child: Scaffold(
+                      appBar: AppBar(title: const Text('Suggest an idea')),
+                      body: _SubmitTab(controller: controller, ideasOnly: true),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(child: feed),
+      ],
+    );
+  }
+
+  Widget _feed(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
       builder: (BuildContext context, Widget? child) {
@@ -192,10 +233,14 @@ class _FeedTab extends StatelessWidget {
             onRefresh: controller.loadFeed,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              children: const <Widget>[
-                SizedBox(height: 120),
+              children: <Widget>[
+                const SizedBox(height: 120),
                 Center(
-                  child: Text('No feedback yet. Be the first to submit one.'),
+                  child: Text(
+                    ideas
+                        ? 'No ideas yet. Be the first to suggest one.'
+                        : 'No feedback yet. Be the first to submit one.',
+                  ),
                 ),
               ],
             ),
@@ -431,9 +476,12 @@ class _FeedbackDetailPage extends StatelessWidget {
 }
 
 class _SubmitTab extends StatefulWidget {
-  const _SubmitTab({required this.controller});
+  const _SubmitTab({required this.controller, this.ideasOnly = false});
 
   final UpstepController controller;
+
+  /// With support chat on, bugs and questions go to chat; this form suggests ideas.
+  final bool ideasOnly;
 
   @override
   State<_SubmitTab> createState() => _SubmitTabState();
@@ -443,7 +491,9 @@ class _SubmitTabState extends State<_SubmitTab> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-  FeedbackType _type = FeedbackType.general;
+  late FeedbackType _type = widget.ideasOnly
+      ? FeedbackType.feature
+      : FeedbackType.general;
   bool _submitting = false;
 
   @override
@@ -467,10 +517,18 @@ class _SubmitTabState extends State<_SubmitTab> {
       _titleController.clear();
       _contentController.clear();
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Feedback submitted.')));
-      DefaultTabController.of(context).animateTo(0);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.ideasOnly ? 'Idea submitted.' : 'Feedback submitted.',
+          ),
+        ),
+      );
+      if (widget.ideasOnly) {
+        Navigator.of(context).pop();
+      } else {
+        DefaultTabController.of(context).animateTo(0);
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -501,8 +559,10 @@ class _SubmitTabState extends State<_SubmitTab> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _contentController,
-            decoration: const InputDecoration(
-              labelText: 'What should we build or fix?',
+            decoration: InputDecoration(
+              labelText: widget.ideasOnly
+                  ? 'What would you like us to build?'
+                  : 'What should we build or fix?',
               border: OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
@@ -516,21 +576,23 @@ class _SubmitTabState extends State<_SubmitTab> {
               return null;
             },
           ),
-          const SizedBox(height: 16),
-          Text('Type', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: FeedbackType.values
-                .map(
-                  (FeedbackType type) => ChoiceChip(
-                    label: Text(type.label),
-                    selected: _type == type,
-                    onSelected: (_) => setState(() => _type = type),
-                  ),
-                )
-                .toList(),
-          ),
+          if (!widget.ideasOnly) ...[
+            const SizedBox(height: 16),
+            Text('Type', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: FeedbackType.values
+                  .map(
+                    (FeedbackType type) => ChoiceChip(
+                      label: Text(type.label),
+                      selected: _type == type,
+                      onSelected: (_) => setState(() => _type = type),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
           const SizedBox(height: 24),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -547,7 +609,7 @@ class _SubmitTabState extends State<_SubmitTab> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Send feedback'),
+                : Text(widget.ideasOnly ? 'Suggest idea' : 'Send feedback'),
           ),
         ],
       ),

@@ -223,9 +223,19 @@ export type SupportWidget =
  | {id:string;type:"quick_replies"|"confirmation";title:string;options:string[]}
  | {id:string;type:"issue_details";title:string}
  | {id:string;type:"contact_form";title:string;summary:string};
+/**
+ * A feature request the AI recognised in chat. The customer can vote for one of
+ * the matching public ideas or suggest a new one. Kept apart from `widgets` so
+ * older SDKs that don't know it simply ignore it.
+ */
+export interface IdeaPrompt {
+ id:string;title:string;suggestedTitle:string;
+ matches:{id:string;title:string;upvotes:number}[];
+}
 export interface SupportMessage {
  id:string; role:"CUSTOMER"|"ASSISTANT"|"AGENT"|"SYSTEM";authorName:string;content:string;createdAt?:string;
- metadata?:{citations?:{url:string;title:string}[];widgets?:SupportWidget[];inScope?:boolean;ticketReference?:string};
+ metadata?:{citations?:{url:string;title:string}[];widgets?:SupportWidget[];inScope?:boolean;ticketReference?:string;
+  ideaPrompt?:IdeaPrompt;ideaPromptId?:string};
 }
 export interface SupportConversation {
  id:string;state:string;ticketId:string|null;ticketReference:string|null;supportEmail:string|null;aiPending:boolean;

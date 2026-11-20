@@ -192,6 +192,25 @@ class SupportClient {
     });
   }
 
+  /// Answers an idea prompt: pass [feedbackId] to vote for one of its
+  /// matches, or [title] (and optional [details]) to post a new idea.
+  Future<void> idea(
+    String id,
+    String promptId, {
+    String? feedbackId,
+    String? title,
+    String? details,
+  }) async {
+    await _ensureSession();
+    await _request('/conversations/${Uri.encodeComponent(id)}', {
+      'action': 'idea',
+      'promptId': promptId,
+      'feedbackId': ?feedbackId,
+      'title': ?title,
+      if (details != null && details.isNotEmpty) 'details': details,
+    });
+  }
+
   Future<void> handoff(String id, String name, String email) async {
     await _ensureSession();
     await _request('/conversations/${Uri.encodeComponent(id)}', {

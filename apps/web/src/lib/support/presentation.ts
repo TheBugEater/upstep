@@ -41,7 +41,10 @@ export function replyWidgets(
       title: "Let the team follow up",
       summary,
     });
-  else if (result.requestDetails)
+  // A feature request gets the ideas card instead of a details form or "did this help?".
+  else if (result.featureRequest) {
+    /* ideaPrompt is attached by the worker */
+  } else if (result.requestDetails)
     widgets.push({
       id: `details:${turnId}`,
       type: "issue_details",

@@ -10,6 +10,7 @@ import {
 } from "./ai";
 import { assessEscalation } from "./escalation";
 import { formatSupportReply, replyWidgets } from "./presentation";
+import { buildIdeaPrompt, matchingIdeas } from "./ideas";
 import { processBusinessLearning } from "./learning";
 import { availableAgents, createSupportTicket } from "./service";
 import { SupportError } from "./policy";
@@ -227,6 +228,22 @@ export async function processAIConversation(
             ticketTitle: "",
             ticketType: "GENERAL",
           };
+    // Feature requests go to the public ideas board: offer matching ideas to
+    // vote for, or the AI's neutral title as a new idea. Matching is
+    // best-effort and never blocks the reply.
+    const ideaPrompt =
+      result.inScope &&
+      result.featureRequest &&
+      result.resolution !== "escalate" &&
+      result.ticketTitle.trim().length >= 3
+        ? buildIdeaPrompt(
+            lastCustomer.id,
+            result.ticketTitle,
+            await matchingIdeas(c.projectId, result.ticketTitle, client).catch(
+              () => [],
+            ),
+          )
+        : null;
     await client.$transaction(async (tx) => {
       // Fence against customer messages, human takeover, disable, and configuration changes during generation.
       const current = await tx.supportConversation.updateMany({
@@ -296,6 +313,9 @@ export async function processAIConversation(
             offerTicket: result.offerTicket,
             ticketTitle: result.ticketTitle,
             ticketType: result.ticketType,
+            ...(ideaPrompt
+              ? { ideaPrompt: ideaPrompt as unknown as Prisma.InputJsonObject }
+              : {}),
             // Team-only trace; stripped from customer-facing responses.
             ...(lookups.length
               ? {
