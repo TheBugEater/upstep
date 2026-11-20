@@ -2,6 +2,7 @@ import { db } from "./db";
 import { getSiteUrl } from "./site-url";
 import { sendGoogleChat } from "./google-chat";
 import type { Prisma } from "@prisma/client";
+import { isPaidPlan } from "./plans";
 
 // ─── Payload shapes ────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ export async function triggerIntegrations(payload: IntegrationPayload, client: I
     },
   });
 
-  if (!project || !["PRO", "BUSINESS"].includes(project.owner.plan) || !project.integrations.length) {
+  if (!project || !isPaidPlan(project.owner.plan) || !project.integrations.length) {
     if (payload.event === "ISSUE_SHARED") throw new Error("Google Chat discussion requires an enabled connection on a Pro or Business project.");
     return;
   }

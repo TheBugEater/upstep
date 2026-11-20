@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "../db";
 import { getProjectAccess } from "../project-auth";
 import { getSiteUrl } from "../site-url";
+import { isPaidPlan } from "../plans";
 
 export type SupportPushEvent = {
   eventId: string;
@@ -64,7 +65,7 @@ export async function deliverSupportPush(
     !conversation ||
     conversation.state === "RESOLVED" ||
     !conversation.project.supportConfig?.enabled ||
-    !["PRO", "BUSINESS"].includes(conversation.project.owner.plan)
+    !isPaidPlan(conversation.project.owner.plan)
   )
     return;
   if (

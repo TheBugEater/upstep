@@ -6,6 +6,9 @@
  * Server Components, or pass only the primitive fields you need.
  */
 
+import type { Prisma } from "@prisma/client";
+import { isSelfHosted } from "./edition";
+
 export type PlanId = "FREE" | "PRO" | "BUSINESS";
 
 // ─── Currencies ───────────────────────────────────────────────────────────────
@@ -118,9 +121,43 @@ export const PLANS: Record<PlanId, Plan> = {
 
 export const PLAN_ORDER: PlanId[] = ["FREE", "PRO", "BUSINESS"];
 
+/** What every account gets on a self-hosted install: Business limits, no billing. */
+export const SELF_HOSTED_PLAN: Plan = {
+  ...PLANS.BUSINESS,
+  name: "Self-hosted",
+  tagline: "Every feature, no limits, on your own server.",
+  stripePriceId: undefined,
+  features: [
+    "Unlimited projects and feedback items",
+    "Live chat, shared support inbox and AI support",
+    "No Upstep branding",
+    "No billing: you run the server and the AI provider",
+  ],
+};
+
 export function getPlan(id: string | null | undefined): Plan {
+  if (isSelfHosted()) return SELF_HOSTED_PLAN;
   if (id && id in PLANS) return PLANS[id as PlanId];
   return PLANS.FREE;
+}
+
+/** The plan an account is treated as: Business on a self-hosted install. */
+export function effectivePlanId(id: string | null | undefined): PlanId {
+  if (isSelfHosted()) return "BUSINESS";
+  return id && id in PLANS ? (id as PlanId) : "FREE";
+}
+
+/** Whether paid features (support, integrations, custom domains) are on. */
+export function isPaidPlan(id: string | null | undefined): boolean {
+  return effectivePlanId(id) !== "FREE";
+}
+
+/**
+ * Database filter for a project owner on a paid plan, e.g.
+ * `project: { owner: paidOwnerWhere() }`. Matches every owner when self-hosted.
+ */
+export function paidOwnerWhere(): Prisma.UserWhereInput {
+  return isSelfHosted() ? {} : { plan: { in: ["PRO", "BUSINESS"] } };
 }
 
 export function isUnlimited(n: number): boolean {

@@ -8,6 +8,7 @@ import { CurrencySwitcher } from "@/components/billing/CurrencySwitcher";
 import { PLANS, PLAN_ORDER, getPlan, formatLimit, formatPrice, isUnlimited } from "@/lib/plans";
 import { detectCurrency } from "@/lib/currency";
 import { billingEnabled } from "@/lib/stripe";
+import { isSelfHosted } from "@/lib/edition";
 
 export default async function BillingPage({
   searchParams,
@@ -35,17 +36,25 @@ export default async function BillingPage({
   const feedbackCount = agg._count;
 
   const enabled = billingEnabled();
+  const selfHosted = isSelfHosted();
 
   return (
     <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 lg:py-8 2xl:px-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Workspace settings</div><h1 className="font-serif text-3xl tracking-tight text-ink sm:text-4xl">Billing &amp; plan</h1><p className="mt-2 text-sm text-muted">Manage your subscription, limits, and workspace usage.</p></div>
-        <div className="rounded-xl border border-line bg-card p-1 shadow-soft"><CurrencySwitcher current={currency} /></div>
+        <div><div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-faint">Workspace settings</div><h1 className="font-serif text-3xl tracking-tight text-ink sm:text-4xl">Billing &amp; plan</h1><p className="mt-2 text-sm text-muted">{selfHosted ? "Your workspace usage on this server." : "Manage your subscription, limits, and workspace usage."}</p></div>
+        {!selfHosted && <div className="rounded-xl border border-line bg-card p-1 shadow-soft"><CurrencySwitcher current={currency} /></div>}
       </div>
 
         {upgraded && <UpgradeSuccessBanner plan={current.name} />}
 
-        {!enabled && (
+        {selfHosted && (
+          <div className="mt-6 rounded-xl border border-line bg-card px-4 py-3 text-sm text-muted">
+            This is a self-hosted install, so every account has every feature with no plan
+            limits and no billing. AI support uses the provider key configured on this server.
+          </div>
+        )}
+
+        {!enabled && !selfHosted && (
           <div className="mt-6 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             Billing isn&apos;t configured on this server yet. Add your Stripe keys to{" "}
             <code className="font-mono text-xs">.env</code> to enable checkout. Plan limits are still
@@ -59,7 +68,7 @@ export default async function BillingPage({
             <div className="text-xs text-muted">Current plan</div>
             <div className="mt-1 flex items-center gap-2">
               <span className="font-serif text-2xl text-ink">{current.name}</span>
-              {current.id !== "FREE" && (
+              {current.id !== "FREE" && !selfHosted && (
                 <span className="text-xs text-faint">{formatPrice(current.id, currency)}/mo</span>
               )}
             </div>
@@ -81,7 +90,8 @@ export default async function BillingPage({
           />
         </div>
 
-        {/* Plan options */}
+        {/* Plan options: none to choose on a self-hosted install */}
+        {!selfHosted && (<>
         <div className="mt-12 mb-5 flex items-center justify-between gap-4 flex-wrap">
           <div><h2 className="text-base font-bold text-ink">Available plans</h2><p className="mt-0.5 text-xs text-faint">Choose the capacity that fits your team.</p></div>
         </div>
@@ -149,6 +159,7 @@ export default async function BillingPage({
             );
           })}
         </div>
+        </>)}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { mobileRequest, revokeMobileSession } from "@/lib/mobile/auth";
 import { db } from "@/lib/db";
 import { supportResponseError } from "@/lib/support/http";
 import { saveMobileSupportProfile } from "@/lib/mobile/profile";
+import { paidOwnerWhere } from "@/lib/plans";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     const projects = await db.project.findMany({
       where: {
         OR: [{ ownerId: userId }, { members: { some: { userId } } }],
-        owner: { plan: { in: ["PRO", "BUSINESS"] } },
+        owner: paidOwnerWhere(),
       },
       select: {
         id: true,

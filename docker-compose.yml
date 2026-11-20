@@ -19,6 +19,9 @@ services:
     environment:
       DATABASE_URL: postgresql://upstep:upstep-local@postgres:5432/upstep
       DIRECT_URL: postgresql://upstep:upstep-local@postgres:5432/upstep
+      # Every account gets every feature with no plan limits or billing.
+      # Run `UPSTEP_SELF_HOSTED=false docker compose up` to enforce plans instead.
+      UPSTEP_SELF_HOSTED: ${UPSTEP_SELF_HOSTED:-true}
     ports:
       - "3000:3000"
     depends_on:

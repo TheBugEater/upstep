@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { stripe, appUrl } from "@/lib/stripe";
+import { isSelfHosted } from "@/lib/edition";
 import { getPlan } from "@/lib/plans";
 
 const schema = z.object({
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!stripe) {
+  if (!stripe || isSelfHosted()) {
     return NextResponse.json(
       { error: "Billing is not configured on this server." },
       { status: 503 }

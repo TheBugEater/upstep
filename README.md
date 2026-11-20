@@ -143,6 +143,16 @@ Compose starts PostgreSQL, applies the committed Prisma migrations, starts
 Upstep and processes notification retries. Containers expose `GET /api/health`
 and respect the platform's `PORT`.
 
+### No plan limits on your own server
+
+Compose sets `UPSTEP_SELF_HOSTED=true`, so every account gets every feature:
+unlimited projects and feedback, the support inbox, AI support and
+integrations, with no Upstep branding and no billing. AI support uses your own
+provider key (`OPENAI_API_KEY`), and the support AI learns from up to 500
+website pages per project. Running Upstep another way? Set
+`UPSTEP_SELF_HOSTED=true` in `apps/web/.env`. Leave it unset to enforce the
+Free, Pro and Business plans with Stripe billing.
+
 ### Email (optional)
 
 Feedback notifications and team invitations are sent through

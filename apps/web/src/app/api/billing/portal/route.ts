@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { stripe, appUrl } from "@/lib/stripe";
+import { isSelfHosted } from "@/lib/edition";
 
 export async function POST() {
   const session = await auth();
@@ -9,7 +10,7 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!stripe) {
+  if (!stripe || isSelfHosted()) {
     return NextResponse.json(
       { error: "Billing is not configured on this server." },
       { status: 503 }

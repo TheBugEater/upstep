@@ -19,6 +19,8 @@ continuously from `main`.
   support on, every widget shows two tabs, Support and Ideas, and its form
   only suggests ideas.
 - AGPL-licensed self-hostable server distribution and Docker Compose setup.
+- `UPSTEP_SELF_HOSTED=true` gives every account on a self-hosted install every
+  feature with no plan limits and no billing. Docker Compose turns it on.
 - Community health files, CI, dependency review, CodeQL and secret scanning.
 - Private, hashed MCP credentials with generate, rotate and revoke controls.
 - PostgreSQL-backed rate limiting and durable notification processing.

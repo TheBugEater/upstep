@@ -1,3 +1,8 @@
+import {
+  isSelfHosted,
+  SELF_HOSTED_SUPPORT_PAGES,
+  UNLIMITED_COUNT,
+} from "../edition";
 export class SupportError extends Error {
   constructor(
     message: string,
@@ -8,6 +13,14 @@ export class SupportError extends Error {
 }
 
 export function supportLimits(plan: string) {
+  // Self-hosted installs pay their own AI provider, so only page crawling keeps a cap.
+  if (isSelfHosted())
+    return {
+      enabled: true,
+      aiReplies: UNLIMITED_COUNT,
+      pages: SELF_HOSTED_SUPPORT_PAGES,
+      learningRuns: UNLIMITED_COUNT,
+    };
   if (plan === "BUSINESS")
     return { enabled: true, aiReplies: 1500, pages: 150, learningRuns: 100 };
   if (plan === "PRO")

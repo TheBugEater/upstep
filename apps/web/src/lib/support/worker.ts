@@ -24,6 +24,7 @@ import {
 import { supportLimits, usageMonth } from "./policy";
 import { queueSupportPush } from "../mobile/push";
 import { kickNotificationProcessor } from "../notification-queue";
+import { paidOwnerWhere } from "../plans";
 
 export async function knowledgeSources(
   projectId: string,
@@ -106,7 +107,7 @@ export async function processAIConversation(
       aiPending: true,
       state: "AI",
       project: {
-        owner: { plan: { in: ["PRO", "BUSINESS"] } },
+        owner: paidOwnerWhere(),
         supportConfig: { enabled: true, mode: { not: "HUMAN_ONLY" } },
       },
       OR: [{ aiLockedAt: null }, { aiLockedAt: { lt: stale } }],
@@ -258,7 +259,7 @@ export async function processAIConversation(
               crawlGeneration: config.crawlGeneration,
               mode: { not: "HUMAN_ONLY" },
             },
-            owner: { plan: { in: ["PRO", "BUSINESS"] } },
+            owner: paidOwnerWhere(),
           },
         },
         data: {
@@ -450,7 +451,7 @@ export async function processSupportJobs(budgetMs = 25_000) {
         enabled: true,
         crawlState: "READY",
         crawledAt: { lt: new Date(Date.now() - 7 * 24 * 60 * 60_000) },
-        project: { owner: { plan: { in: ["PRO", "BUSINESS"] } } },
+        project: { owner: paidOwnerWhere() },
       },
     });
     if (refresh)
@@ -497,7 +498,7 @@ export async function processPendingSupportTicket(
       ...(conversationId ? { id: conversationId } : {}),
       project: {
         supportConfig: { enabled: true },
-        owner: { plan: { in: ["PRO", "BUSINESS"] } },
+        owner: paidOwnerWhere(),
       },
     },
     include: {
@@ -555,7 +556,7 @@ export async function resumeOfflineConversations(client: PrismaClient = db) {
       messages: { some: { role: "CUSTOMER" } },
       project: {
         supportConfig: { enabled: true, mode: { not: "HUMAN_ONLY" } },
-        owner: { plan: { in: ["PRO", "BUSINESS"] } },
+        owner: paidOwnerWhere(),
       },
     },
     include: { customer: { select: { name: true, email: true } } },

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getSiteUrl } from "@/lib/site-url";
 import { redirect, notFound } from "next/navigation";
 import { ProjectWorkspace } from "@/components/workspace/ProjectWorkspace";
+import { effectivePlanId } from "@/lib/plans";
 
 /** Loads everything the project workspace needs. The board page and each
  *  task's own page share it, so a task page has the same live actions. */
@@ -97,7 +98,7 @@ export async function renderProjectWorkspace({ id, issue, taskPageId }: { id: st
           isOwner={isOwner}
           canManage={canManage}
           currentUserId={session.user.id}
-          ownerPlan={ownerPlan}
+          ownerPlan={effectivePlanId(ownerPlan)}
           teamMembers={teamMembers}
           initialItems={boardFeedback as never}
           initialPending={pendingFeedback as never}

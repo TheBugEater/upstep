@@ -6,6 +6,7 @@ import { load } from "cheerio";
 import robotsParser from "robots-parser";
 import { db } from "../db";
 import { SupportError, supportLimits } from "./policy";
+import { paidOwnerWhere } from "../plans";
 
 const BOT = "UpStepBot";
 const MAX_BYTES = 1_500_000;
@@ -215,7 +216,7 @@ export async function processCrawlPage() {
   const config = await db.supportConfig.findFirst({
     where: {
       AND: [{ OR: [{ enabled: true }, { learningState: "LEARNING" }] }],
-      project: { owner: { plan: { in: ["PRO", "BUSINESS"] } } },
+      project: { owner: paidOwnerWhere() },
       crawlState: { in: ["QUEUED", "CRAWLING"] },
       OR: [{ crawlLockedAt: null }, { crawlLockedAt: { lt: stale } }],
     },

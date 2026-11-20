@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/project-auth";
 import { googleChatWebhookUrl } from "@/lib/google-chat";
+import { isPaidPlan } from "@/lib/plans";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     select: { owner: { select: { plan: true } } },
   });
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!["PRO", "BUSINESS"].includes(project.owner.plan)) {
+  if (!isPaidPlan(project.owner.plan)) {
     return NextResponse.json({ error: "Integrations require a Pro or Business plan." }, { status: 402 });
   }
 

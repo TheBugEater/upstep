@@ -9,6 +9,7 @@ import { SupportKnowledge } from "./SupportKnowledge";
 import { SupportIcon } from "./SupportIcons";
 import { SupportProfile } from "./SupportProfile";
 import type { TeamMember } from "../workspace/ProjectWorkspace";
+import { UNLIMITED_COUNT } from "@/lib/edition";
 
 type Config = SupportSetupConfig & {
   crawledAt?: string | null;
@@ -156,6 +157,11 @@ export function SupportPanel({
           <h1 className="text-xl font-semibold tracking-tight text-ink">Customer support</h1>
           <p className="mt-0.5 text-xs text-muted">One conversation, from the first question to the fix.</p>
         </div>
+        {data.usage.limit >= UNLIMITED_COUNT ? (
+          <span className="min-w-[150px] text-[11px] text-faint">
+            {data.usage.used.toLocaleString()} AI replies this month
+          </span>
+        ) : (
         <div className="flex min-w-[150px] flex-col gap-1" title={`${data.usage.used} of ${data.usage.limit} AI replies used this month`}>
           <span className="text-[11px] text-faint">
             {data.usage.used.toLocaleString()} of {data.usage.limit.toLocaleString()} AI replies
@@ -167,6 +173,7 @@ export function SupportPanel({
             />
           </span>
         </div>
+        )}
         <button
           aria-pressed={available}
           className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-raised disabled:opacity-50"

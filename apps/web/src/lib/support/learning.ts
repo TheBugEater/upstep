@@ -17,6 +17,7 @@ import {
 import { supportProject } from "./service";
 import { SupportError, supportLimits, usageMonth } from "./policy";
 import { learningSchema } from "./learning-types";
+import { paidOwnerWhere } from "../plans";
 
 export async function beginBusinessLearning(
   projectId: string,
@@ -215,7 +216,7 @@ export async function processBusinessLearning(
       ...(projectId ? { projectId } : {}),
       learningState: "LEARNING",
       crawlState: { in: ["READY", "FAILED"] },
-      project: { owner: { plan: { in: ["PRO", "BUSINESS"] } } },
+      project: { owner: paidOwnerWhere() },
       OR: [{ learningLockedAt: null }, { learningLockedAt: { lt: stale } }],
     },
     include: {
@@ -339,7 +340,7 @@ export async function processBusinessLearning(
         crawlGeneration: config.crawlGeneration,
         learningGeneration: config.learningGeneration,
         learningLock: lock,
-        project: { owner: { plan: { in: ["PRO", "BUSINESS"] } } },
+        project: { owner: paidOwnerWhere() },
       },
       data: {
         learningState: "REVIEW",

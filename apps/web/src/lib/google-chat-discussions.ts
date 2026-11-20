@@ -5,6 +5,7 @@ import { getProjectAccess } from "./project-auth";
 import { collaborationTransaction, CollaborationError } from "./project-collaboration";
 import type { IntegrationPayload } from "./integrations";
 import { withIntegrationContext } from "./integration-context";
+import { isPaidPlan } from "./plans";
 
 export function discussionJobId(integrationId: string, feedbackId: string) {
   return "chat-discussion-" + createHash("sha256").update(JSON.stringify([integrationId, feedbackId])).digest("hex");
@@ -14,7 +15,7 @@ export async function startGoogleChatDiscussion(input: { projectId: string; feed
   return collaborationTransaction(async (tx) => {
     if (!await getProjectAccess(input.projectId, input.actorId, tx)) throw new CollaborationError("Task not found.", 404);
     const project = await tx.project.findUnique({ where: { id: input.projectId }, select: { name: true, owner: { select: { plan: true } } } });
-    if (!project || !["PRO", "BUSINESS"].includes(project.owner.plan)) throw new CollaborationError("Google Chat requires a Pro or Business plan.", 402);
+    if (!project || !isPaidPlan(project.owner.plan)) throw new CollaborationError("Google Chat requires a Pro or Business plan.", 402);
     const integration = await tx.integration.findFirst({ where: { id: input.integrationId, projectId: input.projectId, type: "GOOGLE_CHAT", enabled: true }, select: { id: true } });
     if (!integration) throw new CollaborationError("Connect and enable a Google Chat space in project integrations first.", 400);
     const feedback = await tx.feedback.findFirst({ where: { id: input.feedbackId, projectId: input.projectId } });

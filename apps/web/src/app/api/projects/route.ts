@@ -2,7 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getPlan, formatLimit } from "@/lib/plans";
+import { getPlan, formatLimit, isPaidPlan } from "@/lib/plans";
 import { beginBusinessLearning } from "@/lib/support/learning";
 import { normalizeDomain } from "@/lib/support/crawler";
 import { processSupportJobs } from "@/lib/support/worker";
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     session.user.id,
   );
   const supportSetupQueued =
-    !!domain && ["PRO", "BUSINESS"].includes(user?.plan || "FREE");
+    !!domain && isPaidPlan(user?.plan);
   if (supportSetupQueued) {
     await beginBusinessLearning(project.id, domain!);
     after(() => processSupportJobs().then(() => {}));
