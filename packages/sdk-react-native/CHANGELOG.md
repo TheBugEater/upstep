@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.0
+
+- With support enabled, the sheet has two tabs, Support and Ideas. Ideas lists the board with a "+ Suggest an idea" button, and its form only posts feature ideas; bugs and questions go to chat.
+- When the AI recognises a feature request in chat, a card shows matching public ideas to vote for, or lets the customer post a new idea in their own words.
+
 ## 0.9.0
 
 - Theme the sheet and support chat to your brand with `colors` (`background`, `surface`, `border`, `text`, `textMuted`, `accentText`, plus `light` / `dark` variants) and `radius`. Unset keys keep the defaults.

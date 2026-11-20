@@ -12,10 +12,12 @@ continuously from `main`.
   `upstep_flutter` 0.3.0: theme the widgets and hosted support chat with
   `colors`, `radius` and (web) `fontFamily`; the default accent follows the
   brand orange per mode.
-- Support chat routes feature requests to the public ideas board: the AI shows
-  matching ideas to vote for, or the customer posts a new one in their own
-  words, instead of opening a private ticket. With support on, every widget
-  shows two tabs, Support and Ideas, and its form only suggests ideas.
+- SDK 0.10.0 (`@upstep/js`, `@upstep/react-native`, `@upstep/types`) and
+  `upstep_flutter` 0.4.0: support chat routes feature requests to the public
+  ideas board. The AI shows matching ideas to vote for, or the customer posts
+  a new one in their own words, instead of opening a private ticket. With
+  support on, every widget shows two tabs, Support and Ideas, and its form
+  only suggests ideas.
 - AGPL-licensed self-hostable server distribution and Docker Compose setup.
 - Community health files, CI, dependency review, CodeQL and secret scanning.
 - Private, hashed MCP credentials with generate, rotate and revoke controls.

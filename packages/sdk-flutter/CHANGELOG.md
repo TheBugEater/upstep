@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- With support enabled, the sheet has two tabs, Support and Ideas. Ideas has a "Suggest an idea" button that opens a feature-only form; bugs and questions go to chat.
+- When the AI recognises a feature request in chat, a card shows matching public ideas to vote for, or lets the customer post a new idea in their own words.
+- New `SupportClient.idea()` to answer an idea prompt.
+
 ## 0.3.0
 
 - Theme the sheet and support chat to your brand with `colors: UpstepColors(...)` (with `light` / `dark` variants) and `radius`, on `Upstep` and `UpstepConfig`.
