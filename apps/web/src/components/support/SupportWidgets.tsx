@@ -34,8 +34,9 @@ const textAction =
   "inline-flex min-h-8 items-center gap-1.5 rounded-[var(--sx-r6,0.375rem)] px-1.5 text-xs font-semibold text-[var(--sx-muted,#737373)] transition hover:text-[var(--sx-text,#0a0a0a)] hover:underline disabled:opacity-50 dark:text-[var(--sx-muted,#a3a3a3)] dark:hover:text-[var(--sx-text,#fff)]";
 const isChoice = (w: SupportWidget) =>
   w.type === "quick_replies" || w.type === "confirmation";
-function actionLabel(widget: SupportWidget) {
-  return widget.type === "contact_form" ? "Talk to a person" : "Add details";
+function actionLabel(widget: SupportWidget, online?: boolean) {
+  if (widget.type !== "contact_form") return "Add details";
+  return online ? "Talk to a person" : "Leave contact details";
 }
 export function SupportWidgets(props: Props) {
   const choice = props.widgets.find(isChoice);
@@ -66,7 +67,7 @@ export function SupportWidgets(props: Props) {
                   {w.type === "contact_form" && (
                     <SupportIcon name="person" className="h-3.5 w-3.5" />
                   )}
-                  {actionLabel(w)}
+                  {actionLabel(w, props.online)}
                 </button>
               ))}
             </div>
@@ -177,7 +178,7 @@ function SupportWidgetCard({
                 className={`${primary} mt-2.5 w-full`}
                 onClick={() => setStep(1)}
               >
-                Talk to a person
+                {actionLabel(widget, online)}
               </button>
             </>
           ) : (

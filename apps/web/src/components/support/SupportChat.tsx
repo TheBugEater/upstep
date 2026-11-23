@@ -41,6 +41,7 @@ type Chat = {
   escalationSummary: string | null;
   activeWidgetMessageId: string | null;
   humanRequested: boolean;
+  humanAvailable: boolean;
   messages: Message[];
   customer: { name: string | null; email: string | null; verified: boolean };
 };
@@ -228,9 +229,19 @@ export function SupportChat({
     async (id: string) => {
       const snapshot = epoch.current;
       activeConversation.current = id;
-      const data = await request(`/conversations/${id}`);
-      if (snapshot === epoch.current && activeConversation.current === id)
-        setChat(data);
+      try {
+        const data = await request(`/conversations/${id}`);
+        if (snapshot === epoch.current && activeConversation.current === id)
+          setChat(data);
+      } catch (e) {
+        if (snapshot === epoch.current && activeConversation.current === id)
+          setChat((current) =>
+            current?.id === id && current.humanAvailable
+              ? { ...current, humanAvailable: false }
+              : current,
+          );
+        throw e;
+      }
     },
     [request],
   );
@@ -475,7 +486,9 @@ export function SupportChat({
       : [];
   const ideaPrompt = chat ? activeIdeaPrompt(chat) : null;
   const business = config?.businessName || "Support";
+  const humanAvailable = chat ? chat.humanAvailable : Boolean(config?.online.length);
   const canAskForPerson =
+    humanAvailable &&
     chat?.state === "AI" &&
     !chat.aiPending &&
     !chat.humanRequested &&
@@ -487,7 +500,7 @@ export function SupportChat({
       ? "Your message is with the team"
       : chat?.state === "RESOLVED"
         ? "Conversation resolved"
-        : config?.online.length
+        : humanAvailable
           ? "AI and our team are here for you"
           : config?.mode === "HUMAN_ONLY"
             ? "Leave a message for the team"
@@ -523,7 +536,7 @@ export function SupportChat({
               size={36}
             />
             <span
-              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[var(--sx-bg)] ${config?.online.length || isHuman ? "bg-emerald-500" : "bg-[var(--support-accent)]"}`}
+              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[var(--sx-bg)] ${humanAvailable || isHuman ? "bg-emerald-500" : "bg-[var(--support-accent)]"}`}
             />
           </div>
           <div className="min-w-0 flex-1">
@@ -861,7 +874,7 @@ export function SupportChat({
               name={chat.customer.name || ""}
               email={chat.customer.email || ""}
               verified={chat.customer.verified}
-              online={!!config?.online.length}
+              online={humanAvailable}
               onReply={quickReply}
               onDetails={(data) => act("details", data).then(Boolean)}
               onContact={(name, email) =>

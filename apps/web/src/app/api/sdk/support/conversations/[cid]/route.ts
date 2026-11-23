@@ -9,6 +9,7 @@ import {
   publicMessage,
 } from "@/lib/support/http";
 import {
+  availableAgents,
   customerMessage,
   requestHuman,
   createSupportTicket,
@@ -36,12 +37,15 @@ export async function GET(req: NextRequest, { params }: Context) {
       session!.customerId,
       cid,
     );
-    const messages = await db.supportMessage.findMany({
-      where: { conversationId: cid, role: { not: "NOTE" } },
-      select: publicMessageSelect,
-      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-      take: 500,
-    });
+    const [messages, online] = await Promise.all([
+      db.supportMessage.findMany({
+        where: { conversationId: cid, role: { not: "NOTE" } },
+        select: publicMessageSelect,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        take: 500,
+      }),
+      availableAgents(project.id),
+    ]);
     return NextResponse.json(
       {
         id: c.id,
@@ -54,6 +58,7 @@ export async function GET(req: NextRequest, { params }: Context) {
         escalationSummary: interaction.escalationSummary,
         activeWidgetMessageId: interaction.activeWidgetMessageId,
         humanRequested: c.humanRequested,
+        humanAvailable: online.length > 0,
         messages: messages.map(publicMessage),
         customer: {
           name: session!.customer.name,
@@ -61,7 +66,7 @@ export async function GET(req: NextRequest, { params }: Context) {
           verified: session!.customer.verified,
         },
       },
-      { headers: supportCors },
+      { headers: { ...supportCors, "Cache-Control": "no-store" } },
     );
   } catch (e) {
     return supportResponseError(e, true);

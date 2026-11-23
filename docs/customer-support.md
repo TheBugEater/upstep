@@ -73,9 +73,11 @@ Private notes stay out of customer responses and model context. Human
 replies/takeover increment a revision so in-flight AI replies cannot land afterward.
 
 The chat starts with product-help suggestions. The "Ask for a person" button
-appears after an in-scope AI answer or troubleshooting step, once AI has finished
-replying. Greetings, clarification alone and off-topic responses do not reveal it.
-An explicit request for a person in the customer's message still enters the team queue.
+appears when a teammate is available and the AI has finished giving an in-scope
+answer or troubleshooting step. Greetings, clarification alone and off-topic
+responses do not reveal it. An explicit request for a person in the customer's
+message still enters the team queue. When the team is offline, the contact form
+offers to save details for follow-up.
 
 Welcome suggestions and AI quick replies send their text when clicked. The chat
 follows new messages and layout changes while the customer is at the bottom;
