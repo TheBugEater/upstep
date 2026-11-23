@@ -133,6 +133,8 @@ interface UpstepContextValue {
   fontFamily: string | undefined;
   showBranding: boolean;
   chat: boolean;
+  /** False for a support-chat-only widget with no Ideas board or feedback form. */
+  feedback: boolean;
 }
 
 const UpstepContext = createContext<UpstepContextValue | null>(null);
@@ -235,6 +237,7 @@ export function UpstepProvider({
         fontFamily: config.fontFamily,
         showBranding,
         chat: config.chat !== false,
+        feedback: config.feedback !== false,
       }}
     >
       {children}
@@ -263,6 +266,12 @@ interface FeedbackWidgetProps {
   hideLauncher?: boolean;
   /** Override chat visibility for this widget. Project/plan access still applies. */
   chat?: boolean;
+  /**
+   * Override the provider's `feedback` option for this widget. False shows only
+   * the support chat: no Ideas tab or feedback form, and no launcher until
+   * support chat is confirmed for the project.
+   */
+  feedback?: boolean;
 }
 
 type Screen = "list" | "detail" | "create" | "support";
@@ -276,8 +285,10 @@ export function FeedbackWidget({
   fontFamily,
   hideLauncher = false,
   chat = true,
+  feedback,
 }: FeedbackWidgetProps) {
   const ctx = useUpstep();
+  const ideas = (feedback ?? true) && ctx.feedback;
   const p = usePalette(theme ?? ctx.theme, {
     accentColor: accentColor ?? ctx.customAccentColor,
     colors: colors ?? ctx.colors,
@@ -297,6 +308,7 @@ export function FeedbackWidget({
   } = ctx;
   const [screen, setScreen] = useState<Screen>("list");
   const [hasSupport, setHasSupport] = useState(false);
+  const support = hasSupport && chat && ctx.chat;
   useEffect(() => {
     let active = true;
     ctx.client.chat = ctx.chat;
@@ -351,9 +363,9 @@ export function FeedbackWidget({
 
   return (
     <>
-      {!hideLauncher && (
+      {!hideLauncher && (ideas || support) && (
         <button
-          aria-label="Open help and feedback"
+          aria-label={ideas ? "Open help and feedback" : "Open support chat"}
           onClick={openWidget}
           style={{
             ...posStyle,
@@ -375,11 +387,11 @@ export function FeedbackWidget({
         >
           <ChatIcon size={16} />
           {!isMobile &&
-            (hasSupport && chat && ctx.chat ? "Help & feedback" : "Feedback")}
+            (support ? (ideas ? "Help & feedback" : "Help") : "Feedback")}
         </button>
       )}
 
-      {open && (
+      {open && (ideas || support) && (
         <div
           onClick={(e) => e.target === e.currentTarget && handleClose()}
           style={{
@@ -409,7 +421,38 @@ export function FeedbackWidget({
             }}
           >
             {/* Header */}
-            {hasSupport && chat && ctx.chat ? (
+            {support && !ideas ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  padding: "14px 16px 14px 20px",
+                  borderBottom: `1px solid ${p.border}`,
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{ flex: 1, fontSize: 16, fontWeight: 600, color: p.text }}
+                >
+                  Support
+                </span>
+                <button
+                  aria-label="Close"
+                  onClick={handleClose}
+                  style={{
+                    border: 0,
+                    background: "transparent",
+                    color: p.textSoft,
+                    padding: 6,
+                    cursor: "pointer",
+                    fontSize: 14,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : support ? (
               <div
                 style={{
                   display: "flex",

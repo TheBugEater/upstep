@@ -22,6 +22,7 @@ const Upstep = {
       if (config.position !== undefined) widgetOptions.position = config.position;
       if (config.theme !== undefined) widgetOptions.theme = config.theme;
       if (config.launcher !== undefined) widgetOptions.launcher = config.launcher;
+      if (config.feedback !== undefined) widgetOptions.feedback = config.feedback;
       if (config.colors !== undefined) widgetOptions.colors = config.colors;
       if (config.radius !== undefined) widgetOptions.radius = config.radius;
       if (config.fontFamily !== undefined) widgetOptions.fontFamily = config.fontFamily;
@@ -87,6 +88,7 @@ if (typeof document !== "undefined") {
     const config: UpstepConfig = { apiKey };
     if (userId) config.userId = userId;
     if (currentScript?.dataset["chat"] !== undefined) config.chat = currentScript.dataset["chat"] !== "false";
+    if (currentScript?.dataset["feedback"] !== undefined) config.feedback = currentScript.dataset["feedback"] !== "false";
     if (baseUrl) config.baseUrl = baseUrl;
     if (accentColor) config.accentColor = accentColor;
     if (position === "left" || position === "right") config.position = position;

@@ -77,6 +77,8 @@ Every entry point (`Upstep.init`, `<UpstepProvider>`, and the script tag's `data
 | `colors` | `object` | — | Brand colors for the panel and support chat: `background`, `surface`, `border`, `text`, `textMuted`, `accentText`, plus `light` / `dark` variants. Unset keys keep the defaults. |
 | `radius` | `number` | `12` | Base corner radius in px. Every corner scales with it; `0` is square. Clamped to 0–32. |
 | `fontFamily` | `string` | system font | CSS font-family for the widget. |
+| `chat` | `boolean` | `true` | Set `false` to hide support chat and keep the widget to feedback and voting. |
+| `feedback` | `boolean` | `true` | Set `false` for a support-chat-only widget: no Ideas tab or feedback form. The launcher appears only once support chat is enabled for the project and this website. |
 
 ```js
 Upstep.init({
@@ -142,6 +144,28 @@ import { UpstepProvider, FeedbackWidget } from '@upstep/js/react';
 <script defer src="https://unpkg.com/@upstep/js@0.7.2/dist/upstep.global.js"
   data-api-key="YOUR_PROJECT_KEY" data-chat="true"></script>
 ```
+
+### Support chat only
+
+Version 0.11.0 adds `feedback: false` for products that want help chat without a
+public ideas board. The launcher reads **Help**, the panel shows only the chat,
+and the ideas list is never loaded. Nothing renders where support is not enabled,
+for example on a domain other than the project's website.
+
+```tsx
+<UpstepProvider apiKey="YOUR_PROJECT_KEY" feedback={false}>
+  <FeedbackWidget />
+</UpstepProvider>
+// FeedbackWidget also accepts feedback={false} for that widget alone.
+```
+
+```html
+<script defer src="https://upstep.dev/sdk/upstep.js"
+  data-api-key="YOUR_PROJECT_KEY" data-feedback="false"></script>
+```
+
+Feature requests the AI recognises in chat still offer the ideas-board card, so
+they reach your board in the dashboard even though customers cannot browse it.
 
 When no teammate is available, AI continues helping from the business's website
 and confirmed answers. Unresolved issues can become private tickets with stable

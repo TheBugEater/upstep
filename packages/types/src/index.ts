@@ -147,6 +147,12 @@ export interface UpstepConfig {
   }) => void;
   /** Show chat inside the existing widget when enabled for the project. Defaults to true. */
   chat?: boolean;
+  /**
+   * Web: show the feedback and ideas board. Defaults to true. Set false for a
+   * support-chat-only widget: no Ideas tab or feedback form, and no launcher
+   * unless support chat is enabled for the project.
+   */
+  feedback?: boolean;
   /** Base URL of your Upstep backend. Defaults to https://upstep.dev */
   baseUrl?: string;
   /**

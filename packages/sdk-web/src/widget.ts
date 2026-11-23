@@ -125,6 +125,8 @@ export interface WidgetOptions {
   theme?: ThemeMode;
   /** Render the floating launcher button. Defaults to true. */
   launcher?: boolean;
+  /** Show the feedback and ideas board. False makes a support-chat-only widget. Defaults to true. */
+  feedback?: boolean;
 }
 
 export class UpstepWidget {
@@ -136,6 +138,7 @@ export class UpstepWidget {
   private loading = false;
   private position: "left" | "right";
   private showLauncher: boolean;
+  private feedback: boolean;
   private themeMode: ThemeMode;
   private options: WidgetOptions;
   private palette: WidgetPalette;
@@ -152,6 +155,7 @@ export class UpstepWidget {
     this.options = options;
     this.position = "right";
     this.showLauncher = options.launcher !== false;
+    this.feedback = options.feedback !== false;
     this.themeMode = options.theme ?? "auto";
     this.palette = this.buildPalette(resolveTheme(this.themeMode));
   }
@@ -183,12 +187,14 @@ export class UpstepWidget {
 
   mount() {
     this.injectStyles();
-    if (this.showLauncher) this.renderButton();
+    // A chat-only widget has nothing to offer until support is confirmed.
+    if (this.showLauncher && this.feedback) this.renderButton();
     void this.client.supportEnabled().then((enabled) => {
       this.hasSupport = enabled;
       if (enabled) {
+        if (this.showLauncher && !this.feedback) this.renderButton();
         const label = document.querySelector("#upstep-btn span");
-        if (label) label.textContent = "Help & feedback";
+        if (label) label.textContent = this.feedback ? "Help & feedback" : "Help";
         if (this.isOpen) this.renderModal();
         // Visitors who have opened the chat before keep it loaded out of sight,
         // so a reply can raise a badge while it is closed. Everyone else loads nothing extra.
@@ -235,8 +241,11 @@ export class UpstepWidget {
   private renderButton() {
     const btn = document.createElement("button");
     btn.id = "upstep-btn";
-    btn.setAttribute("aria-label", "Open help and feedback");
-    btn.innerHTML = `${CHAT_ICON}<span>Feedback</span>`;
+    btn.setAttribute(
+      "aria-label",
+      this.feedback ? "Open help and feedback" : "Open support chat",
+    );
+    btn.innerHTML = `${CHAT_ICON}<span>${this.feedback ? "Feedback" : "Help"}</span>`;
     btn.addEventListener("click", () => {
       this.openModal();
     });
@@ -265,6 +274,7 @@ export class UpstepWidget {
   }
 
   private openModal() {
+    if (!this.feedback && !this.hasSupport) return;
     this.unlockAudio();
     if (!this.isOpen && this.hasSupport) {
       this.tab = "support";
@@ -415,6 +425,7 @@ export class UpstepWidget {
   }
 
   private async fetchFeed() {
+    if (!this.feedback) return;
     try {
       const data = await this.client.listFeedback({ sort: "votes", limit: 20 });
       this.feedItems = data.items;
@@ -435,7 +446,7 @@ export class UpstepWidget {
 
     backdrop.innerHTML = `
       <div id="upstep-modal" style="max-width:${this.hasSupport ? "460px" : "440px"}">
-        ${this.hasSupport ? `<div class="upstep-mode" style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid ${this.palette.border}"><div id="upstep-tabs" style="margin:0;padding:0;background:transparent;flex:1"><button class="upstep-tab ${this.tab === "support" ? "active" : ""}" data-tab="support">Support</button><button class="upstep-tab ${this.tab !== "support" ? "active" : ""}" data-tab="feed">Ideas</button></div><button id="upstep-close" aria-label="Close" style="flex-shrink:0;background:transparent">✕</button></div>` : `<div id="upstep-header"><div><h2>Share your feedback</h2><p>Tell us what to build next, or vote on ideas.</p></div><button id="upstep-close" aria-label="Close">✕</button></div><div id="upstep-tabs"><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Give feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Vote on ideas</button></div>`}
+        ${this.hasSupport && !this.feedback ? `<div class="upstep-mode" style="display:flex;align-items:center;gap:14px;padding:14px 16px 14px 20px;border-bottom:1px solid ${this.palette.border}"><h2 style="flex:1;margin:0;font-size:16px">Support</h2><button id="upstep-close" aria-label="Close" style="flex-shrink:0;background:transparent">✕</button></div>` : this.hasSupport ? `<div class="upstep-mode" style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid ${this.palette.border}"><div id="upstep-tabs" style="margin:0;padding:0;background:transparent;flex:1"><button class="upstep-tab ${this.tab === "support" ? "active" : ""}" data-tab="support">Support</button><button class="upstep-tab ${this.tab !== "support" ? "active" : ""}" data-tab="feed">Ideas</button></div><button id="upstep-close" aria-label="Close" style="flex-shrink:0;background:transparent">✕</button></div>` : `<div id="upstep-header"><div><h2>Share your feedback</h2><p>Tell us what to build next, or vote on ideas.</p></div><button id="upstep-close" aria-label="Close">✕</button></div><div id="upstep-tabs"><button class="upstep-tab ${this.tab === "submit" ? "active" : ""}" data-tab="submit">Give feedback</button><button class="upstep-tab ${this.tab === "feed" ? "active" : ""}" data-tab="feed">Vote on ideas</button></div>`}
         <div id="upstep-body" style="${this.tab === "support" ? "padding:0;overflow:hidden" : ""}">
           ${this.tab === "support" ? `<iframe id="upstep-support-frame" title="Customer support" src="${escapeHtml(this.supportFrameSrc())}" style="width:100%;height:min(560px,calc(100dvh - 168px));min-height:300px;border:0;display:block"></iframe>` : this.tab === "submit" ? this.renderSubmitForm() : this.renderFeed()}
         </div>

@@ -18,6 +18,10 @@ continuously from `main`.
   a new one in their own words, instead of opening a private ticket. With
   support on, every widget shows two tabs, Support and Ideas, and its form
   only suggests ideas.
+- SDK 0.11.0 (`@upstep/js`, `@upstep/types`): `feedback: false` (React
+  `feedback={false}`, script `data-feedback="false"`) makes a support-chat-only
+  web widget. It hides the Ideas tab and feedback form, skips loading ideas,
+  and shows no launcher until support chat is confirmed for the project.
 - AGPL-licensed self-hostable server distribution and Docker Compose setup.
 - `UPSTEP_SELF_HOSTED=true` gives every account on a self-hosted install every
   feature with no plan limits and no billing. Docker Compose turns it on.
