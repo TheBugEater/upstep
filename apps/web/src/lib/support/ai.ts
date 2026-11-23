@@ -59,7 +59,7 @@ export const lookupPlanSchema = z.object({
   calls: z
     .array(
       z.object({
-        tool: z.string().max(10),
+        tool: z.string().max(80),
         inputs: z
           .array(z.object({ name: z.string().max(32), value: z.string().max(120) }))
           .max(3),
@@ -194,7 +194,8 @@ class OpenAIProvider implements SupportAIProvider {
             type: "object",
             additionalProperties: false,
             properties: {
-              tool: { type: "string" },
+              // Only the supplied keys: models otherwise answer with the action name.
+              tool: { type: "string", enum: tools.map((t) => t.key) },
               inputs: {
                 type: "array",
                 items: {
@@ -223,8 +224,18 @@ Tools: ${JSON.stringify(tools)}`;
     const plan = lookupPlanSchema.parse(
       await this.generate(instructions, latest, schema, "support_lookups"),
     );
-    const keys = new Set(tools.map((t) => t.key));
-    return { calls: plan.calls.filter((c) => keys.has(c.tool)).slice(0, 3) };
+    // Accept an action name in place of its key rather than dropping the call.
+    const keyFor = new Map<string, string>();
+    for (const t of tools) {
+      keyFor.set(t.key, t.key);
+      if (!keyFor.has(t.action)) keyFor.set(t.action, t.key);
+    }
+    return {
+      calls: plan.calls
+        .map((c) => ({ ...c, tool: keyFor.get(c.tool) ?? "" }))
+        .filter((c) => c.tool)
+        .slice(0, 3),
+    };
   }
   async assist(input: SupportAssistanceInput): Promise<SupportAssistance> {
     const schema = {

@@ -379,3 +379,49 @@ test("business icon discovery selects website branding and rejects unsafe image 
   assert.equal(normalizeBusinessLogo(png), png);
   assert.equal(normalizeBusinessLogo("data:image/png;base64,notapng"), null);
 });
+
+test("lookup planning limits tools to supplied keys and maps action names back to keys", async () => {
+  const original = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = "test-key-not-real";
+  try {
+    const tools = [
+      { key: "t1", connector: "Shop", action: "shop_account", description: "The customer's account and plan.", inputs: [] },
+      { key: "t2", connector: "Shop", action: "shop_orders", description: "The customer's recent orders.", inputs: [] },
+    ];
+    let schemaKeys: unknown;
+    const ai = new OpenAIProvider(false, async (_url, options) => {
+      const body = JSON.parse(options!.body as string);
+      schemaKeys = body.text.format.schema.properties.calls.items.properties.tool.enum;
+      return Response.json({
+        status: "completed",
+        output: [
+          {
+            type: "message",
+            content: [
+              {
+                type: "output_text",
+                // A model that answers with an action name, plus an unknown tool.
+                text: JSON.stringify({
+                  calls: [
+                    { tool: "shop_account", inputs: [] },
+                    { tool: "t2", inputs: [] },
+                    { tool: "made_up_lookup", inputs: [] },
+                  ],
+                }),
+              },
+            ],
+          },
+        ],
+      });
+    });
+    const plan = await ai.planLookups(
+      { businessName: "Shop", messages: [{ role: "CUSTOMER", content: "Which plan am I on?" }] } as any,
+      tools,
+    );
+    assert.deepEqual(schemaKeys, ["t1", "t2"]);
+    assert.deepEqual(plan.calls.map((c) => c.tool), ["t1", "t2"]);
+  } finally {
+    if (original === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = original;
+  }
+});
