@@ -22,6 +22,8 @@ continuously from `main`.
   `feedback={false}`, script `data-feedback="false"`) makes a support-chat-only
   web widget. It hides the Ideas tab and feedback form, skips loading ideas,
   and shows no launcher until support chat is confirmed for the project.
+- SDK 0.11.1 (`@upstep/js`): the React provider no longer loads ideas when
+  `feedback` is false.
 - AGPL-licensed self-hostable server distribution and Docker Compose setup.
 - `UPSTEP_SELF_HOSTED=true` gives every account on a self-hosted install every
   feature with no plan limits and no billing. Docker Compose turns it on.

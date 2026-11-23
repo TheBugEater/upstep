@@ -177,9 +177,11 @@ export function UpstepProvider({
     }
   }, [client]);
 
+  // A chat-only widget never shows ideas, so it does not fetch them.
+  const feedbackOn = config.feedback !== false;
   useEffect(() => {
-    loadFeed();
-  }, [loadFeed]);
+    if (feedbackOn) void loadFeed();
+  }, [loadFeed, feedbackOn]);
 
   const submit = useCallback(
     async (title: string, content: string, type?: FeedbackType) => {
