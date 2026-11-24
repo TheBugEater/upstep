@@ -9,6 +9,7 @@ import { useSupportUnread } from "./useSupportUnread";
 import { playChime } from "@/lib/support/chime";
 import { preview } from "@/lib/support/unread";
 import { hasTriedToHelp } from "@/lib/support/escalation";
+import { messageTokens, stripSourceTags } from "@/lib/support/message-format";
 import {
   supportThemeVars,
   type SupportAppearance,
@@ -485,7 +486,8 @@ export function SupportChat({
         ]
       : [];
   const ideaPrompt = chat ? activeIdeaPrompt(chat) : null;
-  const business = config?.businessName || "Support";
+  // Empty until the business settings load, so a placeholder name never flashes.
+  const business = config?.businessName || (config ? "Support" : "");
   const humanAvailable = chat ? chat.humanAvailable : Boolean(config?.online.length);
   const canAskForPerson =
     humanAvailable &&
@@ -669,7 +671,7 @@ export function SupportChat({
           className="h-full overflow-y-auto px-3 py-4 [scrollbar-width:thin] sm:px-4 sm:py-5"
         >
           <div ref={listContent} className="space-y-1">
-          {!chat && (
+          {!chat && config && (
             <div className="mx-auto max-w-sm pt-3">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--sx-border)] px-2.5 py-1 text-xs font-medium text-[var(--sx-muted)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--support-accent)]" />
@@ -772,11 +774,13 @@ export function SupportChat({
                     className={`max-w-[88%] rounded-[var(--sx-r16)] px-3.5 py-2.5 text-[15px] leading-6 ${customer ? `${ink} ${firstOfRun ? "mt-3" : ""} rounded-br-[var(--sx-r6)]` : `${m.role === "AGENT" ? team : soft} rounded-tl-[var(--sx-r6)]`}`}
                   >
                     <div className="space-y-3">
-                      {m.content.split(/\n\s*\n/).map((paragraph, n) => (
-                        <p key={n} className="whitespace-pre-wrap break-words">
-                          {paragraph}
-                        </p>
-                      ))}
+                      {(customer ? m.content : stripSourceTags(m.content))
+                        .split(/\n\s*\n/)
+                        .map((paragraph, n) => (
+                          <p key={n} className="whitespace-pre-wrap break-words">
+                            {customer ? paragraph : <FormattedText text={paragraph} />}
+                          </p>
+                        ))}
                     </div>
                     {!!m.metadata?.citations?.length && (
                       <div className="mt-3 flex flex-wrap gap-1.5 border-t border-[var(--sx-border)] pt-2.5">
@@ -999,7 +1003,7 @@ export function SupportChat({
                 }}
                 maxLength={4000}
                 rows={1}
-                placeholder={`Message ${business}…`}
+                placeholder={business ? `Message ${business}…` : "Message…"}
                 className="block max-h-28 min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base leading-6 outline-none placeholder:text-[var(--sx-faint)]"
               />
               <button
@@ -1014,5 +1018,38 @@ export function SupportChat({
         )}
       </footer>
     </main>
+  );
+}
+
+function FormattedText({ text }: { text: string }) {
+  return (
+    <>
+      {messageTokens(text).map((t, i) =>
+        t.type === "bold" ? (
+          <strong key={i} className="font-semibold">
+            {t.text}
+          </strong>
+        ) : t.type === "code" ? (
+          <code
+            key={i}
+            className="rounded-[var(--sx-r6)] bg-[var(--sx-bg)] px-1 py-px font-mono text-[0.9em]"
+          >
+            {t.text}
+          </code>
+        ) : t.type === "link" ? (
+          <a
+            key={i}
+            href={t.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2"
+          >
+            {t.text}
+          </a>
+        ) : (
+          t.text
+        ),
+      )}
+    </>
   );
 }
