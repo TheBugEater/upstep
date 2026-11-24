@@ -8,18 +8,17 @@ export async function Pricing({ heading = true }: { heading?: boolean }) {
   const currency = await detectCurrency();
 
   return (
-    <section id="pricing" className="max-w-6xl mx-auto px-6 py-24">
+    <section id="pricing" className="mx-auto max-w-[1248px] scroll-mt-16 px-5 py-16 sm:px-8 sm:py-24">
       {heading && (
         <div className="max-w-2xl mx-auto text-center">
-          <span className="text-xs font-semibold uppercase tracking-wider text-clay">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-clay-dark">
             Pricing
           </span>
-          <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight text-ink">
-            Simple pricing that scales with you
+          <h2 className="mt-3 text-[2.5rem] leading-[1.04] tracking-[-0.055em] text-ink sm:text-[3.1rem]">
+            Start with feedback. Add Chat Support.
           </h2>
           <p className="mt-4 text-muted leading-relaxed">
-            Start free. Upgrade when your feedback takes off. No setup fees,
-            cancel anytime.
+            Feedback and voting are free to start. Pro and Business include AI and live chat.
           </p>
         </div>
       )}
@@ -28,7 +27,7 @@ export async function Pricing({ heading = true }: { heading?: boolean }) {
         <CurrencySwitcher current={currency} />
       </div>
 
-      <div className="mt-10 grid md:grid-cols-3 gap-5 items-start">
+      <div className="mt-10 grid gap-5 md:grid-cols-3">
         {PLAN_ORDER.map((id) => {
           const plan = PLANS[id];
           const popular = plan.popular;
@@ -38,7 +37,7 @@ export async function Pricing({ heading = true }: { heading?: boolean }) {
               key={id}
               className={`relative flex flex-col rounded-3xl border bg-card p-7 ${
                 popular
-                  ? "border-clay/40 shadow-lift md:-translate-y-2"
+                  ? "border-clay/65 shadow-glow"
                   : "border-line shadow-soft"
               }`}
             >
@@ -54,7 +53,7 @@ export async function Pricing({ heading = true }: { heading?: boolean }) {
               </p>
 
               <div className="mt-5 flex items-baseline gap-1">
-                <span className="font-serif text-4xl text-ink">
+                <span className="text-4xl font-medium tracking-tight text-ink">
                   {formatPrice(plan.id, currency)}
                 </span>
                 <span className="text-sm text-faint">/ month</span>

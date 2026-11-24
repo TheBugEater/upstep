@@ -4,13 +4,12 @@ import { Logo } from "@/components/Logo";
 export function Footer() {
   return (
     <footer className="border-t border-line bg-surface">
-      <div className="max-w-6xl mx-auto px-6 py-14">
+      <div className="mx-auto max-w-[1248px] px-5 py-14 sm:px-8">
         <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1fr]">
           <div>
             <Logo />
             <p className="text-sm text-muted mt-4 max-w-xs leading-relaxed">
-              Feedback that moves you forward. Collect, vote, and ship what
-              your users actually want.
+              Open-source Chat Support, in-app feedback and public roadmaps.
             </p>
             <a
               href="https://thelaunchstory.com/launches/upstep"
@@ -31,7 +30,8 @@ export function Footer() {
           <FooterCol
             title="Product"
             links={[
-              ["Features", "/#features"],
+              ["Chat Support", "/#support"],
+              ["Feedback & roadmap", "/#features"],
               ["Feedback board", "/feedback-board"],
               ["How it works", "/#how"],
               ["Pricing", "/pricing"],
@@ -43,6 +43,7 @@ export function Footer() {
           <FooterCol
             title="Resources"
             links={[
+              ["Chat Support setup", "/guides/customer-support"],
               ["Documentation", "/#integrate"],
               ["Developer guides", "/guides"],
               ["MCP server", "/#mcp"],

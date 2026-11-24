@@ -3,16 +3,18 @@ import { Nav } from "@/components/marketing/Nav";
 import { Footer } from "@/components/marketing/Footer";
 import { Pricing } from "@/components/marketing/Pricing";
 import { JsonLd } from "@/components/JsonLd";
+import { formatPrice } from "@/lib/plans";
+
+const DESCRIPTION =
+  "Start with free feedback and voting. Pro and Business add AI chat, live support, a shared inbox and private tickets.";
 
 export const metadata: Metadata = {
-  title: "Pricing. Feedback Widget Plans",
-  description:
-    "Upstep starts free. Collect feedback and votes with no credit card required. Upgrade for more projects, Slack integrations, and white-label branding.",
+  title: "Pricing for Feedback and Chat Support",
+  description: DESCRIPTION,
   alternates: { canonical: "/pricing" },
   openGraph: {
-    title: "Pricing | Upstep Feedback Widget",
-    description:
-      "Upstep starts free. Collect feedback and votes with no credit card required. Upgrade for more projects, Slack integrations, and white-label branding.",
+    title: "Pricing for Feedback and Chat Support | Upstep",
+    description: DESCRIPTION,
     url: "/pricing",
     images: ["/opengraph-image"],
   },
@@ -35,7 +37,15 @@ const PRICING_LD = {
       name: "How much does Upstep cost?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Upstep offers three plans: Free ($0/mo), Pro ($19/mo), and Business ($49/mo). All plans include the embeddable widget, user voting, and dashboard access.",
+        text: `In USD, Free is ${formatPrice("FREE", "USD")}, Pro is ${formatPrice("PRO", "USD")} per month and Business is ${formatPrice("BUSINESS", "USD")} per month. All plans include feedback and voting.`,
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Which plans include Chat Support?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Pro and Business include AI chat, live support, a shared inbox and private tickets.",
       },
     },
     {

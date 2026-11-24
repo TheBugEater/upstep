@@ -39,11 +39,11 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
   },
   title: {
-    default: "Upstep | Feedback Widget & Voting for Web and Mobile Apps",
+    default: "Upstep | AI Chat Support, Feedback & Roadmaps",
     template: "%s | Upstep",
   },
   description:
-    "Add a feedback and voting widget to your web or mobile app in 2 lines of code. Let users submit ideas, report bugs, and vote on features. Free plan available.",
+    "Add AI and live support chat, product feedback and voting to your web or mobile app. Prioritise requests and share a public roadmap with Upstep.",
   openGraph: {
     siteName: "Upstep",
     type: "website",

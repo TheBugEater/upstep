@@ -6,8 +6,9 @@ import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_LINKS: [string, string][] = [
-  ["Features", "/#features"],
-  ["How it works", "/#how"],
+  ["Chat Support", "/#support"],
+  ["Feedback & roadmap", "/#features"],
+  ["Developers", "/#integrate"],
   ["Pricing", "/pricing"],
 ];
 
@@ -17,11 +18,11 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-50">
       <div className="absolute inset-0 bg-canvas/80 backdrop-blur-md border-b border-line" />
-      <nav className="relative max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <nav aria-label="Main navigation" className="relative mx-auto flex h-16 max-w-[1248px] items-center justify-between px-5 sm:px-8">
         <Logo />
 
         {/* Desktop nav links */}
-        <div className="hidden md:flex items-center gap-8 text-sm text-muted">
+        <div className="hidden items-center gap-6 text-sm font-medium text-muted min-[860px]:flex lg:gap-8">
           {NAV_LINKS.map(([label, href]) => (
             <Link key={href} href={href} className="hover:text-ink transition">
               {label}
@@ -39,7 +40,7 @@ export function Nav() {
           </Link>
           <Link
             href="/login"
-            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium bg-primary text-primary-fg rounded-full px-4 py-2 hover:bg-primary/85 transition shadow-sm"
+            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold bg-primary text-primary-fg rounded-lg px-4 py-2 hover:bg-primary/85 transition shadow-sm"
           >
             Get started
             <span aria-hidden className="opacity-70">→</span>
@@ -48,7 +49,7 @@ export function Nav() {
           {/* Hamburger - mobile only */}
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-ink hover:bg-surface transition text-lg"
+            className="min-[860px]:hidden flex items-center justify-center w-9 h-9 rounded-lg text-ink hover:bg-surface transition text-lg"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
           >
@@ -61,10 +62,10 @@ export function Nav() {
       {menuOpen && (
         <>
           <div
-            className="fixed inset-0 top-16 z-40 md:hidden"
+            className="fixed inset-0 top-16 z-40 min-[860px]:hidden"
             onClick={() => setMenuOpen(false)}
           />
-          <div className="relative z-50 md:hidden bg-canvas border-b border-line px-4 pb-4 pt-2 space-y-0.5">
+          <div className="relative z-50 min-[860px]:hidden bg-canvas border-b border-line px-4 pb-4 pt-2 space-y-0.5">
             {NAV_LINKS.map(([label, href]) => (
               <Link
                 key={href}

@@ -1,25 +1,27 @@
 import type { Metadata } from "next";
+import { Noto_Sans } from "next/font/google";
 import Link from "next/link";
-import { Nav } from "@/components/marketing/Nav";
-import { Footer } from "@/components/marketing/Footer";
-import { CodeShowcase } from "@/components/marketing/CodeShowcase";
-import { HeroDemo } from "@/components/marketing/HeroDemo";
-import { McpDemo } from "@/components/marketing/McpDemo";
-import { FeatureCards } from "@/components/marketing/FeatureCards";
-import { Pricing } from "@/components/marketing/Pricing";
+import type { ComponentProps, ReactNode } from "react";
 import { JsonLd } from "@/components/JsonLd";
+import { CodeShowcase } from "@/components/marketing/CodeShowcase";
+import { Footer } from "@/components/marketing/Footer";
+import { Nav } from "@/components/marketing/Nav";
+import { Pricing } from "@/components/marketing/Pricing";
+import { ProductPreview } from "@/components/marketing/ProductPreview";
+import { SupportIcon } from "@/components/support/SupportIcons";
+import { getPrice, PLAN_ORDER, PLANS } from "@/lib/plans";
+
+const TITLE = "AI Chat Support, Feedback & Roadmaps";
+const DESCRIPTION =
+  "Help customers with AI and live chat, collect in-app feedback and votes, and share a public roadmap. Upstep is open source and self-hostable.";
+
+const landingFont = Noto_Sans({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "User Feedback Widget & Voting Board for Apps | Upstep",
-  description:
-    "Collect in-app user feedback, feature requests, and votes with an open-source feedback widget for web and mobile apps. Triage on fluid boards and publish a roadmap.",
+  title: { absolute: `${TITLE} | Upstep` },
+  description: DESCRIPTION,
   alternates: { canonical: "/" },
-  openGraph: {
-    title: "User Feedback Widget & Voting Board for Apps | Upstep",
-    description:
-      "Collect in-app user feedback, feature requests, and votes with an open-source feedback widget for web and mobile apps.",
-    url: "/",
-  },
+  openGraph: { title: `${TITLE} | Upstep`, description: DESCRIPTION, url: "/" },
 };
 
 const SOFTWARE_LD = {
@@ -29,268 +31,356 @@ const SOFTWARE_LD = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Web, iOS, Android",
   url: "https://upstep.dev",
-  description:
-    "Open-source feedback and voting for web and mobile apps with fluid triage boards and a built-in MCP server for AI agents.",
+  description: DESCRIPTION,
   license: "https://www.gnu.org/licenses/agpl-3.0.html",
   codeRepository: "https://github.com/TheBugEater/upstep",
-  offers: [
-    { "@type": "Offer", name: "Free", price: "0", priceCurrency: "USD" },
-    { "@type": "Offer", name: "Pro", price: "19", priceCurrency: "USD" },
-    { "@type": "Offer", name: "Business", price: "49", priceCurrency: "USD" },
-  ],
+  offers: PLAN_ORDER.map((plan) => ({
+    "@type": "Offer",
+    name: PLANS[plan].name,
+    price: getPrice(plan, "USD"),
+    priceCurrency: "USD",
+  })),
   featureList: [
-    "Embeddable feedback widget",
-    "User voting on feedback",
-    "Bug report collection",
-    "Feature request management",
-    "Kanban triage boards",
-    "Built-in MCP server for AI agents",
-    "React, React Native, and Flutter SDKs",
-    "Webhook and Slack integrations",
+    "AI and live support chat",
+    "Shared support inbox and private tickets",
+    "Embeddable feedback widget and voting",
+    "Kanban triage boards and public roadmaps",
+    "React, React Native and Flutter SDKs",
+    "Built-in MCP server",
   ],
 };
 
+const SUPPORT_FEATURES = [
+  {
+    icon: "message",
+    title: "AI answers from your website",
+    body: "Review what Upstep learns from your public pages. The assistant uses that knowledge to answer questions and link to sources.",
+  },
+  {
+    icon: "person",
+    title: "Your team can take over",
+    body: "Pick up the conversation in a shared inbox with its history, assignments and private notes.",
+  },
+  {
+    icon: "ticket",
+    title: "Private tickets for follow-up",
+    body: "Turn unresolved chats into tickets your team can track on your board.",
+  },
+] as const;
+
+const SETUP_STEPS = [
+  {
+    icon: "plus",
+    title: "Create a project",
+    body: "Give your product a name or start with your website. Your project comes with a publishable widget key.",
+  },
+  {
+    icon: "plug",
+    title: "Add the widget",
+    body: "Paste the web embed or use a native SDK. On a paid plan, review your support knowledge and enable chat.",
+  },
+  {
+    icon: "message",
+    title: "Open your inbox and board",
+    body: "Reply to customers from the inbox and triage ideas and bugs on your feedback board.",
+  },
+] as const;
+
+const FAQS = [
+  {
+    question: "Which plans include Chat Support?",
+    answer: "Pro and Business include AI chat, live chat, the shared inbox and private tickets. The Free plan includes in-app feedback and voting. Chat Support is also available on self-hosted installs.",
+  },
+  {
+    question: "Can I offer support with my team alone?",
+    answer: "Yes. Select team-only routing to collect the customer’s issue and contact details for your team. With AI enabled, your team can take over conversations from the shared inbox.",
+  },
+  {
+    question: "What does the AI learn from?",
+    answer: "It uses public pages from the business website you connect, plus the business details you review and confirm. It can link to the pages it uses to answer customers.",
+  },
+  {
+    question: "Will support chats appear on my public roadmap?",
+    answer: "Support conversations and their follow-up tickets are private. Your public roadmap shows the product work you choose to share.",
+  },
+  {
+    question: "Where can I embed the widget?",
+    answer: "Use the hosted script or JavaScript and React SDKs on the web. React Native and Flutter SDKs also support feedback and chat inside mobile apps.",
+  },
+];
+
+const CONTAINER = "mx-auto w-full max-w-[1248px] px-5 sm:px-8";
+const EYEBROW = "text-[11px] font-semibold uppercase tracking-[0.14em] text-clay-dark";
+const HEADING = "text-[2.5rem] leading-[1.04] tracking-[-0.055em] text-ink sm:text-[3.1rem]";
+const CTA_STYLE = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-clay";
+
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className={`${landingFont.className} min-h-screen bg-[#fcfaf7] dark:bg-canvas`}>
       <JsonLd data={SOFTWARE_LD} />
       <Nav />
-      <Hero />
-      <FeatureCards />
-      <HowItWorks />
-      <Mcp />
-      <OpenSource />
-      <Integrate />
-      <Pricing />
-      <CTA />
+      <main>
+        <Hero />
+        <Support />
+        <Product />
+        <Setup />
+        <Developer />
+        <Pricing />
+        <Questions />
+        <FinalCTA />
+      </main>
       <Footer />
     </div>
   );
 }
 
-/* ────────────────────────────── Hero ────────────────────────────── */
-
 function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-grid opacity-60" />
-      <div className="absolute inset-0 bg-glow" />
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-canvas" />
+    <section className={`${CONTAINER} grid items-center gap-8 pb-14 pt-9 sm:gap-10 sm:pb-20 sm:pt-16 lg:grid-cols-[0.86fr_1.14fr] lg:gap-12 lg:pb-24 lg:pt-[5.5rem]`}>
+      <div>
+        <p className={`${EYEBROW} inline-flex items-center gap-2 rounded-md border border-clay/20 bg-clay-tint px-2.5 py-1.5`}>
+          <SupportIcon name="message" className="h-3.5 w-3.5" />
+          AI &amp; live Chat Support
+        </p>
+        <h1 className="mt-5 text-[clamp(2.9rem,12vw,3.7rem)] font-normal leading-[0.98] tracking-[-0.065em] text-ink sm:text-[4.6rem] lg:text-[4.35rem] xl:text-[4.85rem]">
+          Help users.<br />{" "}
+          Build what<br />{" "}
+          <span className="text-clay-dark">matters.</span>
+        </h1>
+        <p className="mt-6 max-w-[26rem] text-base leading-relaxed text-muted sm:text-lg">
+          Answer customers with AI and live chat, collect feedback in the same widget, and show users what you’re building next.
+        </p>
+        <StartForm />
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <span className="text-xs text-muted">Free feedback plan · No credit card</span>
+          <Link href="#support" className="text-xs font-semibold text-clay-dark underline-offset-4 hover:underline">
+            Explore Chat Support <span aria-hidden>↓</span>
+          </Link>
+        </div>
+      </div>
+      <ProductPreview />
+    </section>
+  );
+}
 
-      <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-24 md:pt-28 md:pb-32">
-        <div className="grid lg:grid-cols-2 gap-14 lg:gap-10 items-center">
-          {/* Copy */}
-          <div className="animate-fade-up">
-            <Link
-              href="#open-source"
-              className="inline-flex items-center gap-2 rounded-full border border-clay/25 bg-clay/[0.07] px-3 py-1 text-xs font-medium text-clay shadow-sm hover:bg-clay/[0.12] transition"
-            >
-              <span className="relative flex w-1.5 h-1.5">
-                <span className="absolute inline-flex w-full h-full rounded-full bg-clay animate-pulse-ring" />
-                <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-clay" />
-              </span>
-              Now open source · AGPL-3.0
-              <span aria-hidden>→</span>
+function StartForm({ inverse = false }: { inverse?: boolean }) {
+  return (
+    <form action="/login" method="GET" className="mt-6 flex w-full max-w-[27rem] flex-col gap-2 min-[375px]:flex-row sm:mt-7">
+      <input
+        type="text"
+        name="appName"
+        autoComplete="off"
+        placeholder="Your product name"
+        maxLength={80}
+        required
+        aria-label="Your product name"
+        className={`min-w-0 flex-1 rounded-lg border px-3.5 py-3 text-sm transition focus:border-clay focus:outline-none focus:ring-2 focus:ring-clay/30 ${inverse ? "border-white/25 bg-white/10 text-white placeholder:text-[#dfcfc8]" : "border-line-strong bg-card text-ink placeholder:text-faint"}`}
+      />
+      <button type="submit" className={`${CTA_STYLE} shrink-0 ${inverse ? "bg-[#ffaf8d] text-[#26150e] hover:bg-[#ffc4ac]" : "bg-primary text-primary-fg hover:bg-primary/85"}`}>
+        Get started free <span aria-hidden>→</span>
+      </button>
+    </form>
+  );
+}
+
+function Support() {
+  return (
+    <section id="support" aria-labelledby="support-heading" className={`${CONTAINER} scroll-mt-24`}>
+      <div className="relative isolate grid overflow-hidden rounded-4xl bg-[#221b18] px-6 py-10 text-white sm:px-10 sm:py-14 lg:grid-cols-[0.94fr_1.06fr] lg:gap-16 lg:px-14 lg:py-16">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_95%_100%,#643724,transparent_72%)]" />
+        <div>
+          <p className={`${EYEBROW} !text-[#ffae8c]`}>Chat Support</p>
+          <h2 id="support-heading" className={`${HEADING} mt-4 !text-white`}>Help customers in the moment.</h2>
+          <ul className="mt-8 space-y-5">
+            {SUPPORT_FEATURES.map(({ icon, title, body }) => (
+              <li key={title} className="flex items-start gap-3.5">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#ffae8c]/25 bg-[#ffae8c]/10 text-[#ffae8c]">
+                  <SupportIcon name={icon} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">{title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-[#decbc2]">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/guides/customer-support" className={`${CTA_STYLE} bg-[#ffaf8d] text-[#26150e] hover:bg-[#ffc4ac]`}>
+              Set up Chat Support <span aria-hidden>→</span>
             </Link>
+            <Link href="#pricing" className="text-xs font-medium text-[#ead4c9] underline-offset-4 hover:underline">Included in Pro and Business</Link>
+          </div>
+        </div>
 
-            <h1 className="mt-6 font-serif text-5xl md:text-[3.75rem] leading-[1.05] tracking-tight text-ink">
-              User feedback that{" "}
-              <span className="text-clay italic">ships itself</span>
-            </h1>
-
-            <p className="mt-6 text-lg text-muted leading-relaxed max-w-md">
-              Drop Upstep into your app in 2 lines of code. Users report bugs
-              and vote on ideas, your team triages on a fluid board, and your AI
-              agent closes the loop over MCP.
-            </p>
-
-            <form
-              action="/login"
-              method="GET"
-              className="mt-8 flex flex-wrap items-center gap-3"
-            >
-              <input
-                type="text"
-                name="appName"
-                placeholder="Your app's name"
-                maxLength={80}
-                required
-                aria-label="Your app's name"
-                className="flex-1 min-w-[220px] px-5 py-3 bg-card border border-line rounded-full text-sm text-ink placeholder-faint shadow-sm focus:outline-none focus:border-clay focus:ring-4 focus:ring-clay/10 transition"
-              />
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-6 py-3 text-sm font-medium hover:bg-clay-hover transition shadow-soft shrink-0"
-              >
-                Get started free
-                <span aria-hidden>→</span>
-              </button>
-            </form>
-            <Link
-              href="#integrate"
-              className="mt-3 inline-block text-sm text-muted hover:text-ink transition"
-            >
-              or view the docs →
-            </Link>
-
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <p className="text-xs text-faint">
-                Free plan available · 2-line integration · No credit card
+        <figure className="mt-10 self-center rounded-2xl border border-white/15 bg-[#2a201c] p-4 shadow-[0_24px_54px_-22px_#130d0b] sm:p-6 lg:mt-0">
+          <figcaption className="flex items-center justify-between gap-2 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <SupportIcon name="history" className="h-4 w-4 text-[#ffae8c]" /> Conversation history
+            </div>
+            <span className="rounded-md bg-white/10 px-2 py-1 text-[10px] text-[#ead4c9]">Example</span>
+          </figcaption>
+          <ol className="relative mt-5 space-y-4 before:absolute before:bottom-6 before:left-3.5 before:top-5 before:w-px before:bg-white/15">
+            <TimelineItem icon="message" title="AI replied with a source">
+              <p>Try narrowing the date range before exporting.</p>
+              <p className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-white/[0.08] px-2 py-1 text-[11px] text-[#ffb99d]">
+                <SupportIcon name="link" className="h-3 w-3" /> Exporting reports
               </p>
-              <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
-                <span className="text-clay" aria-hidden>
-                  ★
+            </TimelineItem>
+            <TimelineItem icon="person" title="Alex took over the chat">
+              <p>I’ll reproduce the issue and follow up.</p>
+            </TimelineItem>
+            <TimelineItem icon="lock" title="Private ticket created">
+              <p><span className="font-mono text-[11px] text-[#ffb99d]">UP-1042</span> · Investigate stalled CSV export</p>
+            </TimelineItem>
+          </ol>
+        </figure>
+      </div>
+    </section>
+  );
+}
+
+function TimelineItem({ icon, title, children }: { icon: ComponentProps<typeof SupportIcon>["name"]; title: string; children: ReactNode }) {
+  return (
+    <li className="relative grid grid-cols-[1.75rem_minmax(0,1fr)] gap-3">
+      <span className="grid h-7 w-7 place-items-center rounded-full border border-[#76513e] bg-[#422b22] text-[#ffae8c]">
+        <SupportIcon name={icon} className="h-3.5 w-3.5" />
+      </span>
+      <div className="rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2.5 sm:px-3.5">
+        <p className="text-xs font-semibold text-white">{title}</p>
+        <div className="mt-1 text-xs leading-relaxed text-[#decbc2]">{children}</div>
+      </div>
+    </li>
+  );
+}
+
+function Product() {
+  return (
+    <section id="features" aria-labelledby="features-heading" className={`${CONTAINER} scroll-mt-24 py-16 sm:py-24`}>
+      <p className={EYEBROW}>Feedback &amp; roadmap</p>
+      <h2 id="features-heading" className={`${HEADING} mt-3 max-w-3xl`}>Build with your users.</h2>
+      <div className="mt-8 grid gap-5 md:grid-cols-2">
+        <article className="overflow-hidden rounded-3xl border border-line bg-card">
+          <div className="p-6 pb-5 sm:p-8 sm:pb-6">
+            <SupportIcon name="arrow" className="mb-4 h-5 w-5 text-clay-dark" />
+            <h3 className="text-xl font-semibold tracking-tight text-ink">Prioritise ideas with votes.</h3>
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">Collect feature requests and bugs inside your app. When ideas come up in chat, customers can vote on a match or submit a new request.</p>
+            <TextLink href="/feedback-board">Explore feedback boards</TextLink>
+          </div>
+          <div className="border-t border-clay/10 bg-clay-tint px-6 py-5 sm:px-8">
+            <div aria-hidden className="overflow-hidden rounded-xl border border-clay/15 bg-card shadow-soft">
+              <div className="flex items-center gap-3 border-b border-line px-3.5 py-3 text-sm">
+                <span className="rounded-md bg-clay-tint px-2 py-1 font-mono text-xs font-semibold text-clay-dark">↑ 42</span>
+                <span className="font-medium text-ink">Save a dashboard filter</span>
+              </div>
+              <div className="flex items-center gap-3 px-3.5 py-3 text-sm">
+                <span className="rounded-md bg-surface px-2 py-1 font-mono text-xs font-semibold text-muted">↑ 24</span>
+                <span className="font-medium text-ink">Export reports as PDF</span>
+              </div>
+            </div>
+          </div>
+        </article>
+        <article className="overflow-hidden rounded-3xl border border-line bg-card">
+          <div className="p-6 pb-5 sm:p-8 sm:pb-6">
+            <SupportIcon name="check" className="mb-4 h-5 w-5 text-clay-dark" />
+            <h3 className="text-xl font-semibold tracking-tight text-ink">Share what’s shipping.</h3>
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">Triage work with statuses, labels and assignees, then publish the updates your customers should see on your roadmap.</p>
+            <TextLink href="/guides/how-to-build-a-public-roadmap">Learn to publish a roadmap</TextLink>
+          </div>
+          <div className="border-t border-line bg-[#eaece4] px-6 py-5 dark:bg-[#18201b] sm:px-8">
+            <div aria-hidden className="grid grid-cols-2 gap-2.5">
+              <div className="min-w-0 rounded-xl border border-line bg-card px-3 py-3 shadow-soft sm:px-4">
+                <p className="mb-2 text-xs font-semibold text-info">● In progress</p>
+                <p className="rounded-md bg-surface p-2 text-xs font-medium text-ink">Save a dashboard filter</p>
+              </div>
+              <div className="min-w-0 rounded-xl border border-line bg-card px-3 py-3 shadow-soft sm:px-4">
+                <p className="mb-2 text-xs font-semibold text-success">● Shipped</p>
+                <p className="rounded-md bg-surface p-2 text-xs font-medium text-ink">CSV exports</p>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function TextLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link href={href} className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-clay-dark underline-offset-4 hover:underline">
+      {children} <span aria-hidden>→</span>
+    </Link>
+  );
+}
+
+function Setup() {
+  return (
+    <section id="how" aria-labelledby="setup-heading" className="scroll-mt-16 border-y border-line bg-card">
+      <div className={`${CONTAINER} py-14 sm:py-20`}>
+        <p className={EYEBROW}>How it works</p>
+        <h2 id="setup-heading" className={`${HEADING} mt-3`}>One widget for both.</h2>
+        <ol className="mt-8 grid gap-x-8 gap-y-6 md:grid-cols-3">
+          {SETUP_STEPS.map(({ icon, title, body }, index) => (
+            <li key={title} className="border-t border-line pt-5">
+              <div className="flex items-center justify-between">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-clay-tint text-clay-dark">
+                  <SupportIcon name={icon} className="h-4 w-4" />
                 </span>
-                10K+ feedback items processed
-              </p>
-            </div>
-          </div>
-
-          {/* Live animated product demo */}
-          <div className="animate-fade-up [animation-delay:120ms] lg:pl-4 pb-8">
-            <HeroDemo />
-          </div>
-        </div>
+                <span className="font-mono text-xs text-faint">0{index + 1}</span>
+              </div>
+              <h3 className="mt-4 text-base font-semibold text-ink">{title}</h3>
+              <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">{body}</p>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );
 }
 
-/* ───────────────────────── Open source ────────────────────────── */
-
-function OpenSource() {
+function Developer() {
   return (
-    <section id="open-source" className="max-w-6xl mx-auto px-6 py-24">
-      <div className="relative overflow-hidden rounded-4xl border border-white/10 bg-[#17191D] px-8 py-12 shadow-lift md:px-14 md:py-16">
-        <div className="absolute inset-0 bg-glow opacity-40" />
-        <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-clay/15 blur-3xl" />
-
-        <div className="relative grid min-w-0 items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-medium text-white/70">
-              <span className="text-clay" aria-hidden>
-                ◆
-              </span>
-              Open source · Self-hostable · Built in public
-            </div>
-            <h2 className="mt-5 max-w-xl font-serif text-4xl leading-tight tracking-tight text-white md:text-5xl">
-              Your users&apos; feedback should never be a black box.
-            </h2>
-            <p className="mt-5 max-w-xl leading-relaxed text-white/60">
-              The complete Upstep application is open source: dashboard, APIs,
-              roadmaps, integrations, SDKs, and the MCP server. Inspect every
-              security boundary, run it on your infrastructure, or help shape
-              what comes next.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href="https://github.com/TheBugEater/upstep"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#191816] transition hover:bg-white/90"
-              >
-                View on GitHub
-                <span aria-hidden>↗</span>
-              </a>
-              <Link
-                href="/blog/upstep-is-open-source"
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-white transition hover:border-clay/60 hover:text-clay"
-              >
-                Why we opened it
-                <span aria-hidden>→</span>
-              </Link>
-            </div>
-          </div>
-
-          <div className="min-w-0 rounded-2xl border border-white/10 bg-black/20 p-5 font-mono text-xs shadow-soft sm:p-6">
-            <div className="mb-5 flex items-center gap-2 border-b border-white/10 pb-4">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-              <span className="ml-2 text-white/35">self-host upstep</span>
-            </div>
-            <div className="overflow-x-auto pb-1">
-              <div className="min-w-[520px] space-y-2 leading-relaxed text-white/65">
-                <p>
-                  <span className="text-clay">$</span> git clone
-                  https://github.com/TheBugEater/upstep.git
-                </p>
-                <p>
-                  <span className="text-clay">$</span> cd upstep
-                </p>
-                <p>
-                  <span className="text-clay">$</span> cp apps/web/.env.example
-                  apps/web/.env
-                </p>
-                <p>
-                  <span className="text-clay">$</span> docker compose up --build
-                </p>
-                <p className="pt-3 text-[#73D18B]">
-                  ✓ dashboard · api · mcp · postgres
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 grid grid-cols-3 gap-2 border-t border-white/10 pt-5 text-center">
-              <div>
-                <p className="text-sm font-semibold text-white">AGPL</p>
-                <p className="mt-1 text-[10px] text-white/35">server</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">MIT</p>
-                <p className="mt-1 text-[10px] text-white/35">SDKs</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">No Redis</p>
-                <p className="mt-1 text-[10px] text-white/35">required</p>
-              </div>
-            </div>
-          </div>
+    <section id="integrate" aria-labelledby="integration-heading" className={`${CONTAINER} scroll-mt-16 pt-16 sm:pt-24`}>
+      <div className="grid items-center gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+        <div>
+          <p className={EYEBROW}>Integrate</p>
+          <h2 id="integration-heading" className={`${HEADING} mt-3`}>Add Upstep to your app.</h2>
+          <p className="mt-4 max-w-sm leading-relaxed text-muted">
+            Use one script tag on your website or integrate with a JavaScript, React, React Native or Flutter SDK.
+          </p>
+          <TextLink href="/guides">Browse developer guides</TextLink>
         </div>
+        <div className="min-w-0"><CodeShowcase /></div>
+      </div>
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <article id="mcp" className="scroll-mt-24 rounded-2xl border border-line bg-card p-5 sm:p-6">
+          <h3 className="text-base font-semibold text-ink">Built-in MCP server</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted">Connect Codex, Claude Code or Cursor to your board so your coding agent can triage feedback, update tasks and post replies.</p>
+          <TextLink href="/guides/product-feedback-mcp">Connect an MCP client</TextLink>
+        </article>
+        <article id="open-source" className="scroll-mt-24 rounded-2xl border border-line bg-card p-5 sm:p-6">
+          <h3 className="text-base font-semibold text-ink">Open source and self-hostable</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted">Run the dashboard, support inbox, feedback boards and MCP server on your own infrastructure with Docker Compose.</p>
+          <TextLink href="https://github.com/TheBugEater/upstep#self-host-in-two-minutes">View self-hosting docs</TextLink>
+        </article>
       </div>
     </section>
   );
 }
 
-/* ────────────────────────── How it works ───────────────────────── */
-
-function HowItWorks() {
-  const steps = [
-    {
-      n: "01",
-      title: "Create a project",
-      body: "Sign in and spin up a project. You get a unique API key instantly.",
-    },
-    {
-      n: "02",
-      title: "Drop in the widget",
-      body: "Add the SDK to your app with two lines of code. It mounts itself.",
-    },
-    {
-      n: "03",
-      title: "Triage & ship",
-      body: "Feedback rolls into your board sorted by votes. Ship what matters.",
-    },
-  ];
-
+function Questions() {
   return (
-    <section id="how" className="bg-surface border-y border-line">
-      <div className="max-w-6xl mx-auto px-6 py-24">
-        <SectionHeading
-          eyebrow="How it works"
-          title="Live in three steps"
-          sub="No SDK gymnastics. No server setup. Just feedback, flowing."
-        />
-
-        <div className="mt-14 grid md:grid-cols-3 gap-8 relative">
-          {steps.map((s) => (
-            <div key={s.n} className="relative">
-              <div className="font-serif text-5xl text-clay/30 mb-4">{s.n}</div>
-              <h3 className="font-semibold text-ink text-lg mb-2">{s.title}</h3>
-              <p className="text-sm text-muted leading-relaxed max-w-xs">
-                {s.body}
-              </p>
-            </div>
+    <section aria-labelledby="faq-heading" className="border-y border-line bg-card">
+      <div className={`${CONTAINER} grid gap-7 py-14 sm:py-20 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16`}>
+        <h2 id="faq-heading" className={HEADING}>Common questions.</h2>
+        <div className="divide-y divide-line border-y border-line">
+          {FAQS.map(({ question, answer }) => (
+            <details key={question} className="group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-sm font-semibold text-ink hover:text-clay-dark [&::-webkit-details-marker]:hidden">
+                {question}
+                <SupportIcon name="chevron" className="h-4 w-4 shrink-0 text-clay-dark group-open:rotate-180" />
+              </summary>
+              <p className="pb-4 pr-5 text-sm leading-relaxed text-muted">{answer}</p>
+            </details>
           ))}
         </div>
       </div>
@@ -298,208 +388,16 @@ function HowItWorks() {
   );
 }
 
-/* ──────────────────────────── MCP ──────────────────────────────── */
-
-function Mcp() {
+function FinalCTA() {
   return (
-    <section id="mcp" className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-glow opacity-70" />
-      <div className="relative max-w-6xl mx-auto px-6 py-24">
-        <div className="grid lg:grid-cols-2 gap-14 items-center">
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-clay">
-              Built-in MCP server
-            </span>
-            <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight text-ink">
-              Give your AI direct access to your users
-            </h2>
-            <p className="mt-5 text-muted leading-relaxed">
-              Connect Claude Code, Codex, Cursor, Windsurf, Copilot, or any MCP
-              client to your feedback inbox. Your agent reads what users want,
-              creates and updates tasks, posts replies, and keeps the board
-              tidy. Access is scoped to a single project by its API key.
-            </p>
-
-            <ul className="mt-8 space-y-4">
-              {[
-                [
-                  "Triage from your editor",
-                  "“What's the most-voted bug?” answered without leaving your flow.",
-                ],
-                [
-                  "Internal by default",
-                  "Agent tasks are created Dev-only, and it can spin up its own board. Users never see the machinery.",
-                ],
-                [
-                  "Agents that act",
-                  "Create tasks, change statuses, comment. Every change lands on the live board.",
-                ],
-                [
-                  "Nothing to deploy",
-                  "The server is part of Upstep. Point your client at one URL and go.",
-                ],
-              ].map(([t, d]) => (
-                <li key={t} className="flex gap-3">
-                  <span className="mt-0.5 w-5 h-5 rounded-full bg-clay/15 text-clay flex items-center justify-center text-xs shrink-0">
-                    ✓
-                  </span>
-                  <div>
-                    <span className="text-sm font-medium text-ink">{t}.</span>{" "}
-                    <span className="text-sm text-muted">{d}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-8 rounded-xl border border-line bg-card p-4 font-mono text-xs text-muted overflow-x-auto shadow-soft">
-              <p className="text-faint mb-1"># Claude Code</p>
-              <p className="whitespace-nowrap">
-                <span className="text-clay">claude</span> mcp add --transport
-                http upstep \
-              </p>
-              <p className="pl-4 whitespace-nowrap">
-                https://upstep.dev/api/mcp \
-              </p>
-              <p className="pl-4 whitespace-nowrap">
-                --header{" "}
-                <span className="text-ink-soft">
-                  &quot;Authorization: Bearer YOUR_MCP_KEY&quot;
-                </span>
-              </p>
-              <p className="text-faint mt-3 mb-1"># Codex CLI</p>
-              <p className="whitespace-nowrap">
-                <span className="text-clay">export</span>{" "}
-                UPSTEP_MCP_KEY=&quot;YOUR_MCP_KEY&quot;
-              </p>
-              <p className="whitespace-nowrap">
-                <span className="text-clay">codex</span> mcp add upstep --url
-                https://upstep.dev/api/mcp \
-              </p>
-              <p className="pl-4 whitespace-nowrap">
-                --bearer-token-env-var UPSTEP_MCP_KEY
-              </p>
-            </div>
-          </div>
-
-          <McpDemo />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ───────────────────────── Integrate / dev ─────────────────────── */
-
-function Integrate() {
-  return (
-    <section id="integrate" className="max-w-6xl mx-auto px-6 py-24">
-      <div className="grid lg:grid-cols-2 gap-14 items-center">
+    <section aria-labelledby="get-started-heading" className={`${CONTAINER} py-14 sm:py-20`}>
+      <div className="grid items-center gap-x-12 rounded-3xl bg-[#2a1d17] bg-[radial-gradient(ellipse_at_100%_110%,#673420,transparent_65%)] p-6 sm:p-10 lg:grid-cols-[1fr_0.9fr]">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-clay">
-            For developers
-          </span>
-          <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight text-ink">
-            Built to disappear into your stack
-          </h2>
-          <p className="mt-5 text-muted leading-relaxed">
-            Typed SDKs, framework-native components, and a tiny footprint. Pick
-            your platform and ship. Upstep handles storage, dedupe, and the UI.
-          </p>
-
-          <ul className="mt-8 space-y-4">
-            {[
-              ["Fully typed", "First-class TypeScript across every SDK."],
-              ["Tiny bundle", "The web widget is under 10 kB gzipped."],
-              [
-                "Framework native",
-                "React, vanilla JS, script tag, React Native, or Flutter.",
-              ],
-            ].map(([t, d]) => (
-              <li key={t} className="flex gap-3">
-                <span className="mt-0.5 w-5 h-5 rounded-full bg-clay/15 text-clay flex items-center justify-center text-xs shrink-0">
-                  ✓
-                </span>
-                <div>
-                  <span className="text-sm font-medium text-ink">{t}.</span>{" "}
-                  <span className="text-sm text-muted">{d}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <h2 id="get-started-heading" className="text-4xl leading-tight tracking-[-0.05em] text-white sm:text-5xl">Bring Upstep to your product.</h2>
+          <p className="mt-2 text-sm leading-relaxed text-[#ead4c9]">Start collecting feedback for free. Add Chat Support on Pro or Business.</p>
         </div>
-
-        <CodeShowcase />
+        <div className="lg:[&>form]:mt-0"><StartForm inverse /></div>
       </div>
     </section>
-  );
-}
-
-/* ─────────────────────────────── CTA ───────────────────────────── */
-
-function CTA() {
-  return (
-    <section className="max-w-6xl mx-auto px-6 pb-24">
-      <div className="relative overflow-hidden rounded-4xl bg-[#17191D] px-8 py-16 md:px-16 md:py-20 text-center">
-        <div className="absolute inset-0 bg-glow opacity-50" />
-        <div className="relative">
-          <h2 className="font-serif text-4xl md:text-5xl text-white tracking-tight leading-tight">
-            Start listening to your users today
-          </h2>
-          <p className="mt-4 text-white/60 max-w-md mx-auto">
-            It takes two minutes to set up and zero infrastructure to run.
-          </p>
-          <form
-            action="/login"
-            method="GET"
-            className="mt-8 flex flex-wrap items-center justify-center gap-3 max-w-md mx-auto"
-          >
-            <input
-              type="text"
-              name="appName"
-              placeholder="Your app's name"
-              maxLength={80}
-              required
-              aria-label="Your app's name"
-              className="flex-1 min-w-[200px] px-5 py-3.5 bg-white/10 border border-white/15 rounded-full text-sm text-white placeholder-white/40 focus:outline-none focus:border-clay focus:ring-4 focus:ring-clay/20 transition"
-            />
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 bg-clay text-clay-fg rounded-full px-7 py-3.5 text-sm font-medium hover:bg-clay-hover transition shadow-soft shrink-0"
-            >
-              Get started free
-              <span aria-hidden>→</span>
-            </button>
-          </form>
-          <p className="mt-4 text-xs text-white/40">
-            Free plan · No credit card · Trusted for 10K+ feedback items and
-            counting
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ───────────────────────── Shared heading ──────────────────────── */
-
-function SectionHeading({
-  eyebrow,
-  title,
-  sub,
-}: {
-  eyebrow: string;
-  title: string;
-  sub: string;
-}) {
-  return (
-    <div className="max-w-2xl">
-      <span className="text-xs font-semibold uppercase tracking-wider text-clay">
-        {eyebrow}
-      </span>
-      <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight text-ink">
-        {title}
-      </h2>
-      <p className="mt-4 text-muted leading-relaxed">{sub}</p>
-    </div>
   );
 }

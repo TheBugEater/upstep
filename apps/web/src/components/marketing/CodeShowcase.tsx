@@ -6,6 +6,16 @@ type Tab = { id: string; label: string; lang: string; code: string };
 
 const TABS: Tab[] = [
   {
+    id: "script",
+    label: "Script tag",
+    lang: "html",
+    code: `<script
+  defer
+  src="https://upstep.dev/sdk/upstep.js"
+  data-api-key="YOUR_PROJECT_KEY"
+></script>`,
+  },
+  {
     id: "react",
     label: "React",
     lang: "tsx",
@@ -57,16 +67,6 @@ onMounted(() => {
 </script>`,
   },
   {
-    id: "script",
-    label: "Script tag",
-    lang: "html",
-    code: `<script
-  type="module"
-  src="https://unpkg.com/@upstep/js/dist/upstep.global.js"
-  data-api-key="upstep_xxx"
-></script>`,
-  },
-  {
     id: "native",
     label: "React Native",
     lang: "tsx",
@@ -106,25 +106,24 @@ export function CodeShowcase() {
   const tab = TABS.find((t) => t.id === active) ?? TABS[0]!;
 
   return (
-    <div className="rounded-2xl border border-line-strong bg-[#17191D] shadow-lift overflow-hidden">
-      {/* Title bar */}
-      <div className="flex items-center gap-2 px-4 h-11 border-b border-white/10">
-        <span className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-        <span className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-        <span className="w-3 h-3 rounded-full bg-[#28C840]" />
-        <span className="ml-3 text-xs text-white/40 font-mono">{tab.lang}</span>
+    <div className="overflow-hidden rounded-2xl border border-[#4c3930] bg-[#221b18] shadow-soft">
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+        <span className="font-mono text-xs font-medium text-[#ffb99d]">Widget embed</span>
+        <span className="font-mono text-xs text-white/65">{tab.lang}</span>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 px-3 pt-3">
+      <div role="group" aria-label="Integration options" className="flex flex-wrap items-center gap-1 px-3 pt-3">
         {TABS.map((t) => (
           <button
             key={t.id}
+            type="button"
+            aria-pressed={active === t.id}
             onClick={() => setActive(t.id)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
               active === t.id
                 ? "bg-white/10 text-white"
-                : "text-white/45 hover:text-white/80"
+                : "text-white/65 hover:text-white"
             }`}
           >
             {t.label}
@@ -133,7 +132,7 @@ export function CodeShowcase() {
       </div>
 
       {/* Code */}
-      <pre className="px-5 py-5 text-[13px] leading-relaxed font-mono text-white/90 overflow-x-auto">
+      <pre className="min-h-[8.5rem] overflow-x-auto px-5 py-5 font-mono text-[13px] leading-relaxed text-white/90">
         <code>{tab.code}</code>
       </pre>
     </div>
