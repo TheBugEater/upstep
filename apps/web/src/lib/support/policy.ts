@@ -22,9 +22,9 @@ export function supportLimits(plan: string) {
       learningRuns: UNLIMITED_COUNT,
     };
   if (plan === "BUSINESS")
-    return { enabled: true, aiReplies: 1500, pages: 150, learningRuns: 100 };
+    return { enabled: true, aiReplies: 5000, pages: 150, learningRuns: 100 };
   if (plan === "PRO")
-    return { enabled: true, aiReplies: 300, pages: 40, learningRuns: 20 };
+    return { enabled: true, aiReplies: 1000, pages: 40, learningRuns: 20 };
   return { enabled: false, aiReplies: 0, pages: 0, learningRuns: 0 };
 }
 export function requireSupportPlan(plan: string) {

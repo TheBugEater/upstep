@@ -315,8 +315,8 @@ test(
           const month = new Date().toISOString().slice(0, 7);
           await db.supportUsage.upsert({
             where: { ownerId_month: { ownerId: owner.id, month } },
-            create: { ownerId: owner.id, month, aiReplies: 300 },
-            update: { aiReplies: 300 },
+            create: { ownerId: owner.id, month, aiReplies: 1000 },
+            update: { aiReplies: 1000 },
           });
           await teamConversationAction(
             {

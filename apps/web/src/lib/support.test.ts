@@ -88,8 +88,8 @@ test("customer identities require project-specific signatures, short expiry, and
 });
 test("paid support limits are finite, with no AI allowance on Free", () => {
   assert.equal(supportLimits("FREE").enabled, false);
-  assert.equal(supportLimits("PRO").aiReplies, 300);
-  assert.equal(supportLimits("BUSINESS").aiReplies, 1500);
+  assert.equal(supportLimits("PRO").aiReplies, 1000);
+  assert.equal(supportLimits("BUSINESS").aiReplies, 5000);
 });
 test("OpenAI adapter uses Luna Responses with strict output, validates citations and redacts errors", async () => {
   const before = process.env.OPENAI_API_KEY;

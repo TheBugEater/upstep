@@ -42,7 +42,7 @@ poll every 2.5 seconds while the chat is open. This release does not use WebSock
 ## Usage and isolation
 
 Allowances are shared by all projects belonging to one billed owner, per UTC month:
-Pro: 300 AI reply attempts and 40 pages/project. Business: 1,500 attempts and
+Pro: 1,000 AI reply attempts and 40 pages/project. Business: 5,000 attempts and
 150 pages/project. Provider calls reserve allowance atomically; failed or discarded
 calls still consume an attempt because they can incur provider charges. Human chat
 continues at the AI allowance limit. Downgrades are enforced on server requests and

@@ -47,7 +47,7 @@ const token = header + "." + payload + "." + signature;
 // In the browser after the embed has loaded:
 // window.Upstep.identifySupport(token);
 // On logout: window.Upstep.identifySupport(undefined);` },
-      { title: "Understand the first release", body: "AI searches the project's indexed website pages and links its sources. It cannot access accounts, process refunds or make business changes. Optional contact details are visible to your support team; automatic email replies and replies by inbound email are not included in this release. AI reply attempts are limited per account per UTC calendar month: 300 on Pro or 1,500 on Business, shared across projects. Human chat remains available at the AI limit. Pro indexes up to 40 pages per project; Business up to 150." },
+      { title: "Understand the first release", body: "AI searches the project's indexed website pages and links its sources. It cannot access accounts, process refunds or make business changes. Optional contact details are visible to your support team; automatic email replies and replies by inbound email are not included in this release. AI reply attempts are limited per account per UTC calendar month: 1,000 on Pro or 5,000 on Business, shared across projects. Human chat remains available at the AI limit. Pro indexes up to 40 pages per project; Business up to 150." },
     ],
     troubleshooting: [
       {issue: "No pages were indexed", answer: "Check HTTPS, robots.txt and whether the website renders readable HTML without a login. JavaScript-only sites may need a separate public documentation site as the business domain."},
